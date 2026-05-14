@@ -30,11 +30,16 @@ To avoid high latency and control costs, media is generated **per word** (not pe
 
 ### 3.1 Backend & Infrastructure
 
-* **Logic & APIs:** Implementation of backend services and AI API integrations in **Python** or **Java**.
-* **Hosting:** Deployment via a **Kubernetes** cluster for scalable content delivery.
-* **Database & Storage:** Relational database (e.g., RDS) for user progress and vocabulary metadata. Cloud storage (S3/GCS) for caching the generated `.mp4` and `.mp3` files.
+* **Logic & APIs:** Implementation of backend services and AI API integrations in **Java** using **Spring Boot 4**.
+* **Native Build:** The backend should support a native build target for lower runtime overhead and faster startup.
+* **Hosting:** Initial deployment should avoid Kubernetes. The first production direction is AWS-managed infrastructure configured with Terraform.
+* **Database & Storage:** PostgreSQL for user progress and vocabulary metadata. AWS S3 for caching generated `.mp4`, `.mp3`, and image files.
+* **Infrastructure as Code:** Terraform should define cloud resources so the environment can be recreated and evolved safely.
 
 ### 3.2 Frontend
 
 * The frontend manages the spaced repetition algorithm either locally or via backend synchronization.
+* Web frontend should be built with React or React Native Web.
+* Mobile frontend should be built with React Native for iOS and Android.
+* Preferred direction: use React Native with web support where practical, likely through Expo and React Native Web, to maximize shared code across web, iOS, and Android.
 * Smooth media playback: Ensures a seamless transition between the lip-sync video and the overlaid context image while the audio track continues without interruption.

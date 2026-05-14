@@ -25,12 +25,15 @@ The planned pipeline uses:
 
 ## Technical Direction
 
-- Backend services and AI integrations in Python or Java.
-- Kubernetes-based deployment for scalable delivery.
-- Relational database for user progress and vocabulary metadata.
-- Cloud object storage for cached audio and video assets.
-- Frontend support for spaced repetition and seamless audiovisual playback.
+- Backend: Spring Boot 4 Java application with a native build target.
+- Database: PostgreSQL for user progress, vocabulary metadata, and generated media metadata.
+- Infrastructure: AWS cloud deployment managed with Terraform as Infrastructure as Code.
+- Initial hosting: no Kubernetes; start with simpler AWS-managed services and keep the architecture deployable by Terraform.
+- Storage: S3-compatible object storage for cached generated audio, video, and image assets.
+- Frontend: React Native with web support where practical, preferably through Expo and React Native Web. If media playback or platform constraints make this too costly, start with a focused React web version first.
 
 ## Documentation
 
 The full initial specification is available in [`documentation/app-specification.md`](documentation/app-specification.md).
+
+The current technical architecture direction is documented in [`documentation/technical-architecture.md`](documentation/technical-architecture.md).
