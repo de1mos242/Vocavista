@@ -1,0 +1,1 @@
+-- Baseline migration. Application tables will be added as the domain model is defined.

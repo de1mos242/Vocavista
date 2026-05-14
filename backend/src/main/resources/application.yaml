@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: vocavista-backend
+  datasource:
+    url: ${VOCAVISTA_DB_URL:jdbc:postgresql://localhost:5432/vocavista}
+    username: ${VOCAVISTA_DB_USERNAME:vocavista}
+    password: ${VOCAVISTA_DB_PASSWORD:vocavista}
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: Vocavista Backend
+    description: Backend service for Vocavista
+    version: @project.version@
