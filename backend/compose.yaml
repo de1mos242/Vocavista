@@ -15,5 +15,31 @@ services:
       timeout: 5s
       retries: 5
 
+  rustfs:
+    image: rustfs/rustfs:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - vocavista-rustfs-data:/data
+      - vocavista-rustfs-logs:/logs
+
+  rustfs-create-bucket:
+    image: amazon/aws-cli:latest
+    depends_on:
+      - rustfs
+    environment:
+      AWS_ACCESS_KEY_ID: rustfsadmin
+      AWS_SECRET_ACCESS_KEY: rustfsadmin
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      'until aws --endpoint-url http://rustfs:9000 s3api head-bucket --bucket vocavista-media >/dev/null 2>&1; do
+        aws --endpoint-url http://rustfs:9000 s3 mb s3://vocavista-media >/dev/null 2>&1 && break;
+        sleep 2;
+      done'
+
 volumes:
   vocavista-postgres-data:
+  vocavista-rustfs-data:
+  vocavista-rustfs-logs:
