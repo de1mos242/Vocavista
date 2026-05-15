@@ -1,0 +1,169 @@
+openapi: 3.0.3
+info:
+  title: Vocavista API
+  version: 0.0.1
+paths:
+  /api/v1/words/info:
+    get:
+      tags:
+        - Words
+      operationId: getWordInfo
+      summary: Get compact German word information
+      parameters:
+        - name: word
+          in: query
+          required: true
+          description: German word or fixed expression to explain.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 80
+      responses:
+        '200':
+          description: Word information generated for the requested word.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WordInfoResponse'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: AI provider returned an invalid or unsuccessful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: AI provider is unavailable or not configured.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    WordInfoResponse:
+      type: object
+      required:
+        - normalizedWord
+        - language
+        - translations
+        - partOfSpeech
+        - frequency
+        - isCompound
+        - compoundParts
+        - shortNote
+        - examples
+      properties:
+        normalizedWord:
+          type: string
+          minLength: 1
+        language:
+          type: string
+          enum:
+            - de
+        translations:
+          $ref: '#/components/schemas/LanguageTextMap'
+        partOfSpeech:
+          $ref: '#/components/schemas/PartOfSpeech'
+        gender:
+          nullable: true
+          $ref: '#/components/schemas/Gender'
+        article:
+          nullable: true
+          $ref: '#/components/schemas/GermanArticle'
+        plural:
+          type: string
+          nullable: true
+        frequency:
+          $ref: '#/components/schemas/WordFrequency'
+        isCompound:
+          type: boolean
+        compoundParts:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompoundPart'
+        shortNote:
+          $ref: '#/components/schemas/LanguageTextMap'
+        examples:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/WordExample'
+    CompoundPart:
+      type: object
+      required:
+        - word
+        - meanings
+      properties:
+        word:
+          type: string
+          minLength: 1
+        meanings:
+          $ref: '#/components/schemas/LanguageTextMap'
+    WordExample:
+      type: object
+      required:
+        - sentence
+        - translations
+      properties:
+        sentence:
+          type: string
+          minLength: 1
+        translations:
+          $ref: '#/components/schemas/LanguageTextMap'
+    LanguageTextMap:
+      type: object
+      minProperties: 1
+      additionalProperties:
+        type: array
+        minItems: 1
+        items:
+          type: string
+          minLength: 1
+    PartOfSpeech:
+      type: string
+      enum:
+        - noun
+        - verb
+        - adjective
+        - adverb
+        - pronoun
+        - preposition
+        - conjunction
+        - interjection
+        - phrase
+        - other
+    WordFrequency:
+      type: string
+      enum:
+        - rare
+        - uncommon
+        - common
+        - very_common
+    Gender:
+      type: string
+      enum:
+        - masculine
+        - feminine
+        - neuter
+    GermanArticle:
+      type: string
+      enum:
+        - der
+        - die
+        - das
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string

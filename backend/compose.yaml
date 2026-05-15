@@ -8,7 +8,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - vocavista-postgres-data:/var/lib/postgresql/data
+      - vocavista-postgres-18-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vocavista -d vocavista"]
       interval: 10s
@@ -40,6 +40,6 @@ services:
       done'
 
 volumes:
-  vocavista-postgres-data:
+  vocavista-postgres-18-data:
   vocavista-rustfs-data:
   vocavista-rustfs-logs:
