@@ -1,12 +1,7 @@
 package com.vocavista.backend.wordinfo;
 
-import com.vocavista.backend.api.model.Gender;
-import com.vocavista.backend.api.model.GermanArticle;
-import com.vocavista.backend.api.model.PartOfSpeech;
-import com.vocavista.backend.api.model.WordFrequency;
-import com.vocavista.backend.api.model.WordInfoResponse;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -18,13 +13,15 @@ class ProviderWordInfoValidator {
 			throw malformed("missing word info");
 		}
 		requireText(wordInfo.normalizedWord(), "normalizedWord");
-		requireEnum(wordInfo.language(), "language", WordInfoResponse.LanguageEnum::fromValue);
-		if (!"de".equals(wordInfo.language())) {
+		if (wordInfo.language() == null) {
+			throw malformed("language is required");
+		}
+		if (wordInfo.language() != ProviderWordInfo.Language.de) {
 			throw malformed("language must be de");
 		}
-		requireLanguageMap(wordInfo.translations(), "translations");
-		requireEnum(wordInfo.partOfSpeech(), "partOfSpeech", PartOfSpeech::fromValue);
-		requireEnum(wordInfo.frequency(), "frequency", WordFrequency::fromValue);
+		requireLocalizedText(wordInfo.translations(), "translations");
+		requireValue(wordInfo.partOfSpeech(), "partOfSpeech");
+		requireValue(wordInfo.frequency(), "frequency");
 		if (wordInfo.isCompound() == null) {
 			throw malformed("isCompound is required");
 		}
@@ -35,15 +32,15 @@ class ProviderWordInfoValidator {
 			throw malformed("compoundParts must be empty for non-compound words");
 		}
 		wordInfo.compoundParts().forEach(this::validateCompoundPart);
-		requireLanguageMap(wordInfo.shortNote(), "shortNote");
+		requireLocalizedText(wordInfo.shortNote(), "shortNote");
 		if (wordInfo.examples() == null || wordInfo.examples().size() != 3) {
 			throw malformed("examples must contain exactly 3 items");
 		}
 		wordInfo.examples().forEach(this::validateExample);
-		if ("noun".equals(wordInfo.partOfSpeech())) {
-			requireEnum(wordInfo.gender(), "gender", Gender::fromValue);
-			requireEnum(wordInfo.article(), "article", GermanArticle::fromValue);
-			requireText(wordInfo.plural(), "plural");
+		if (wordInfo.partOfSpeech() == ProviderWordInfo.ProviderPartOfSpeech.noun) {
+			requireOptionalValue(wordInfo.gender(), "gender");
+			requireOptionalValue(wordInfo.article(), "article");
+			requireOptionalText(wordInfo.plural(), "plural");
 		}
 	}
 
@@ -52,7 +49,7 @@ class ProviderWordInfoValidator {
 			throw malformed("compoundParts must not contain null items");
 		}
 		requireText(compoundPart.word(), "compoundPart.word");
-		requireLanguageMap(compoundPart.meanings(), "compoundPart.meanings");
+		requireLocalizedText(compoundPart.meanings(), "compoundPart.meanings");
 	}
 
 	private void validateExample(ProviderWordInfo.WordExample example) {
@@ -60,19 +57,18 @@ class ProviderWordInfoValidator {
 			throw malformed("examples must not contain null items");
 		}
 		requireText(example.sentence(), "example.sentence");
-		requireLanguageMap(example.translations(), "example.translations");
+		requireLocalizedText(example.translations(), "example.translations");
 	}
 
-	private static void requireLanguageMap(Map<String, List<String>> textMap, String fieldName) {
-		if (textMap == null || textMap.isEmpty()) {
+	private static void requireLocalizedText(ProviderWordInfo.LocalizedText text, String fieldName) {
+		if (text == null) {
 			throw malformed(fieldName + " is required");
 		}
-		requireLanguageValues(textMap, fieldName, "en");
-		requireLanguageValues(textMap, fieldName, "ru");
+		requireLanguageValues(text.en(), fieldName, "en");
+		requireLanguageValues(text.ru(), fieldName, "ru");
 	}
 
-	private static void requireLanguageValues(Map<String, List<String>> textMap, String fieldName, String language) {
-		List<String> values = textMap.get(language);
+	private static void requireLanguageValues(List<String> values, String fieldName, String language) {
 		if (values == null || values.isEmpty()) {
 			throw malformed(fieldName + " must include " + language);
 		}
@@ -81,31 +77,33 @@ class ProviderWordInfoValidator {
 		}
 	}
 
+	private static void requireValue(Object value, String fieldName) {
+		if (value == null) {
+			throw malformed(fieldName + " is required");
+		}
+	}
+
+	private static void requireOptionalValue(Optional<?> value, String fieldName) {
+		if (value == null || value.isEmpty()) {
+			throw malformed(fieldName + " is required");
+		}
+	}
+
+	private static void requireOptionalText(Optional<String> value, String fieldName) {
+		if (value == null || value.isEmpty()) {
+			throw malformed(fieldName + " is required");
+		}
+		requireText(value.get(), fieldName);
+	}
+
 	private static void requireText(String value, String fieldName) {
 		if (!StringUtils.hasText(value)) {
 			throw malformed(fieldName + " is required");
 		}
 	}
 
-	private static <T> void requireEnum(String value, String fieldName, EnumParser<T> parser) {
-		requireText(value, fieldName);
-		try {
-			parser.parse(value.trim());
-		}
-		catch (IllegalArgumentException ex) {
-			throw new AiProviderBadGatewayException("AI provider returned unsupported enum value for " + fieldName, ex);
-		}
-	}
-
 	private static AiProviderBadGatewayException malformed(String message) {
 		return new AiProviderBadGatewayException("AI provider returned malformed content: " + message);
-	}
-
-	@FunctionalInterface
-	private interface EnumParser<T> {
-
-		T parse(String value);
-
 	}
 
 }

@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.vocavista.backend.api.model.PartOfSpeech;
 import com.vocavista.backend.api.model.WordInfoResponse;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class WordInfoServiceTest {
@@ -36,8 +38,10 @@ class WordInfoServiceTest {
 
 	@Test
 	void rejectsMalformedProviderResponse() {
-		ProviderWordInfo malformedInfo = new ProviderWordInfo("Hausaufgabe", "de", null, "noun", "feminine", "die",
-				"Hausaufgaben", "common", true, java.util.List.of(), java.util.Map.of(), java.util.List.of());
+		ProviderWordInfo malformedInfo = new ProviderWordInfo("Hausaufgabe", ProviderWordInfo.Language.de, null,
+				ProviderWordInfo.ProviderPartOfSpeech.noun, Optional.of(ProviderWordInfo.ProviderGender.feminine),
+				Optional.of(ProviderWordInfo.ProviderArticle.die), Optional.of("Hausaufgaben"),
+				ProviderWordInfo.ProviderFrequency.common, true, List.of(), null, List.of());
 		WordInfoService service = new WordInfoService(word -> malformedInfo, providerWordInfoValidator, wordInfoMapper);
 
 		assertThatThrownBy(() -> service.getWordInfo("Hausaufgabe")).isInstanceOf(AiProviderBadGatewayException.class);

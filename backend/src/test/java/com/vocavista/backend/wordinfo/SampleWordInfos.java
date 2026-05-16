@@ -1,7 +1,7 @@
 package com.vocavista.backend.wordinfo;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 final class SampleWordInfos {
 
@@ -11,31 +11,35 @@ final class SampleWordInfos {
 	static ProviderWordInfo nounInfo() {
 		return new ProviderWordInfo(
 				"Hausaufgabe",
-				"de",
-				Map.of("en", List.of("homework"), "ru", List.of("domashnee zadanie")),
-				"noun",
-				"feminine",
-				"die",
-				"Hausaufgaben",
-				"common",
+				ProviderWordInfo.Language.de,
+				localizedText(List.of("homework"), List.of("domashnee zadanie")),
+				ProviderWordInfo.ProviderPartOfSpeech.noun,
+				Optional.of(ProviderWordInfo.ProviderGender.feminine),
+				Optional.of(ProviderWordInfo.ProviderArticle.die),
+				Optional.of("Hausaufgaben"),
+				ProviderWordInfo.ProviderFrequency.common,
 				true,
 				List.of(
 						new ProviderWordInfo.CompoundPart("Haus",
-								Map.of("en", List.of("house"), "ru", List.of("dom"))),
+								localizedText(List.of("house"), List.of("dom"))),
 						new ProviderWordInfo.CompoundPart("Aufgabe",
-								Map.of("en", List.of("task"), "ru", List.of("zadanie")))),
-				Map.of("en", List.of("A common word for school homework."), "ru",
+								localizedText(List.of("task"), List.of("zadanie")))),
+				localizedText(List.of("A common word for school homework."),
 						List.of("Obychnoe slovo dlya domashnego zadaniya.")),
 				List.of(
 						new ProviderWordInfo.WordExample("Ich mache meine Hausaufgabe nach dem Abendessen.",
-								Map.of("en", List.of("I do my homework after dinner."), "ru",
+								localizedText(List.of("I do my homework after dinner."),
 										List.of("Ya delayu domashnee zadanie posle uzhina."))),
 						new ProviderWordInfo.WordExample("Die Hausaufgabe ist heute leicht.",
-								Map.of("en", List.of("The homework is easy today."), "ru",
+								localizedText(List.of("The homework is easy today."),
 										List.of("Segodnya domashnee zadanie legkoe."))),
 						new ProviderWordInfo.WordExample("Hast du die Hausaufgabe schon fertig?",
-								Map.of("en", List.of("Have you already finished the homework?"), "ru",
+								localizedText(List.of("Have you already finished the homework?"),
 										List.of("Ty uzhe zakonchil domashnee zadanie?")))));
+	}
+
+	private static ProviderWordInfo.LocalizedText localizedText(List<String> en, List<String> ru) {
+		return new ProviderWordInfo.LocalizedText(en, ru);
 	}
 
 	static String nounInfoJson() {

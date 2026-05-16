@@ -29,6 +29,7 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 			Keep translations and notes concise. Do not invent rare meanings unless clearly relevant.
 			Use null for noun-only fields when the word is not a noun.
 			For German nouns, include gender, article, and plural.
+			Use exact enum values: language de; partOfSpeech noun, verb, adjective, adverb, pronoun, preposition, conjunction, interjection, phrase, other; frequency rare, uncommon, common, very_common; gender masculine, feminine, neuter; article der, die, das.
 			Examples must contain exactly 3 natural German sentences.
 			Example objects must contain only the German sentence and translations.
 			Translations, notes, example translations, and compound-part meanings must include both en and ru keys.
