@@ -29,11 +29,19 @@ Add the first reusable media-generation feature for German word and phrase pronu
 - 2026-05-16: Added `pronunciation_video_assets` migration, JPA entity/repository, cache hash reuse, validation, and queued async processing.
 - 2026-05-16: Added fake text-to-speech, fake lip-sync, fake storage, optional S3-compatible storage wiring, and real-provider placeholder beans that fail with controlled metadata until real integrations are implemented.
 - 2026-05-16: Added controller, service, and generation processor tests.
+- 2026-05-19: Added a command-line runner for pronunciation-video generation that can run with `spring.main.web-application-type=none`, wait for terminal status, print the result, and exit without starting the web API.
+- 2026-05-19: Added gitignored `backend/src/main/resources/application-local.yaml` local-profile config path, plus committed `backend/src/main/resources/application-local.example.yaml` for local command-runner overrides.
+- 2026-05-19: Fixed command runner bean construction by marking the application constructor for Spring autowiring.
+- 2026-05-19: Fixed S3 storage bean construction by marking the application constructor for Spring autowiring.
 
 ## Verification
 
 - `./mvnw -Djava.version=21 test` passed locally with 25 tests.
 - `./mvnw test` is blocked in this environment because the active JDK is 21 and the project is configured for Java 25 (`release version 25 not supported`).
+- 2026-05-19: `./mvnw test` passed with Java 25 after adding the command runner; 26 tests passed.
+- 2026-05-19: `./mvnw test` passed after switching local config to standard Spring `local` profile loading; 26 tests passed.
+- 2026-05-19: `./mvnw test` passed after fixing command runner constructor autowiring; 26 tests passed.
+- 2026-05-19: `./mvnw test` passed after fixing S3 storage constructor autowiring; 26 tests passed.
 
 ## Links
 

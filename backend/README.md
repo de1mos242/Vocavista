@@ -80,6 +80,24 @@ Run the application:
 ./mvnw spring-boot:run
 ```
 
+Run one pronunciation-video generation from the command line without starting the web server:
+
+```bash
+./mvnw spring-boot:run \
+  -Dspring-boot.run.arguments="--spring.main.web-application-type=none --vocavista.media.pronunciation-video-command.enabled=true --vocavista.media.pronunciation-video-command.word=Hausaufgabe --vocavista.media.pronunciation-video-command.phrase=Ich mache meine Hausaufgabe nach dem Abendessen. --vocavista.media.pronunciation-video-command.language=de"
+```
+
+The command uses the same provider and storage configuration as the API, waits for completion or failure, prints the asset id/status and playable URL when available, then exits.
+
+For repeated local runs, copy the example local config and edit the word, phrase, provider, and storage settings there:
+
+```bash
+cp src/main/resources/application-local.example.yaml src/main/resources/application-local.yaml
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+`src/main/resources/application-local.yaml` is gitignored and loaded only when the `local` Spring profile is active. Keep secrets and personal overrides there, not in `src/main/resources/application.yaml`.
+
 Run tests:
 
 ```bash

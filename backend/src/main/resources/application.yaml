@@ -32,6 +32,13 @@ vocavista:
     script-template-version: ${VOCAVISTA_PRONUNCIATION_SCRIPT_TEMPLATE_VERSION:v1}
     voice-config: ${VOCAVISTA_TTS_VOICE_CONFIG:default-clear-german}
     avatar-config: ${VOCAVISTA_LIPSYNC_AVATAR_CONFIG:default-talking-head}
+    pronunciation-video-command:
+      enabled: false
+      word: ${VOCAVISTA_PRONUNCIATION_VIDEO_WORD:}
+      phrase: ${VOCAVISTA_PRONUNCIATION_VIDEO_PHRASE:}
+      language: ${VOCAVISTA_PRONUNCIATION_VIDEO_LANGUAGE:de}
+      timeout-seconds: ${VOCAVISTA_PRONUNCIATION_VIDEO_TIMEOUT_SECONDS:120}
+      poll-interval-millis: ${VOCAVISTA_PRONUNCIATION_VIDEO_POLL_INTERVAL_MILLIS:500}
     s3:
       endpoint: ${VOCAVISTA_S3_ENDPOINT:http://localhost:9000}
       region: ${VOCAVISTA_S3_REGION:us-east-1}

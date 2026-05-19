@@ -1,0 +1,32 @@
+# Copy this file to application-local.yaml and edit local-only values.
+# application-local.yaml is intentionally gitignored and loaded by the local Spring profile.
+
+spring:
+  main:
+    web-application-type: none
+
+vocavista:
+  media:
+    # Fake providers are deterministic and do not call external AI services.
+    # Real provider mode is wired, but concrete real TTS/lip-sync integrations are not implemented yet.
+    provider-mode: fake
+
+    # Use fake storage for no infrastructure, or s3 to store generated files in local RustFS.
+    storage-mode: fake
+
+    pronunciation-video-command:
+      enabled: true
+      word: Hausaufgabe
+      phrase: Ich mache meine Hausaufgabe nach dem Abendessen.
+      language: de
+      timeout-seconds: 120
+      poll-interval-millis: 500
+
+    s3:
+      endpoint: http://localhost:9000
+      region: us-east-1
+      bucket: vocavista-media
+      access-key: rustfsadmin
+      secret-key: rustfsadmin
+      path-style-access: true
+      public-base-url: http://localhost:9000/vocavista-media

@@ -3,6 +3,7 @@ package com.vocavista.backend.media.pronunciation;
 import java.net.URI;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,7 @@ class S3MediaStorageService implements MediaStorageService {
 	private final long urlTtlSeconds;
 	private final Clock clock;
 
+	@Autowired
 	S3MediaStorageService(
 			@Value("${vocavista.media.s3.endpoint}") String endpoint,
 			@Value("${vocavista.media.s3.region}") String region,
