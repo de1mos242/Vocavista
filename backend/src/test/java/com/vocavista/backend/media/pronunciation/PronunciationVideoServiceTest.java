@@ -65,6 +65,29 @@ class PronunciationVideoServiceTest {
 	}
 
 	@Test
+	void retriesExistingFailedAsset() {
+		PronunciationVideoAsset existingAsset = failedAsset();
+		when(pronunciationVideoRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
+				.thenReturn(Optional.of(existingAsset));
+		when(pronunciationVideoRepository.save(existingAsset)).thenReturn(existingAsset);
+		PronunciationVideoService service = service();
+
+		PronunciationVideoResponse response = service.create(request("Hausaufgabe",
+				"Ich mache meine Hausaufgabe nach dem Abendessen."));
+
+		assertThat(response.getId()).isEqualTo(existingAsset.getId());
+		assertThat(response.getStatus()).isEqualTo(PronunciationVideoStatus.QUEUED);
+		assertThat(response.getErrorCode()).isNull();
+		assertThat(response.getErrorMessage()).isNull();
+		assertThat(existingAsset.getErrorCode()).isNull();
+		assertThat(existingAsset.getErrorMessage()).isNull();
+		assertThat(existingAsset.getAudioObjectKey()).isNull();
+		assertThat(existingAsset.getVideoObjectKey()).isNull();
+		verify(pronunciationVideoRepository).save(existingAsset);
+		verify(generationProcessor).process(existingAsset.getId());
+	}
+
+	@Test
 	void rejectsBlankPhraseAfterTrimming() {
 		PronunciationVideoService service = service();
 
@@ -89,6 +112,18 @@ class PronunciationVideoServiceTest {
 		asset.setStatus(PronunciationVideoAssetStatus.COMPLETED);
 		asset.setVideoObjectKey("pronunciation-videos/%s/video.txt".formatted(asset.getId()));
 		asset.setCompletedAt(OffsetDateTime.now());
+		return asset;
+	}
+
+	private static PronunciationVideoAsset failedAsset() {
+		PronunciationVideoAsset asset = PronunciationVideoAsset.queued("Hausaufgabe",
+				"Ich mache meine Hausaufgabe nach dem Abendessen.", "Hausaufgabe",
+				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
+		asset.setId(UUID.randomUUID());
+		asset.setStatus(PronunciationVideoAssetStatus.FAILED);
+		asset.setAudioObjectKey("pronunciation-videos/%s/audio.mp3".formatted(asset.getId()));
+		asset.setErrorCode("tts_provider_error");
+		asset.setErrorMessage("ElevenLabs failed");
 		return asset;
 	}
 

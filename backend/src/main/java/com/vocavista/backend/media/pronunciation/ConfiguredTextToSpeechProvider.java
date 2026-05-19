@@ -1,11 +1,11 @@
 package com.vocavista.backend.media.pronunciation;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(prefix = "vocavista.media", name = "provider-mode", havingValue = "real")
+@ConditionalOnExpression("'${vocavista.media.provider-mode:fake}' == 'real' and '${vocavista.media.tts-provider:fake}' != 'elevenlabs'")
 class ConfiguredTextToSpeechProvider implements TextToSpeechProvider {
 
 	private final String provider;

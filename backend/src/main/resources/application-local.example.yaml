@@ -8,8 +8,10 @@ spring:
 vocavista:
   media:
     # Fake providers are deterministic and do not call external AI services.
-    # Real provider mode is wired, but concrete real TTS/lip-sync integrations are not implemented yet.
+    # Use real with tts-provider=elevenlabs and lipsync-provider=did for real media generation.
     provider-mode: fake
+    tts-provider: elevenlabs
+    lipsync-provider: did
 
     # Use fake storage for no infrastructure, or s3 to store generated files in local RustFS.
     storage-mode: fake
@@ -30,3 +32,16 @@ vocavista:
       secret-key: rustfsadmin
       path-style-access: true
       public-base-url: http://localhost:9000/vocavista-media
+
+    elevenlabs:
+      api-key: __missing__
+      voice-id: JBFqnCBsd6RMkjVDRZzb
+      model-id: eleven_multilingual_v2
+      output-format: mp3_44100_128
+      first-word-speed: 0.72
+      second-word-speed: 1.0
+      phrase-speed: 0.86
+
+    did:
+      api-key: __missing__
+      source-url: https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.png

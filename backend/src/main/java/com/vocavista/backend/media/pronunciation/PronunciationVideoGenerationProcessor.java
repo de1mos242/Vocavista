@@ -42,11 +42,14 @@ class PronunciationVideoGenerationProcessor {
 
 			PronunciationScript script = scriptFor(asset);
 			GeneratedAudio audio = textToSpeechProvider.generate(script);
-			String audioObjectKey = "pronunciation-videos/" + asset.getId() + "/audio.txt";
+			String audioObjectKey = "pronunciation-videos/" + asset.getId() + "/audio."
+					+ extensionFor(audio.contentType());
 			mediaStorageService.store(audioObjectKey, audio.contentType(), audio.bytes());
 
-			GeneratedVideo video = lipSyncVideoProvider.generate(script, audio);
-			String videoObjectKey = "pronunciation-videos/" + asset.getId() + "/video.txt";
+			GeneratedVideo video = lipSyncVideoProvider.generate(script, audio,
+					mediaStorageService.playableUrl(audioObjectKey).url());
+			String videoObjectKey = "pronunciation-videos/" + asset.getId() + "/video."
+					+ extensionFor(video.contentType());
 			mediaStorageService.store(videoObjectKey, video.contentType(), video.bytes());
 
 			asset.setAudioObjectKey(audioObjectKey);
@@ -76,12 +79,24 @@ class PronunciationVideoGenerationProcessor {
 	}
 
 	private PronunciationScript scriptFor(PronunciationVideoAsset asset) {
-		String text = ("Say the German word \"%s\" twice, with a short pause between repetitions. "
-				+ "Use a neutral clear pronunciation for the first repetition and a slightly more natural conversational "
-				+ "intonation for the second repetition. After another short pause, say the phrase: \"%s\"")
-				.formatted(asset.getNormalizedWord(), asset.getNormalizedPhrase());
+		String text = "%s...\n\n%s!\n\n%s".formatted(asset.getNormalizedWord(), asset.getNormalizedWord(),
+				punctuated(asset.getNormalizedPhrase()));
 		return new PronunciationScript(asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage(), text,
 				scriptTemplateVersion, voiceConfig, avatarConfig);
+	}
+
+	private static String punctuated(String value) {
+		return value.endsWith(".") || value.endsWith("!") || value.endsWith("?") ? value : value + ".";
+	}
+
+	private static String extensionFor(String contentType) {
+		return switch (contentType) {
+			case "audio/mpeg" -> "mp3";
+			case "audio/wav" -> "wav";
+			case "video/mp4" -> "mp4";
+			case "text/plain" -> "txt";
+			default -> "bin";
+		};
 	}
 
 }

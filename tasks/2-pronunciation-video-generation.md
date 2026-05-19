@@ -33,6 +33,11 @@ Add the first reusable media-generation feature for German word and phrase pronu
 - 2026-05-19: Added gitignored `backend/src/main/resources/application-local.yaml` local-profile config path, plus committed `backend/src/main/resources/application-local.example.yaml` for local command-runner overrides.
 - 2026-05-19: Fixed command runner bean construction by marking the application constructor for Spring autowiring.
 - 2026-05-19: Fixed S3 storage bean construction by marking the application constructor for Spring autowiring.
+- 2026-05-19: Added real ElevenLabs text-to-speech provider and D-ID talking-head/lip-sync provider for `provider-mode=real`, including D-ID polling and completed MP4 download into configured media storage.
+- 2026-05-19: Changed the generated TTS script template to a literal spoken sequence (`word`, paused repeat with different punctuation, then phrase) so real TTS does not read prompt instructions aloud.
+- 2026-05-19: Documented real-provider setup and the requirement that D-ID must be able to fetch the stored audio URL from public/tunneled object storage.
+- 2026-05-19: Changed cache reuse behavior for failed pronunciation-video assets so a repeated create request clears stale failure/media metadata, requeues the same asset, and starts generation again instead of returning the cached failure.
+- 2026-05-19: Changed ElevenLabs generation to use three segment-level TTS calls with separate speeds: slow first isolated word, faster second isolated word, and medium-speed phrase. Bumped the script template version so previously generated fast assets are not reused.
 
 ## Verification
 
@@ -42,6 +47,9 @@ Add the first reusable media-generation feature for German word and phrase pronu
 - 2026-05-19: `./mvnw test` passed after switching local config to standard Spring `local` profile loading; 26 tests passed.
 - 2026-05-19: `./mvnw test` passed after fixing command runner constructor autowiring; 26 tests passed.
 - 2026-05-19: `./mvnw test` passed after fixing S3 storage constructor autowiring; 26 tests passed.
+- 2026-05-19: `./mvnw test` passed after adding ElevenLabs and D-ID provider integrations; 28 tests passed.
+- 2026-05-19: `./mvnw test` passed after adding failed-asset retry behavior; 29 tests passed.
+- 2026-05-19: `./mvnw test` passed after adding segment-level pronunciation speeds; 29 tests passed.
 
 ## Links
 

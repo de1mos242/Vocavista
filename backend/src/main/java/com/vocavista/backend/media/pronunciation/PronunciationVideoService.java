@@ -46,7 +46,7 @@ class PronunciationVideoService {
 
 		return pronunciationVideoRepository
 				.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(input.language(), contentHash)
-				.map(this::toResponse)
+				.map(this::reuseOrRetry)
 				.orElseGet(() -> createQueuedAsset(input, contentHash));
 	}
 
@@ -67,9 +67,30 @@ class PronunciationVideoService {
 		catch (DataIntegrityViolationException ex) {
 			return pronunciationVideoRepository
 					.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(input.language(), contentHash)
-					.map(this::toResponse)
+					.map(this::reuseOrRetry)
 					.orElseThrow(() -> ex);
 		}
+	}
+
+	private PronunciationVideoResponse reuseOrRetry(PronunciationVideoAsset asset) {
+		if (asset.getStatus() != PronunciationVideoAssetStatus.FAILED) {
+			return toResponse(asset);
+		}
+
+		asset.setStatus(PronunciationVideoAssetStatus.QUEUED);
+		asset.setAudioObjectKey(null);
+		asset.setVideoObjectKey(null);
+		asset.setAudioProvider(null);
+		asset.setAudioModel(null);
+		asset.setVideoProvider(null);
+		asset.setVideoModel(null);
+		asset.setErrorCode(null);
+		asset.setErrorMessage(null);
+		asset.setCompletedAt(null);
+		asset.setUpdatedAt(OffsetDateTime.now(clock));
+		PronunciationVideoAsset savedAsset = pronunciationVideoRepository.save(asset);
+		generationProcessor.process(savedAsset.getId());
+		return toResponse(savedAsset);
 	}
 
 	private PronunciationVideoResponse toResponse(PronunciationVideoAsset asset) {

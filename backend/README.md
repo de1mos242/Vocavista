@@ -60,17 +60,24 @@ export VOCAVISTA_S3_SECRET_KEY=rustfsadmin
 export VOCAVISTA_S3_PATH_STYLE_ACCESS=true
 ```
 
-Optional real AI provider testing should be explicitly enabled through environment variables. Keep `VOCAVISTA_MEDIA_PROVIDER_MODE=fake` for normal automated tests. Set `VOCAVISTA_MEDIA_PROVIDER_MODE=real` and provide the relevant API keys when you intentionally want integration tests or local runs to call real providers:
+Optional real AI provider testing should be explicitly enabled through environment variables. Keep `VOCAVISTA_MEDIA_PROVIDER_MODE=fake` for normal automated tests. ElevenLabs text-to-speech and D-ID talking-head video are implemented for real local runs:
 
 ```bash
 export VOCAVISTA_MEDIA_PROVIDER_MODE=real
-export VOCAVISTA_TTS_PROVIDER=openai
+export VOCAVISTA_TTS_PROVIDER=elevenlabs
 export VOCAVISTA_LIPSYNC_PROVIDER=did
-export VOCAVISTA_OPENAI_API_KEY=
-export VOCAVISTA_ELEVENLABS_API_KEY=
+export VOCAVISTA_ELEVENLABS_API_KEY=...
+export VOCAVISTA_ELEVENLABS_VOICE_ID=JBFqnCBsd6RMkjVDRZzb
+export VOCAVISTA_ELEVENLABS_FIRST_WORD_SPEED=0.72
+export VOCAVISTA_ELEVENLABS_SECOND_WORD_SPEED=1.0
+export VOCAVISTA_ELEVENLABS_PHRASE_SPEED=0.86
 export VOCAVISTA_DID_API_KEY=
-export VOCAVISTA_HEYGEN_API_KEY=
+export VOCAVISTA_DID_SOURCE_URL=https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.png
 ```
+
+`VOCAVISTA_DID_API_KEY` is used as the Basic auth token expected by D-ID. You may include the `Basic ` prefix or provide just the token value.
+
+D-ID must be able to fetch the generated audio URL. `localhost` RustFS URLs are not reachable from D-ID cloud, so real D-ID runs need a public S3-compatible bucket, a tunnel to local RustFS, or another public object URL configured through `VOCAVISTA_S3_PUBLIC_BASE_URL`.
 
 `backend/.env.example` lists the supported local storage and provider variables without real secret values. Real-provider tests should remain opt-in and skip automatically unless the required mode and credentials are present.
 
