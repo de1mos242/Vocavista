@@ -23,6 +23,25 @@ spring:
     virtual:
       enabled: true
 
+vocavista:
+  media:
+    provider-mode: ${VOCAVISTA_MEDIA_PROVIDER_MODE:fake}
+    storage-mode: ${VOCAVISTA_MEDIA_STORAGE_MODE:fake}
+    tts-provider: ${VOCAVISTA_TTS_PROVIDER:fake}
+    lipsync-provider: ${VOCAVISTA_LIPSYNC_PROVIDER:fake}
+    script-template-version: ${VOCAVISTA_PRONUNCIATION_SCRIPT_TEMPLATE_VERSION:v1}
+    voice-config: ${VOCAVISTA_TTS_VOICE_CONFIG:default-clear-german}
+    avatar-config: ${VOCAVISTA_LIPSYNC_AVATAR_CONFIG:default-talking-head}
+    s3:
+      endpoint: ${VOCAVISTA_S3_ENDPOINT:http://localhost:9000}
+      region: ${VOCAVISTA_S3_REGION:us-east-1}
+      bucket: ${VOCAVISTA_S3_BUCKET:vocavista-media}
+      access-key: ${VOCAVISTA_S3_ACCESS_KEY:rustfsadmin}
+      secret-key: ${VOCAVISTA_S3_SECRET_KEY:rustfsadmin}
+      path-style-access: ${VOCAVISTA_S3_PATH_STYLE_ACCESS:true}
+      public-base-url: ${VOCAVISTA_S3_PUBLIC_BASE_URL:http://localhost:9000/vocavista-media}
+      url-ttl-seconds: ${VOCAVISTA_S3_URL_TTL_SECONDS:3600}
+
 server:
   port: ${PORT:8080}
 

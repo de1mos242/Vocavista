@@ -1,0 +1,40 @@
+package com.vocavista.backend.media.pronunciation;
+
+import com.vocavista.backend.api.model.ErrorResponse;
+import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+
+@RestControllerAdvice(assignableTypes = PronunciationVideoController.class)
+@Slf4j
+class MediaErrorHandler {
+
+	@ExceptionHandler({ PronunciationVideoValidationException.class, MethodArgumentNotValidException.class,
+			ConstraintViolationException.class, HandlerMethodValidationException.class, HttpMessageNotReadableException.class })
+	ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
+		log.debug("Invalid media request", ex);
+		return error(HttpStatus.BAD_REQUEST, "invalid_request", "Invalid pronunciation video request");
+	}
+
+	@ExceptionHandler(PronunciationVideoNotFoundException.class)
+	ResponseEntity<ErrorResponse> handleNotFound(PronunciationVideoNotFoundException ex) {
+		return error(HttpStatus.NOT_FOUND, "not_found", "Pronunciation video asset was not found");
+	}
+
+	@ExceptionHandler(MediaGenerationException.class)
+	ResponseEntity<ErrorResponse> handleProviderFailure(MediaGenerationException ex) {
+		log.warn("Media provider failed", ex);
+		return error(HttpStatus.SERVICE_UNAVAILABLE, ex.getCode(), ex.getMessage());
+	}
+
+	private static ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {
+		return ResponseEntity.status(status).body(new ErrorResponse(code, message));
+	}
+
+}

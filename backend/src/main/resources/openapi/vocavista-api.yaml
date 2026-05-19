@@ -3,6 +3,58 @@ info:
   title: Vocavista API
   version: 0.0.1
 paths:
+  /api/v1/media/pronunciation-videos:
+    post:
+      tags:
+        - Media
+      operationId: createPronunciationVideo
+      summary: Queue or reuse a pronunciation video generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PronunciationVideoRequest'
+      responses:
+        '202':
+          description: Pronunciation video generation was queued or reused.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PronunciationVideoResponse'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/media/pronunciation-videos/{id}:
+    get:
+      tags:
+        - Media
+      operationId: getPronunciationVideo
+      summary: Get pronunciation video generation status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Pronunciation video asset identifier.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pronunciation video generation status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PronunciationVideoResponse'
+        '404':
+          description: Pronunciation video asset was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/words/info:
     get:
       tags:
@@ -45,6 +97,57 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
+    PronunciationVideoRequest:
+      type: object
+      required:
+        - word
+        - phrase
+        - language
+      properties:
+        word:
+          type: string
+          minLength: 1
+          maxLength: 80
+        phrase:
+          type: string
+          minLength: 1
+          maxLength: 240
+        language:
+          type: string
+          enum:
+            - de
+    PronunciationVideoResponse:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PronunciationVideoStatus'
+        videoUrl:
+          type: string
+          format: uri
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        errorCode:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+    PronunciationVideoStatus:
+      type: string
+      enum:
+        - queued
+        - processing
+        - completed
+        - failed
     WordInfoResponse:
       type: object
       required:
