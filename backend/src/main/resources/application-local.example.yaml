@@ -31,6 +31,8 @@ vocavista:
       access-key: rustfsadmin
       secret-key: rustfsadmin
       path-style-access: true
+      # For D-ID local runs with the cloudflared compose service, replace this with:
+      # https://<generated>.trycloudflare.com/vocavista-media
       public-base-url: http://localhost:9000/vocavista-media
 
     elevenlabs:

@@ -38,6 +38,27 @@ Add the first reusable media-generation feature for German word and phrase pronu
 - 2026-05-19: Documented real-provider setup and the requirement that D-ID must be able to fetch the stored audio URL from public/tunneled object storage.
 - 2026-05-19: Changed cache reuse behavior for failed pronunciation-video assets so a repeated create request clears stale failure/media metadata, requeues the same asset, and starts generation again instead of returning the cached failure.
 - 2026-05-19: Changed ElevenLabs generation to use three segment-level TTS calls with separate speeds: slow first isolated word, faster second isolated word, and medium-speed phrase. Bumped the script template version so previously generated fast assets are not reused.
+- 2026-05-19: Added a `cloudflared` Docker Compose service for local D-ID testing, exposing RustFS over a temporary HTTPS tunnel and applying an anonymous object-read policy to the local media bucket.
+- 2026-05-20: Checked D-ID avatar/source-image options. The current Talks provider uses `source_url` and can animate any public `jpg/png`; D-ID's cataloged V3/V4 avatars are available through authenticated presenter/avatar endpoints and use separate IDs from the current Talks config.
+- 2026-05-20: Checked ElevenLabs voice options for grammatical-gender-specific pronunciation videos. The native German Voice Library voices with `free_users_allowed=true` look more suitable than the default premade English-accent multilingual voices. D-ID voices remain a simpler single-provider option, but would require switching from uploaded audio to D-ID text-script TTS and would reduce the current per-segment speed control.
+
+## Voice Candidate Notes
+
+Default ElevenLabs `premade` voices can be used directly by `voice-id`, but most are English-accent voices that only support German through `eleven_multilingual_v2`. Voice Library voices with `free_users_allowed=true` sound like better candidates for German pronunciation; they may need to be added to the workspace before using the `voice_id` in generation.
+
+| Role | Voice ID | Name | Description |
+| --- | --- | --- | --- |
+| Masculine nouns / Adam | `aYjXhF7kZXskZc5G6PV2` | Philipp - Clear German Male | Clear, neutral German male voice with a calm and balanced tone. Suitable for explainers, e-learning, voice assistants; clear articulation and steady pacing. |
+| Masculine fallback / Adam | `KDqku3FJfbImX6HKQdWA` | Daniel - Calm German Storyteller | Warm, trustworthy, calm German male voice with natural storytelling tone; friendly and empathetic. |
+| Masculine younger option / Adam | `8aPaMtDocayOBFDFyWHp` | Markus - Deep German Soul | Calm young German male voice for social media, news, explainers, storytelling, and ads. |
+| Feminine nouns / Alyssa or Amber | `E13qNLHLLuVPKQvesCoy` | Clara - Warm, clear & Calm | Warm lower female voice, calm, clear, confident; natural conversational delivery for e-learning, audiobooks, and documentary-style voiceovers. |
+| Feminine fallback / Alyssa or Amber | `iFSsEDGbm0FiEd2IVH4w` | Mary K. - Clear & Captivating | Clear standard German female voice; friendly, engaging, and suitable for narratives, e-learning, podcasts, and broadcasts. |
+| Feminine conversational / Alyssa or Amber | `wUrj2qIfmBZAz9x7k6yN` | Rebecca Green - Conversational and Clear | Calm, pleasant German female voice with clear articulation; good for voice agents and educational narration. |
+| Neuter nouns | `pzRegoXBZ4b8y5gN3hCp` | Lukas Brandt - Corporate Narration | Neutral, professional German voice for e-learning and instructional content; clear, steady, deliberately non-performative delivery. |
+| Neuter fallback | `TUKJhQmz3RPYBNAgC5A1` | German Narration - Helmut Clark | Clear and natural German narration voice; calm, neutral, trustworthy, with steady pacing and professional tone. |
+| Non-nouns / general narrator | `r8MyP4qUsq5WFFSkPdfV` | Johannes - Clear and Neutral | Middle-aged German male voice with clear pronunciation and neutral intonation; suitable for narration. |
+| Truly gender-neutral, but stylized | `Ewvy14akxdhONg4fmNry` | Finnegan - Children's Story Actress | German gender-neutral voice for children and teen stories with a touch of huskiness; more character-like than pronunciation-neutral. |
+| Premade neutral fallback | `SAz9YHcvj6GT2YYXdXww` | River - Relaxed, Neutral, Informative | Default premade neutral voice for narrations/conversation; not explicitly verified for `de-DE` in the catalog, so pronunciation quality should be tested before use. |
 
 ## Verification
 
@@ -50,6 +71,7 @@ Add the first reusable media-generation feature for German word and phrase pronu
 - 2026-05-19: `./mvnw test` passed after adding ElevenLabs and D-ID provider integrations; 28 tests passed.
 - 2026-05-19: `./mvnw test` passed after adding failed-asset retry behavior; 29 tests passed.
 - 2026-05-19: `./mvnw test` passed after adding segment-level pronunciation speeds; 29 tests passed.
+- 2026-05-19: `docker compose config` passed after adding the RustFS tunnel service.
 
 ## Links
 

@@ -29,7 +29,7 @@ vocavista:
     storage-mode: ${VOCAVISTA_MEDIA_STORAGE_MODE:fake}
     tts-provider: ${VOCAVISTA_TTS_PROVIDER:fake}
     lipsync-provider: ${VOCAVISTA_LIPSYNC_PROVIDER:fake}
-    script-template-version: ${VOCAVISTA_PRONUNCIATION_SCRIPT_TEMPLATE_VERSION:v4}
+    script-template-version: ${VOCAVISTA_PRONUNCIATION_SCRIPT_TEMPLATE_VERSION:v5}
     voice-config: ${VOCAVISTA_TTS_VOICE_CONFIG:default-clear-german}
     avatar-config: ${VOCAVISTA_LIPSYNC_AVATAR_CONFIG:default-talking-head}
     pronunciation-video-command:
@@ -58,7 +58,7 @@ vocavista:
       similarity-boost: ${VOCAVISTA_ELEVENLABS_SIMILARITY_BOOST:0.75}
       style: ${VOCAVISTA_ELEVENLABS_STYLE:0.0}
       first-word-speed: ${VOCAVISTA_ELEVENLABS_FIRST_WORD_SPEED:0.72}
-      second-word-speed: ${VOCAVISTA_ELEVENLABS_SECOND_WORD_SPEED:1.0}
+      second-word-speed: ${VOCAVISTA_ELEVENLABS_SECOND_WORD_SPEED:0.9}
       phrase-speed: ${VOCAVISTA_ELEVENLABS_PHRASE_SPEED:0.86}
       use-speaker-boost: ${VOCAVISTA_ELEVENLABS_USE_SPEAKER_BOOST:true}
     did:

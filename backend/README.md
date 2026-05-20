@@ -49,6 +49,21 @@ Bucket: vocavista-media
 
 The `rustfs-create-bucket` compose service creates the `vocavista-media` bucket if it does not already exist.
 
+For local D-ID runs, expose RustFS through a temporary Cloudflare Tunnel:
+
+```bash
+docker compose up -d rustfs rustfs-create-bucket rustfs-tunnel
+docker compose logs rustfs-tunnel
+```
+
+Copy the generated `https://...trycloudflare.com` URL from the logs and use it as the public media base URL with the bucket name appended:
+
+```bash
+export VOCAVISTA_S3_PUBLIC_BASE_URL=https://your-tunnel.trycloudflare.com/vocavista-media
+```
+
+The local bucket is configured for anonymous object reads by `rustfs-create-bucket` so D-ID can fetch generated audio through the tunnel.
+
 Media storage configuration defaults for local development:
 
 ```bash
