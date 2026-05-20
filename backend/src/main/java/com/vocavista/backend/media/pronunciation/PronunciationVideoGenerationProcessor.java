@@ -30,6 +30,9 @@ class PronunciationVideoGenerationProcessor {
 	@Value("${vocavista.media.avatar-config:default-talking-head}")
 	private String avatarConfig = "default-talking-head";
 
+	@Value("${vocavista.media.render-mode:talking-head}")
+	private String renderMode = "talking-head";
+
 	@Async
 	@Transactional
 	public void process(UUID id) {
@@ -46,18 +49,24 @@ class PronunciationVideoGenerationProcessor {
 					+ extensionFor(audio.contentType());
 			mediaStorageService.store(audioObjectKey, audio.contentType(), audio.bytes());
 
-			GeneratedVideo video = lipSyncVideoProvider.generate(script, audio,
-					mediaStorageService.playableUrl(audioObjectKey).url());
-			String videoObjectKey = "pronunciation-videos/" + asset.getId() + "/video."
-					+ extensionFor(video.contentType());
-			mediaStorageService.store(videoObjectKey, video.contentType(), video.bytes());
-
 			asset.setAudioObjectKey(audioObjectKey);
-			asset.setVideoObjectKey(videoObjectKey);
 			asset.setAudioProvider(textToSpeechProvider.providerName());
 			asset.setAudioModel(textToSpeechProvider.modelName());
-			asset.setVideoProvider(lipSyncVideoProvider.providerName());
-			asset.setVideoModel(lipSyncVideoProvider.modelName());
+			if (isVideoRenderMode()) {
+				GeneratedVideo video = lipSyncVideoProvider.generate(script, audio,
+						mediaStorageService.playableUrl(audioObjectKey).url());
+				String videoObjectKey = "pronunciation-videos/" + asset.getId() + "/video."
+						+ extensionFor(video.contentType());
+				mediaStorageService.store(videoObjectKey, video.contentType(), video.bytes());
+				asset.setVideoObjectKey(videoObjectKey);
+				asset.setVideoProvider(lipSyncVideoProvider.providerName());
+				asset.setVideoModel(lipSyncVideoProvider.modelName());
+			}
+			else {
+				asset.setVideoObjectKey(null);
+				asset.setVideoProvider("talkinghead-js");
+				asset.setVideoModel("browser-audio-driven-viseme-v1");
+			}
 			asset.setStatus(PronunciationVideoAssetStatus.COMPLETED);
 			asset.setUpdatedAt(OffsetDateTime.now(clock));
 			asset.setCompletedAt(asset.getUpdatedAt());
@@ -66,8 +75,12 @@ class PronunciationVideoGenerationProcessor {
 			markFailed(asset, ex.getCode(), ex.getMessage(), ex);
 		}
 		catch (RuntimeException ex) {
-			markFailed(asset, "generation_error", "Could not generate pronunciation video", ex);
+			markFailed(asset, "generation_error", "Could not generate pronunciation media", ex);
 		}
+	}
+
+	private boolean isVideoRenderMode() {
+		return "video".equalsIgnoreCase(renderMode);
 	}
 
 	private void markFailed(PronunciationVideoAsset asset, String code, String message, RuntimeException ex) {

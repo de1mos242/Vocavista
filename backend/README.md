@@ -75,17 +75,21 @@ export VOCAVISTA_S3_SECRET_KEY=rustfsadmin
 export VOCAVISTA_S3_PATH_STYLE_ACCESS=true
 ```
 
-Optional real AI provider testing should be explicitly enabled through environment variables. Keep `VOCAVISTA_MEDIA_PROVIDER_MODE=fake` for normal automated tests. ElevenLabs text-to-speech and D-ID talking-head video are implemented for real local runs:
+Local runtime defaults use real ElevenLabs TTS, local RustFS storage, and browser-side TalkingHead rendering. Provide the ElevenLabs key through the environment before starting the app:
 
 ```bash
-export VOCAVISTA_MEDIA_PROVIDER_MODE=real
-export VOCAVISTA_TTS_PROVIDER=elevenlabs
-export VOCAVISTA_LIPSYNC_PROVIDER=did
 export VOCAVISTA_ELEVENLABS_API_KEY=...
 export VOCAVISTA_ELEVENLABS_VOICE_ID=JBFqnCBsd6RMkjVDRZzb
 export VOCAVISTA_ELEVENLABS_FIRST_WORD_SPEED=0.72
 export VOCAVISTA_ELEVENLABS_SECOND_WORD_SPEED=1.0
 export VOCAVISTA_ELEVENLABS_PHRASE_SPEED=0.86
+```
+
+The default `talking-head` render mode stores only the generated audio and returns `audioUrl`; the browser preview animates a TalkingHead avatar locally without paying for D-ID video generation. Automated tests override the runtime defaults back to fake providers from `src/test/resources/application.yaml` so they do not call external services. To explicitly generate a D-ID MP4 instead, opt into video rendering:
+
+```bash
+export VOCAVISTA_MEDIA_RENDER_MODE=video
+export VOCAVISTA_LIPSYNC_PROVIDER=did
 export VOCAVISTA_DID_API_KEY=
 export VOCAVISTA_DID_SOURCE_URL=https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.png
 ```
@@ -94,11 +98,21 @@ export VOCAVISTA_DID_SOURCE_URL=https://create-images-results.d-id.com/DefaultPr
 
 D-ID must be able to fetch the generated audio URL. `localhost` RustFS URLs are not reachable from D-ID cloud, so real D-ID runs need a public S3-compatible bucket, a tunnel to local RustFS, or another public object URL configured through `VOCAVISTA_S3_PUBLIC_BASE_URL`.
 
+Run the browser TalkingHead preview after starting the app:
+
+```text
+http://localhost:8080/talking-head.html
+```
+
+The page loads TalkingHead/HeadAudio modules from public CDNs, calls `POST /api/v1/media/pronunciation-videos`, polls the returned id, and plays the completed `audioUrl` through a browser-rendered avatar. In `talking-head` mode, `audioUrl` is served back through the backend as `/api/v1/media/pronunciation-videos/{id}/audio` so browser WebAudio decoding does not depend on RustFS CORS settings.
+
 `backend/.env.example` lists the supported local storage and provider variables without real secret values. Real-provider tests should remain opt-in and skip automatically unless the required mode and credentials are present.
 
 Run the application:
 
 ```bash
+docker compose up -d postgres rustfs rustfs-create-bucket
+export VOCAVISTA_ELEVENLABS_API_KEY=...
 ./mvnw spring-boot:run
 ```
 

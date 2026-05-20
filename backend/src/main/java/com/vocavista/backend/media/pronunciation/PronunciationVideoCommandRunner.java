@@ -81,6 +81,12 @@ class PronunciationVideoCommandRunner implements CommandLineRunner {
 		if (response.getVideoUrl() != null) {
 			out.println("videoUrl=" + response.getVideoUrl());
 		}
+		if (response.getAudioUrl() != null) {
+			out.println("audioUrl=" + response.getAudioUrl());
+		}
+		if (response.getRenderMode() != null) {
+			out.println("renderMode=" + response.getRenderMode());
+		}
 		if (response.getExpiresAt() != null) {
 			out.println("expiresAt=" + response.getExpiresAt());
 		}

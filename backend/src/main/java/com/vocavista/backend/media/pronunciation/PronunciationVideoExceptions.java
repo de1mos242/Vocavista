@@ -14,6 +14,10 @@ class PronunciationVideoNotFoundException extends RuntimeException {
 		super(message);
 	}
 
+	PronunciationVideoNotFoundException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
 }
 
 class MediaGenerationException extends RuntimeException {

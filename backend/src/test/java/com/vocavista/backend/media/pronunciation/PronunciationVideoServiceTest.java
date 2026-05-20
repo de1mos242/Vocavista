@@ -59,7 +59,10 @@ class PronunciationVideoServiceTest {
 
 		assertThat(response.getId()).isEqualTo(existingAsset.getId());
 		assertThat(response.getStatus()).isEqualTo(PronunciationVideoStatus.COMPLETED);
+		assertThat(response.getAudioUrl())
+				.hasToString("/api/v1/media/pronunciation-videos/" + existingAsset.getId() + "/audio");
 		assertThat(response.getVideoUrl()).hasToString("https://media.fake.local/" + existingAsset.getVideoObjectKey());
+		assertThat(response.getRenderMode()).isEqualTo("talking-head");
 		verify(pronunciationVideoRepository, never()).save(any());
 		verify(generationProcessor, never()).process(any());
 	}
@@ -110,6 +113,7 @@ class PronunciationVideoServiceTest {
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
 		asset.setId(UUID.randomUUID());
 		asset.setStatus(PronunciationVideoAssetStatus.COMPLETED);
+		asset.setAudioObjectKey("pronunciation-videos/%s/audio.txt".formatted(asset.getId()));
 		asset.setVideoObjectKey("pronunciation-videos/%s/video.txt".formatted(asset.getId()));
 		asset.setCompletedAt(OffsetDateTime.now());
 		return asset;

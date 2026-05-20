@@ -11,16 +11,16 @@ Add the first reusable media-generation feature for German word and phrase pronu
 - Normalize and validate `word`, `phrase`, and `language` inputs.
 - Generate a stable cache hash for reusable assets.
 - Add provider interfaces for text-to-speech, lip-sync video, and media storage.
-- Provide deterministic fake providers for automated tests and local development.
-- Add S3-compatible storage wiring for local RustFS when explicitly enabled.
+- Provide deterministic fake providers for automated tests.
+- Add S3-compatible storage wiring for local RustFS.
 
 ## Decisions
 
 - V1 accepts only German (`de`) while still exposing `language` in the API.
 - V1 limits `word` to 80 characters and `phrase` to 240 characters.
-- Fake media providers are the default so tests do not call external services.
-- S3-compatible storage is opt-in through configuration; fake storage remains default for tests.
-- Real AI provider integrations remain behind interfaces and explicit configuration.
+- Local runtime defaults use real ElevenLabs TTS, local RustFS storage, and browser-side TalkingHead rendering.
+- Fake media providers and fake storage remain the test defaults through `src/test/resources/application.yaml` so tests do not call external services.
+- D-ID MP4 generation remains opt-in through `VOCAVISTA_MEDIA_RENDER_MODE=video` and D-ID provider configuration.
 
 ## Progress
 
@@ -41,6 +41,9 @@ Add the first reusable media-generation feature for German word and phrase pronu
 - 2026-05-19: Added a `cloudflared` Docker Compose service for local D-ID testing, exposing RustFS over a temporary HTTPS tunnel and applying an anonymous object-read policy to the local media bucket.
 - 2026-05-20: Checked D-ID avatar/source-image options. The current Talks provider uses `source_url` and can animate any public `jpg/png`; D-ID's cataloged V3/V4 avatars are available through authenticated presenter/avatar endpoints and use separate IDs from the current Talks config.
 - 2026-05-20: Checked ElevenLabs voice options for grammatical-gender-specific pronunciation videos. The native German Voice Library voices with `free_users_allowed=true` look more suitable than the default premade English-accent multilingual voices. D-ID voices remain a simpler single-provider option, but would require switching from uploaded audio to D-ID text-script TTS and would reduce the current per-segment speed control.
+- 2026-05-20: Switched the default pronunciation media rendering approach from generated MP4 video to browser-side TalkingHead rendering. The backend now stores generated TTS audio, returns `audioUrl`, and skips D-ID unless `VOCAVISTA_MEDIA_RENDER_MODE=video` is explicitly set. Added `/talking-head.html` as a minimal Spring-served preview page that loads TalkingHead/HeadAudio from CDNs and animates a browser avatar from the generated audio.
+- 2026-05-20: Changed local runtime defaults to real ElevenLabs TTS plus local RustFS storage, keeping only `VOCAVISTA_ELEVENLABS_API_KEY` required from the environment for a normal local TalkingHead preview run. Added test-resource overrides so automated tests continue using fake providers/storage.
+- 2026-05-20: Fixed browser TalkingHead playback for RustFS-backed audio by returning a same-origin backend audio URL in `talking-head` mode and adding `GET /api/v1/media/pronunciation-videos/{id}/audio` to stream generated audio from storage. This avoids WebAudio `fetch` failures caused by `localhost:8080` to `localhost:9000` CORS differences.
 
 ## Voice Candidate Notes
 
@@ -72,6 +75,8 @@ Default ElevenLabs `premade` voices can be used directly by `voice-id`, but most
 - 2026-05-19: `./mvnw test` passed after adding failed-asset retry behavior; 29 tests passed.
 - 2026-05-19: `./mvnw test` passed after adding segment-level pronunciation speeds; 29 tests passed.
 - 2026-05-19: `docker compose config` passed after adding the RustFS tunnel service.
+- 2026-05-20: `./mvnw clean test -Dtest=PronunciationVideoGenerationProcessorTest,PronunciationVideoServiceTest,PronunciationVideoControllerTest,PronunciationVideoCommandRunnerTest` passed after changing runtime defaults; 11 focused tests passed. `./mvnw -DskipTests package` passed.
+- 2026-05-20: `./mvnw clean test -Dtest=PronunciationVideoGenerationProcessorTest,PronunciationVideoServiceTest,PronunciationVideoControllerTest,PronunciationVideoCommandRunnerTest` passed after adding same-origin audio streaming; 12 focused tests passed. `./mvnw -DskipTests package` passed.
 
 ## Links
 

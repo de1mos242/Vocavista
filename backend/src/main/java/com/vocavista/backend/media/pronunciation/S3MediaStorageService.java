@@ -15,6 +15,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Component
@@ -60,6 +61,20 @@ class S3MediaStorageService implements MediaStorageService {
 		}
 		catch (RuntimeException ex) {
 			throw new MediaGenerationException("storage_error", "Could not store generated media", ex);
+		}
+	}
+
+	@Override
+	public StoredMedia read(String objectKey) {
+		try {
+			var responseBytes = s3Client.getObjectAsBytes(GetObjectRequest.builder()
+					.bucket(bucket)
+					.key(objectKey)
+					.build());
+			return new StoredMedia(responseBytes.response().contentType(), responseBytes.asByteArray());
+		}
+		catch (RuntimeException ex) {
+			throw new PronunciationVideoNotFoundException("Generated media object was not found", ex);
 		}
 	}
 

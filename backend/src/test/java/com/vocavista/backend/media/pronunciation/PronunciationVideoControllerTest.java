@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,7 +58,9 @@ class PronunciationVideoControllerTest {
 	void returnsCompletedPronunciationVideoStatus() throws Exception {
 		UUID id = UUID.randomUUID();
 		PronunciationVideoResponse response = new PronunciationVideoResponse(id, PronunciationVideoStatus.COMPLETED)
+				.audioUrl(URI.create("https://media.fake.local/pronunciation-videos/%s/audio.txt".formatted(id)))
 				.videoUrl(URI.create("https://media.fake.local/pronunciation-videos/%s/video.txt".formatted(id)))
+				.renderMode("talking-head")
 				.expiresAt(OffsetDateTime.parse("2026-05-15T12:00:00Z"));
 		when(pronunciationVideoService.get(id)).thenReturn(response);
 
@@ -65,8 +68,21 @@ class PronunciationVideoControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(id.toString()))
 				.andExpect(jsonPath("$.status").value("completed"))
+				.andExpect(jsonPath("$.audioUrl").exists())
 				.andExpect(jsonPath("$.videoUrl").exists())
+				.andExpect(jsonPath("$.renderMode").value("talking-head"))
 				.andExpect(jsonPath("$.expiresAt").exists());
+	}
+
+	@Test
+	void returnsGeneratedAudioBytes() throws Exception {
+		UUID id = UUID.randomUUID();
+		when(pronunciationVideoService.getAudio(id)).thenReturn(new StoredMedia("audio/mpeg", "audio".getBytes()));
+
+		mockMvc.perform(get("/api/v1/media/pronunciation-videos/{id}/audio", id))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType("audio/mpeg"))
+				.andExpect(content().bytes("audio".getBytes()));
 	}
 
 	@Test

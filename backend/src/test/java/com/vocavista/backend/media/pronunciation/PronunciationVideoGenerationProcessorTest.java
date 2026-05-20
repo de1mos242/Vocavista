@@ -17,7 +17,7 @@ class PronunciationVideoGenerationProcessorTest {
 	private PronunciationVideoRepository pronunciationVideoRepository;
 
 	@Test
-	void completesGenerationWithFakeProvidersAndStorage() {
+	void completesGenerationWithAudioOnlyTalkingHeadRenderModeByDefault() {
 		PronunciationVideoAsset asset = queuedAsset();
 		when(pronunciationVideoRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
 		PronunciationVideoGenerationProcessor processor = new PronunciationVideoGenerationProcessor(pronunciationVideoRepository,
@@ -27,9 +27,10 @@ class PronunciationVideoGenerationProcessorTest {
 
 		assertThat(asset.getStatus()).isEqualTo(PronunciationVideoAssetStatus.COMPLETED);
 		assertThat(asset.getAudioObjectKey()).endsWith("/audio.txt");
-		assertThat(asset.getVideoObjectKey()).endsWith("/video.txt");
+		assertThat(asset.getVideoObjectKey()).isNull();
 		assertThat(asset.getAudioProvider()).isEqualTo("fake");
-		assertThat(asset.getVideoProvider()).isEqualTo("fake");
+		assertThat(asset.getVideoProvider()).isEqualTo("talkinghead-js");
+		assertThat(asset.getVideoModel()).isEqualTo("browser-audio-driven-viseme-v1");
 		assertThat(asset.getCompletedAt()).isNotNull();
 	}
 

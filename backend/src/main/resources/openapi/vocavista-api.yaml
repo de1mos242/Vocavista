@@ -131,6 +131,13 @@ components:
           type: string
           format: uri
           nullable: true
+        audioUrl:
+          type: string
+          format: uri
+          nullable: true
+        renderMode:
+          type: string
+          nullable: true
         expiresAt:
           type: string
           format: date-time

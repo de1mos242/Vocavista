@@ -1,23 +1,18 @@
 # Copy this file to application-local.yaml and edit local-only values.
 # application-local.yaml is intentionally gitignored and loaded by the local Spring profile.
 
-spring:
-  main:
-    web-application-type: none
-
 vocavista:
   media:
-    # Fake providers are deterministic and do not call external AI services.
-    # Use real with tts-provider=elevenlabs and lipsync-provider=did for real media generation.
-    provider-mode: fake
+    # Real ElevenLabs TTS, local RustFS storage, and browser TalkingHead rendering are the defaults.
+    # Keep the API key in VOCAVISTA_ELEVENLABS_API_KEY or in this gitignored local override.
+    provider-mode: real
     tts-provider: elevenlabs
-    lipsync-provider: did
-
-    # Use fake storage for no infrastructure, or s3 to store generated files in local RustFS.
-    storage-mode: fake
+    lipsync-provider: fake
+    render-mode: talking-head
+    storage-mode: s3
 
     pronunciation-video-command:
-      enabled: true
+      enabled: false
       word: Hausaufgabe
       phrase: Ich mache meine Hausaufgabe nach dem Abendessen.
       language: de

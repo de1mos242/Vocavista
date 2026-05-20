@@ -25,10 +25,11 @@ spring:
 
 vocavista:
   media:
-    provider-mode: ${VOCAVISTA_MEDIA_PROVIDER_MODE:fake}
-    storage-mode: ${VOCAVISTA_MEDIA_STORAGE_MODE:fake}
-    tts-provider: ${VOCAVISTA_TTS_PROVIDER:fake}
+    provider-mode: ${VOCAVISTA_MEDIA_PROVIDER_MODE:real}
+    storage-mode: ${VOCAVISTA_MEDIA_STORAGE_MODE:s3}
+    tts-provider: ${VOCAVISTA_TTS_PROVIDER:elevenlabs}
     lipsync-provider: ${VOCAVISTA_LIPSYNC_PROVIDER:fake}
+    render-mode: ${VOCAVISTA_MEDIA_RENDER_MODE:talking-head}
     script-template-version: ${VOCAVISTA_PRONUNCIATION_SCRIPT_TEMPLATE_VERSION:v5}
     voice-config: ${VOCAVISTA_TTS_VOICE_CONFIG:default-clear-german}
     avatar-config: ${VOCAVISTA_LIPSYNC_AVATAR_CONFIG:default-talking-head}
