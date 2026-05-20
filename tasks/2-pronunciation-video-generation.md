@@ -44,6 +44,7 @@ Add the first reusable media-generation feature for German word and phrase pronu
 - 2026-05-20: Switched the default pronunciation media rendering approach from generated MP4 video to browser-side TalkingHead rendering. The backend now stores generated TTS audio, returns `audioUrl`, and skips D-ID unless `VOCAVISTA_MEDIA_RENDER_MODE=video` is explicitly set. Added `/talking-head.html` as a minimal Spring-served preview page that loads TalkingHead/HeadAudio from CDNs and animates a browser avatar from the generated audio.
 - 2026-05-20: Changed local runtime defaults to real ElevenLabs TTS plus local RustFS storage, keeping only `VOCAVISTA_ELEVENLABS_API_KEY` required from the environment for a normal local TalkingHead preview run. Added test-resource overrides so automated tests continue using fake providers/storage.
 - 2026-05-20: Fixed browser TalkingHead playback for RustFS-backed audio by returning a same-origin backend audio URL in `talking-head` mode and adding `GET /api/v1/media/pronunciation-videos/{id}/audio` to stream generated audio from storage. This avoids WebAudio `fetch` failures caused by `localhost:8080` to `localhost:9000` CORS differences.
+- 2026-05-20: Added a preview avatar selector using the current TalkingHead `main` avatar assets (`brunette`, `brunette-t`, `avatarsdk`, `avaturn`, `mpfb`, `vroid`) instead of only the older release-bundled `brunette.glb` asset. Kept the TalkingHead JS module pinned while using newer avatar GLBs.
 
 ## Voice Candidate Notes
 
@@ -77,6 +78,7 @@ Default ElevenLabs `premade` voices can be used directly by `voice-id`, but most
 - 2026-05-19: `docker compose config` passed after adding the RustFS tunnel service.
 - 2026-05-20: `./mvnw clean test -Dtest=PronunciationVideoGenerationProcessorTest,PronunciationVideoServiceTest,PronunciationVideoControllerTest,PronunciationVideoCommandRunnerTest` passed after changing runtime defaults; 11 focused tests passed. `./mvnw -DskipTests package` passed.
 - 2026-05-20: `./mvnw clean test -Dtest=PronunciationVideoGenerationProcessorTest,PronunciationVideoServiceTest,PronunciationVideoControllerTest,PronunciationVideoCommandRunnerTest` passed after adding same-origin audio streaming; 12 focused tests passed. `./mvnw -DskipTests package` passed.
+- 2026-05-20: `./mvnw -DskipTests package` passed after adding the preview avatar selector.
 
 ## Links
 

@@ -52,7 +52,8 @@ vocavista:
     elevenlabs:
       base-url: ${VOCAVISTA_ELEVENLABS_BASE_URL:https://api.elevenlabs.io}
       api-key: ${VOCAVISTA_ELEVENLABS_API_KEY:__missing__}
-      voice-id: ${VOCAVISTA_ELEVENLABS_VOICE_ID:JBFqnCBsd6RMkjVDRZzb}
+      voice-id: ${VOCAVISTA_ELEVENLABS_VOICE_ID:FGY2WhTYpPnrIDTdsKH5}
+#      voice-id: ${VOCAVISTA_ELEVENLABS_VOICE_ID:JBFqnCBsd6RMkjVDRZzb}
       model-id: ${VOCAVISTA_ELEVENLABS_MODEL_ID:eleven_multilingual_v2}
       output-format: ${VOCAVISTA_ELEVENLABS_OUTPUT_FORMAT:mp3_44100_128}
       stability: ${VOCAVISTA_ELEVENLABS_STABILITY:0.5}
