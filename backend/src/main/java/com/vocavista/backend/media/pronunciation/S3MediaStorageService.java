@@ -3,7 +3,6 @@ package com.vocavista.backend.media.pronunciation;
 import java.net.URI;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -17,7 +16,6 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Component
-@ConditionalOnProperty(prefix = "vocavista.media", name = "storage-mode", havingValue = "s3")
 class S3MediaStorageService implements MediaStorageService {
 
 	private final S3Client s3Client;
@@ -25,11 +23,11 @@ class S3MediaStorageService implements MediaStorageService {
 
 	@Autowired
 	S3MediaStorageService(
-			@Value("${vocavista.media.s3.endpoint}") String endpoint,
-			@Value("${vocavista.media.s3.region}") String region,
-			@Value("${vocavista.media.s3.bucket}") String bucket,
-			@Value("${vocavista.media.s3.access-key}") String accessKey,
-			@Value("${vocavista.media.s3.secret-key}") String secretKey,
+			@Value("${vocavista.media.s3.endpoint:http://localhost:9000}") String endpoint,
+			@Value("${vocavista.media.s3.region:us-east-1}") String region,
+			@Value("${vocavista.media.s3.bucket:vocavista-media}") String bucket,
+			@Value("${vocavista.media.s3.access-key:rustfsadmin}") String accessKey,
+			@Value("${vocavista.media.s3.secret-key:rustfsadmin}") String secretKey,
 			@Value("${vocavista.media.s3.path-style-access:true}") boolean pathStyleAccess) {
 		this(bucket, buildClient(endpoint, region, accessKey, secretKey, pathStyleAccess));
 	}
@@ -63,7 +61,7 @@ class S3MediaStorageService implements MediaStorageService {
 			return new StoredMedia(responseBytes.response().contentType(), responseBytes.asByteArray());
 		}
 		catch (RuntimeException ex) {
-			throw new PronunciationVideoNotFoundException("Generated media object was not found", ex);
+			throw new PronunciationNotFoundException("Generated media object was not found", ex);
 		}
 	}
 

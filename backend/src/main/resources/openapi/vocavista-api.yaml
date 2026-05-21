@@ -3,42 +3,42 @@ info:
   title: Vocavista API
   version: 0.0.1
 paths:
-  /api/v1/media/pronunciation-videos:
+  /api/v1/media/pronunciations:
     post:
       tags:
         - Media
-      operationId: createPronunciationVideo
+      operationId: createPronunciation
       summary: Queue or reuse pronunciation audio generation for TalkingHead playback
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PronunciationVideoRequest'
+              $ref: '#/components/schemas/PronunciationRequest'
       responses:
         '202':
           description: Pronunciation audio generation was queued or reused.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PronunciationVideoResponse'
+                $ref: '#/components/schemas/PronunciationResponse'
         '400':
           description: Invalid request.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/media/pronunciation-videos/{id}:
+  /api/v1/media/pronunciations/{id}:
     get:
       tags:
         - Media
-      operationId: getPronunciationVideo
+      operationId: getPronunciation
       summary: Get pronunciation audio generation status
       parameters:
         - name: id
           in: path
           required: true
-          description: Pronunciation video asset identifier.
+          description: Pronunciation asset identifier.
           schema:
             type: string
             format: uuid
@@ -48,9 +48,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PronunciationVideoResponse'
+                $ref: '#/components/schemas/PronunciationResponse'
         '404':
-          description: Pronunciation video asset was not found.
+          description: Pronunciation asset was not found.
           content:
             application/json:
               schema:
@@ -97,7 +97,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
-    PronunciationVideoRequest:
+    PronunciationRequest:
       type: object
       required:
         - word
@@ -116,7 +116,7 @@ components:
           type: string
           enum:
             - de
-    PronunciationVideoResponse:
+    PronunciationResponse:
       type: object
       required:
         - id
@@ -126,7 +126,7 @@ components:
           type: string
           format: uuid
         status:
-          $ref: '#/components/schemas/PronunciationVideoStatus'
+          $ref: '#/components/schemas/PronunciationStatus'
         audioUrl:
           type: string
           format: uri
@@ -140,7 +140,7 @@ components:
         errorMessage:
           type: string
           nullable: true
-    PronunciationVideoStatus:
+    PronunciationStatus:
       type: string
       enum:
         - queued

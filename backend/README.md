@@ -14,7 +14,6 @@ Spring Boot 4 backend service for Vocavista.
 - Bean Validation.
 - Actuator health/info endpoints.
 - Testcontainers for PostgreSQL-backed integration tests.
-- GraalVM Native Build Tools for native image builds.
 
 ## Local Development
 
@@ -70,7 +69,7 @@ export VOCAVISTA_ELEVENLABS_SECOND_WORD_SPEED=1.0
 export VOCAVISTA_ELEVENLABS_PHRASE_SPEED=0.86
 ```
 
-The backend stores generated audio and returns `audioUrl`; the browser preview animates a TalkingHead avatar locally. Automated tests override the runtime defaults back to fake providers from `src/test/resources/application.yaml` so they do not call external services.
+The backend stores generated audio and returns `audioUrl`; the browser preview animates a TalkingHead avatar locally. Automated tests mock provider and storage boundaries where they exercise generation behavior, so they do not call external services.
 
 Run the browser TalkingHead preview after starting the app:
 
@@ -78,7 +77,7 @@ Run the browser TalkingHead preview after starting the app:
 http://localhost:8080/talking-head.html
 ```
 
-The page loads TalkingHead/HeadAudio modules from public CDNs, calls `POST /api/v1/media/pronunciation-videos`, polls the returned id, and plays the completed `audioUrl` through a browser-rendered avatar. In `talking-head` mode, `audioUrl` is served back through the backend as `/api/v1/media/pronunciation-videos/{id}/audio` so browser WebAudio decoding does not depend on RustFS CORS settings.
+The page loads TalkingHead/HeadAudio modules from public CDNs, calls `POST /api/v1/media/pronunciations`, polls the returned id, and plays the completed `audioUrl` through a browser-rendered avatar. The `audioUrl` is served back through the backend as `/api/v1/media/pronunciations/{id}/audio` so browser WebAudio decoding does not depend on RustFS CORS settings.
 
 `backend/.env.example` lists the supported local storage and provider variables without real secret values. Real-provider tests should remain opt-in and skip automatically unless the required mode and credentials are present.
 
@@ -90,16 +89,7 @@ export VOCAVISTA_ELEVENLABS_API_KEY=...
 ./mvnw spring-boot:run
 ```
 
-Run one pronunciation media generation from the command line without starting the web server:
-
-```bash
-./mvnw spring-boot:run \
-  -Dspring-boot.run.arguments="--spring.main.web-application-type=none --vocavista.media.pronunciation-video-command.enabled=true --vocavista.media.pronunciation-video-command.word=Hausaufgabe --vocavista.media.pronunciation-video-command.phrase=Ich mache meine Hausaufgabe nach dem Abendessen. --vocavista.media.pronunciation-video-command.language=de"
-```
-
-The command uses the same provider and storage configuration as the API, waits for completion or failure, prints the asset id/status and playable URL when available, then exits.
-
-For repeated local runs, copy the example local config and edit the word, phrase, provider, and storage settings there:
+For local overrides, copy the example local config and edit provider and storage settings there:
 
 ```bash
 cp src/main/resources/application-local.example.yaml src/main/resources/application-local.yaml
@@ -118,12 +108,6 @@ Build a JVM artifact:
 
 ```bash
 ./mvnw package
-```
-
-Native image support is configured for the future, but it is not required for normal local development yet. Normal development uses Corretto JDK 25. Switch to GraalVM 25 or newer before building a native image:
-
-```bash
-./mvnw -Pnative native:compile
 ```
 
 ## Health Check

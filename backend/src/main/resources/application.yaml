@@ -25,18 +25,8 @@ spring:
 
 vocavista:
   media:
-    provider-mode: ${VOCAVISTA_MEDIA_PROVIDER_MODE:real}
-    storage-mode: ${VOCAVISTA_MEDIA_STORAGE_MODE:s3}
-    tts-provider: ${VOCAVISTA_TTS_PROVIDER:elevenlabs}
     script-template-version: ${VOCAVISTA_PRONUNCIATION_SCRIPT_TEMPLATE_VERSION:v5}
     voice-config: ${VOCAVISTA_TTS_VOICE_CONFIG:default-clear-german}
-    pronunciation-video-command:
-      enabled: false
-      word: ${VOCAVISTA_PRONUNCIATION_VIDEO_WORD:}
-      phrase: ${VOCAVISTA_PRONUNCIATION_VIDEO_PHRASE:}
-      language: ${VOCAVISTA_PRONUNCIATION_VIDEO_LANGUAGE:de}
-      timeout-seconds: ${VOCAVISTA_PRONUNCIATION_VIDEO_TIMEOUT_SECONDS:120}
-      poll-interval-millis: ${VOCAVISTA_PRONUNCIATION_VIDEO_POLL_INTERVAL_MILLIS:500}
     s3:
       endpoint: ${VOCAVISTA_S3_ENDPOINT:http://localhost:9000}
       region: ${VOCAVISTA_S3_REGION:us-east-1}
@@ -48,7 +38,6 @@ vocavista:
       base-url: ${VOCAVISTA_ELEVENLABS_BASE_URL:https://api.elevenlabs.io}
       api-key: ${VOCAVISTA_ELEVENLABS_API_KEY:__missing__}
       voice-id: ${VOCAVISTA_ELEVENLABS_VOICE_ID:FGY2WhTYpPnrIDTdsKH5}
-#      voice-id: ${VOCAVISTA_ELEVENLABS_VOICE_ID:JBFqnCBsd6RMkjVDRZzb}
       model-id: ${VOCAVISTA_ELEVENLABS_MODEL_ID:eleven_multilingual_v2}
       output-format: ${VOCAVISTA_ELEVENLABS_OUTPUT_FORMAT:mp3_44100_128}
       stability: ${VOCAVISTA_ELEVENLABS_STABILITY:0.5}

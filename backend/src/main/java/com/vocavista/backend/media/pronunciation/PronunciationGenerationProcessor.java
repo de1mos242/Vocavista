@@ -13,9 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-class PronunciationVideoGenerationProcessor {
+class PronunciationGenerationProcessor {
 
-	private final PronunciationVideoRepository pronunciationVideoRepository;
+	private final PronunciationRepository pronunciationRepository;
 	private final TextToSpeechProvider textToSpeechProvider;
 	private final MediaStorageService mediaStorageService;
 	private final Clock clock = Clock.systemUTC();
@@ -29,23 +29,23 @@ class PronunciationVideoGenerationProcessor {
 	@Async
 	@Transactional
 	public void process(UUID id) {
-		PronunciationVideoAsset asset = pronunciationVideoRepository.findById(id)
-				.orElseThrow(() -> new PronunciationVideoNotFoundException("Pronunciation video asset was not found"));
+		PronunciationAsset asset = pronunciationRepository.findById(id)
+				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
 		try {
 			OffsetDateTime now = OffsetDateTime.now(clock);
-			asset.setStatus(PronunciationVideoAssetStatus.PROCESSING);
+			asset.setStatus(PronunciationAssetStatus.PROCESSING);
 			asset.setUpdatedAt(now);
 
 			PronunciationScript script = scriptFor(asset);
 			GeneratedAudio audio = textToSpeechProvider.generate(script);
-			String audioObjectKey = "pronunciation-videos/" + asset.getId() + "/audio."
+			String audioObjectKey = "pronunciations/" + asset.getId() + "/audio."
 					+ extensionFor(audio.contentType());
 			mediaStorageService.store(audioObjectKey, audio.contentType(), audio.bytes());
 
 			asset.setAudioObjectKey(audioObjectKey);
 			asset.setAudioProvider(textToSpeechProvider.providerName());
 			asset.setAudioModel(textToSpeechProvider.modelName());
-			asset.setStatus(PronunciationVideoAssetStatus.COMPLETED);
+			asset.setStatus(PronunciationAssetStatus.COMPLETED);
 			asset.setUpdatedAt(OffsetDateTime.now(clock));
 			asset.setCompletedAt(asset.getUpdatedAt());
 		}
@@ -57,15 +57,15 @@ class PronunciationVideoGenerationProcessor {
 		}
 	}
 
-	private void markFailed(PronunciationVideoAsset asset, String code, String message, RuntimeException ex) {
+	private void markFailed(PronunciationAsset asset, String code, String message, RuntimeException ex) {
 		log.warn("Pronunciation media generation failed for {}", asset.getId(), ex);
-		asset.setStatus(PronunciationVideoAssetStatus.FAILED);
+		asset.setStatus(PronunciationAssetStatus.FAILED);
 		asset.setErrorCode(code);
 		asset.setErrorMessage(message);
 		asset.setUpdatedAt(OffsetDateTime.now(clock));
 	}
 
-	private PronunciationScript scriptFor(PronunciationVideoAsset asset) {
+	private PronunciationScript scriptFor(PronunciationAsset asset) {
 		String text = "%s...\n\n%s!\n\n%s".formatted(asset.getNormalizedWord(), asset.getNormalizedWord(),
 				punctuated(asset.getNormalizedPhrase()));
 		return new PronunciationScript(asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage(), text,

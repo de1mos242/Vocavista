@@ -24,6 +24,7 @@ Remove obsolete D-ID and backend video-generation code now that pronunciation pl
 ## Decisions
 
 - 2026-05-21: Remove D-ID and lip-sync provider abstractions from backend generation. TalkingHead rendering is browser-side, so the backend only needs to generate and serve audio.
+- 2026-05-22: Follow-up cleanup can rename the route and internal model now because the only exposed consumer is the local TalkingHead preview.
 
 ## Progress
 
@@ -31,6 +32,7 @@ Remove obsolete D-ID and backend video-generation code now that pronunciation pl
 - 2026-05-21: Removed D-ID provider implementation, fake/configured lip-sync providers, generated-video model, playable public media URL support, and D-ID/local tunnel configuration.
 - 2026-05-21: Simplified pronunciation media generation to create/store audio only and return the same-origin audio endpoint for browser-side TalkingHead playback.
 - 2026-05-21: Updated OpenAPI response shape, tests, local examples, README, compose setup, and app specification to remove D-ID/video-rendering options.
+- 2026-05-22: Continued cleanup in `tasks/7-pronunciation-audio-cleanup.md`.
 
 ## Verification
 

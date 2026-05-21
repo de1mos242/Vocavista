@@ -5,18 +5,6 @@ vocavista:
   media:
     # Real ElevenLabs TTS, local RustFS storage, and browser TalkingHead rendering are the defaults.
     # Keep the API key in VOCAVISTA_ELEVENLABS_API_KEY or in this gitignored local override.
-    provider-mode: real
-    tts-provider: elevenlabs
-    storage-mode: s3
-
-    pronunciation-video-command:
-      enabled: false
-      word: Hausaufgabe
-      phrase: Ich mache meine Hausaufgabe nach dem Abendessen.
-      language: de
-      timeout-seconds: 120
-      poll-interval-millis: 500
-
     s3:
       endpoint: http://localhost:9000
       region: us-east-1

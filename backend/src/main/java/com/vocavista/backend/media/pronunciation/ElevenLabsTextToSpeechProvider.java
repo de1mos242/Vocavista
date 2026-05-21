@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -14,7 +13,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
 @Component
-@ConditionalOnExpression("'${vocavista.media.provider-mode:fake}' == 'real' and '${vocavista.media.tts-provider:fake}' == 'elevenlabs'")
 class ElevenLabsTextToSpeechProvider implements TextToSpeechProvider {
 
 	private static final String MISSING_API_KEY = "__missing__";
@@ -35,11 +33,11 @@ class ElevenLabsTextToSpeechProvider implements TextToSpeechProvider {
 	@Autowired
 	ElevenLabsTextToSpeechProvider(
 			RestClient.Builder restClientBuilder,
-			@Value("${vocavista.media.elevenlabs.base-url}") String baseUrl,
-			@Value("${vocavista.media.elevenlabs.api-key}") String apiKey,
-			@Value("${vocavista.media.elevenlabs.voice-id}") String voiceId,
-			@Value("${vocavista.media.elevenlabs.model-id}") String modelId,
-			@Value("${vocavista.media.elevenlabs.output-format}") String outputFormat,
+			@Value("${vocavista.media.elevenlabs.base-url:https://api.elevenlabs.io}") String baseUrl,
+			@Value("${vocavista.media.elevenlabs.api-key:__missing__}") String apiKey,
+			@Value("${vocavista.media.elevenlabs.voice-id:FGY2WhTYpPnrIDTdsKH5}") String voiceId,
+			@Value("${vocavista.media.elevenlabs.model-id:eleven_multilingual_v2}") String modelId,
+			@Value("${vocavista.media.elevenlabs.output-format:mp3_44100_128}") String outputFormat,
 			@Value("${vocavista.media.elevenlabs.stability:0.5}") double stability,
 			@Value("${vocavista.media.elevenlabs.similarity-boost:0.75}") double similarityBoost,
 			@Value("${vocavista.media.elevenlabs.style:0.0}") double style,

@@ -13,11 +13,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "pronunciation_video_assets")
+@Table(name = "pronunciation_assets")
 @Getter
 @Setter
 @NoArgsConstructor
-class PronunciationVideoAsset {
+class PronunciationAsset {
 
 	@Id
 	private UUID id;
@@ -39,7 +39,7 @@ class PronunciationVideoAsset {
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
-	private PronunciationVideoAssetStatus status;
+	private PronunciationAssetStatus status;
 
 	@Column(name = "audio_object_key")
 	private String audioObjectKey;
@@ -68,7 +68,7 @@ class PronunciationVideoAsset {
 	@Column(name = "completed_at")
 	private OffsetDateTime completedAt;
 
-	static PronunciationVideoAsset queued(
+	static PronunciationAsset queued(
 			String inputWord,
 			String inputPhrase,
 			String normalizedWord,
@@ -76,7 +76,7 @@ class PronunciationVideoAsset {
 			String language,
 			String contentHash,
 			OffsetDateTime now) {
-		PronunciationVideoAsset asset = new PronunciationVideoAsset();
+		PronunciationAsset asset = new PronunciationAsset();
 		asset.id = UUID.randomUUID();
 		asset.inputWord = inputWord;
 		asset.inputPhrase = inputPhrase;
@@ -84,7 +84,7 @@ class PronunciationVideoAsset {
 		asset.normalizedPhrase = normalizedPhrase;
 		asset.language = language;
 		asset.contentHash = contentHash;
-		asset.status = PronunciationVideoAssetStatus.QUEUED;
+		asset.status = PronunciationAssetStatus.QUEUED;
 		asset.createdAt = now;
 		asset.updatedAt = now;
 		return asset;

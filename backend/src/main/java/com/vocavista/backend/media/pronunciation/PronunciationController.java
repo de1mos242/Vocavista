@@ -1,8 +1,8 @@
 package com.vocavista.backend.media.pronunciation;
 
 import com.vocavista.backend.api.MediaApi;
-import com.vocavista.backend.api.model.PronunciationVideoRequest;
-import com.vocavista.backend.api.model.PronunciationVideoResponse;
+import com.vocavista.backend.api.model.PronunciationRequest;
+import com.vocavista.backend.api.model.PronunciationResponse;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,24 +14,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-class PronunciationVideoController implements MediaApi {
+class PronunciationController implements MediaApi {
 
-	private final PronunciationVideoService pronunciationVideoService;
+	private final PronunciationService pronunciationService;
 
 	@Override
-	public ResponseEntity<PronunciationVideoResponse> createPronunciationVideo(
-			PronunciationVideoRequest pronunciationVideoRequest) {
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(pronunciationVideoService.create(pronunciationVideoRequest));
+	public ResponseEntity<PronunciationResponse> createPronunciation(PronunciationRequest pronunciationRequest) {
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(pronunciationService.create(pronunciationRequest));
 	}
 
 	@Override
-	public ResponseEntity<PronunciationVideoResponse> getPronunciationVideo(UUID id) {
-		return ResponseEntity.ok(pronunciationVideoService.get(id));
+	public ResponseEntity<PronunciationResponse> getPronunciation(UUID id) {
+		return ResponseEntity.ok(pronunciationService.get(id));
 	}
 
-	@GetMapping("/api/v1/media/pronunciation-videos/{id}/audio")
+	@GetMapping("/api/v1/media/pronunciations/{id}/audio")
 	ResponseEntity<byte[]> getPronunciationAudio(@PathVariable UUID id) {
-		StoredMedia audio = pronunciationVideoService.getAudio(id);
+		StoredMedia audio = pronunciationService.getAudio(id);
 		return ResponseEntity.ok()
 				.contentType(MediaType.parseMediaType(audio.contentType() == null ? "audio/mpeg" : audio.contentType()))
 				.body(audio.bytes());

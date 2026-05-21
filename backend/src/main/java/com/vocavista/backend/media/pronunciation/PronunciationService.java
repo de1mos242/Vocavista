@@ -1,8 +1,8 @@
 package com.vocavista.backend.media.pronunciation;
 
-import com.vocavista.backend.api.model.PronunciationVideoRequest;
-import com.vocavista.backend.api.model.PronunciationVideoResponse;
-import com.vocavista.backend.api.model.PronunciationVideoStatus;
+import com.vocavista.backend.api.model.PronunciationRequest;
+import com.vocavista.backend.api.model.PronunciationResponse;
+import com.vocavista.backend.api.model.PronunciationStatus;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -19,15 +19,15 @@ import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
-class PronunciationVideoService {
+class PronunciationService {
 
 	private static final int MAX_WORD_LENGTH = 80;
 	private static final int MAX_PHRASE_LENGTH = 240;
 	private static final String RENDER_MODE = "talking-head";
 	private static final String SUPPORTED_LANGUAGE = "de";
 
-	private final PronunciationVideoRepository pronunciationVideoRepository;
-	private final PronunciationVideoGenerationProcessor generationProcessor;
+	private final PronunciationRepository pronunciationRepository;
+	private final PronunciationGenerationProcessor generationProcessor;
 	private final TextToSpeechProvider textToSpeechProvider;
 	private final MediaStorageService mediaStorageService;
 	private final Clock clock = Clock.systemUTC();
@@ -38,53 +38,53 @@ class PronunciationVideoService {
 	@Value("${vocavista.media.voice-config:default-clear-german}")
 	private String voiceConfig = "default-clear-german";
 
-	PronunciationVideoResponse create(PronunciationVideoRequest request) {
+	PronunciationResponse create(PronunciationRequest request) {
 		NormalizedInput input = normalize(request);
 		String contentHash = contentHash(input);
 
-		return pronunciationVideoRepository
+		return pronunciationRepository
 				.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(input.language(), contentHash)
 				.map(this::reuseOrRetry)
 				.orElseGet(() -> createQueuedAsset(input, contentHash));
 	}
 
-	PronunciationVideoResponse get(UUID id) {
-		PronunciationVideoAsset asset = pronunciationVideoRepository.findById(id)
-				.orElseThrow(() -> new PronunciationVideoNotFoundException("Pronunciation video asset was not found"));
+	PronunciationResponse get(UUID id) {
+		PronunciationAsset asset = pronunciationRepository.findById(id)
+				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
 		return toResponse(asset);
 	}
 
 	StoredMedia getAudio(UUID id) {
-		PronunciationVideoAsset asset = pronunciationVideoRepository.findById(id)
-				.orElseThrow(() -> new PronunciationVideoNotFoundException("Pronunciation video asset was not found"));
-		if (asset.getStatus() != PronunciationVideoAssetStatus.COMPLETED || !StringUtils.hasText(asset.getAudioObjectKey())) {
-			throw new PronunciationVideoNotFoundException("Pronunciation audio was not found");
+		PronunciationAsset asset = pronunciationRepository.findById(id)
+				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
+		if (asset.getStatus() != PronunciationAssetStatus.COMPLETED || !StringUtils.hasText(asset.getAudioObjectKey())) {
+			throw new PronunciationNotFoundException("Pronunciation audio was not found");
 		}
 		return mediaStorageService.read(asset.getAudioObjectKey());
 	}
 
-	private PronunciationVideoResponse createQueuedAsset(NormalizedInput input, String contentHash) {
-		PronunciationVideoAsset asset = PronunciationVideoAsset.queued(input.word(), input.phrase(), input.normalizedWord(),
+	private PronunciationResponse createQueuedAsset(NormalizedInput input, String contentHash) {
+		PronunciationAsset asset = PronunciationAsset.queued(input.word(), input.phrase(), input.normalizedWord(),
 				input.normalizedPhrase(), input.language(), contentHash, OffsetDateTime.now(clock));
 		try {
-			PronunciationVideoAsset savedAsset = pronunciationVideoRepository.save(asset);
+			PronunciationAsset savedAsset = pronunciationRepository.save(asset);
 			generationProcessor.process(savedAsset.getId());
 			return toResponse(savedAsset);
 		}
 		catch (DataIntegrityViolationException ex) {
-			return pronunciationVideoRepository
+			return pronunciationRepository
 					.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(input.language(), contentHash)
 					.map(this::reuseOrRetry)
 					.orElseThrow(() -> ex);
 		}
 	}
 
-	private PronunciationVideoResponse reuseOrRetry(PronunciationVideoAsset asset) {
-		if (asset.getStatus() != PronunciationVideoAssetStatus.FAILED) {
+	private PronunciationResponse reuseOrRetry(PronunciationAsset asset) {
+		if (asset.getStatus() != PronunciationAssetStatus.FAILED) {
 			return toResponse(asset);
 		}
 
-		asset.setStatus(PronunciationVideoAssetStatus.QUEUED);
+		asset.setStatus(PronunciationAssetStatus.QUEUED);
 		asset.setAudioObjectKey(null);
 		asset.setAudioProvider(null);
 		asset.setAudioModel(null);
@@ -92,47 +92,47 @@ class PronunciationVideoService {
 		asset.setErrorMessage(null);
 		asset.setCompletedAt(null);
 		asset.setUpdatedAt(OffsetDateTime.now(clock));
-		PronunciationVideoAsset savedAsset = pronunciationVideoRepository.save(asset);
+		PronunciationAsset savedAsset = pronunciationRepository.save(asset);
 		generationProcessor.process(savedAsset.getId());
 		return toResponse(savedAsset);
 	}
 
-	private PronunciationVideoResponse toResponse(PronunciationVideoAsset asset) {
-		PronunciationVideoResponse response = new PronunciationVideoResponse(asset.getId(),
-				PronunciationVideoStatus.fromValue(asset.getStatus().name().toLowerCase()));
+	private PronunciationResponse toResponse(PronunciationAsset asset) {
+		PronunciationResponse response = new PronunciationResponse(asset.getId(),
+				PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
 		response.setRenderMode(RENDER_MODE);
-		if (asset.getStatus() == PronunciationVideoAssetStatus.COMPLETED && StringUtils.hasText(asset.getAudioObjectKey())) {
-			response.setAudioUrl(URI.create("/api/v1/media/pronunciation-videos/" + asset.getId() + "/audio"));
+		if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getAudioObjectKey())) {
+			response.setAudioUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/audio"));
 		}
-		if (asset.getStatus() == PronunciationVideoAssetStatus.FAILED) {
+		if (asset.getStatus() == PronunciationAssetStatus.FAILED) {
 			response.setErrorCode(asset.getErrorCode());
 			response.setErrorMessage(asset.getErrorMessage());
 		}
 		return response;
 	}
 
-	private NormalizedInput normalize(PronunciationVideoRequest request) {
+	private NormalizedInput normalize(PronunciationRequest request) {
 		if (request == null) {
-			throw new PronunciationVideoValidationException("request body is required");
+			throw new PronunciationValidationException("request body is required");
 		}
 
 		String word = trimAndCollapse(request.getWord());
 		String phrase = trimAndCollapse(request.getPhrase());
 		String language = request.getLanguage() == null ? "" : request.getLanguage().toString();
 		if (!StringUtils.hasText(word)) {
-			throw new PronunciationVideoValidationException("word must not be blank");
+			throw new PronunciationValidationException("word must not be blank");
 		}
 		if (word.length() > MAX_WORD_LENGTH) {
-			throw new PronunciationVideoValidationException("word must not exceed 80 characters");
+			throw new PronunciationValidationException("word must not exceed 80 characters");
 		}
 		if (!StringUtils.hasText(phrase)) {
-			throw new PronunciationVideoValidationException("phrase must not be blank");
+			throw new PronunciationValidationException("phrase must not be blank");
 		}
 		if (phrase.length() > MAX_PHRASE_LENGTH) {
-			throw new PronunciationVideoValidationException("phrase must not exceed 240 characters");
+			throw new PronunciationValidationException("phrase must not exceed 240 characters");
 		}
 		if (!SUPPORTED_LANGUAGE.equals(language)) {
-			throw new PronunciationVideoValidationException("only German language code de is supported");
+			throw new PronunciationValidationException("only German language code de is supported");
 		}
 		return new NormalizedInput(request.getWord(), request.getPhrase(), word, phrase, language);
 	}

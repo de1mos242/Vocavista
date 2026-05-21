@@ -1,20 +1,20 @@
 package com.vocavista.backend.media.pronunciation;
 
-class PronunciationVideoValidationException extends RuntimeException {
+class PronunciationValidationException extends RuntimeException {
 
-	PronunciationVideoValidationException(String message) {
+	PronunciationValidationException(String message) {
 		super(message);
 	}
 
 }
 
-class PronunciationVideoNotFoundException extends RuntimeException {
+class PronunciationNotFoundException extends RuntimeException {
 
-	PronunciationVideoNotFoundException(String message) {
+	PronunciationNotFoundException(String message) {
 		super(message);
 	}
 
-	PronunciationVideoNotFoundException(String message, Throwable cause) {
+	PronunciationNotFoundException(String message, Throwable cause) {
 		super(message, cause);
 	}
 

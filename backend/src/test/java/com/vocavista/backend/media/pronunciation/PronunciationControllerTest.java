@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.vocavista.backend.api.model.PronunciationVideoResponse;
-import com.vocavista.backend.api.model.PronunciationVideoStatus;
+import com.vocavista.backend.api.model.PronunciationResponse;
+import com.vocavista.backend.api.model.PronunciationStatus;
 import java.net.URI;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -21,23 +21,23 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(PronunciationVideoController.class)
+@WebMvcTest(PronunciationController.class)
 @Import(MediaErrorHandler.class)
-class PronunciationVideoControllerTest {
+class PronunciationControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;
 
 	@MockitoBean
-	private PronunciationVideoService pronunciationVideoService;
+	private PronunciationService pronunciationService;
 
 	@Test
-	void queuesPronunciationVideoForValidRequest() throws Exception {
+	void queuesPronunciationForValidRequest() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(pronunciationVideoService.create(any()))
-				.thenReturn(new PronunciationVideoResponse(id, PronunciationVideoStatus.QUEUED));
+		when(pronunciationService.create(any()))
+				.thenReturn(new PronunciationResponse(id, PronunciationStatus.QUEUED));
 
-		mockMvc.perform(post("/api/v1/media/pronunciation-videos")
+		mockMvc.perform(post("/api/v1/media/pronunciations")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
@@ -50,18 +50,18 @@ class PronunciationVideoControllerTest {
 				.andExpect(jsonPath("$.id").value(id.toString()))
 				.andExpect(jsonPath("$.status").value("queued"));
 
-		verify(pronunciationVideoService).create(any());
+		verify(pronunciationService).create(any());
 	}
 
 	@Test
-	void returnsCompletedPronunciationVideoStatus() throws Exception {
+	void returnsCompletedPronunciationStatus() throws Exception {
 		UUID id = UUID.randomUUID();
-		PronunciationVideoResponse response = new PronunciationVideoResponse(id, PronunciationVideoStatus.COMPLETED)
-				.audioUrl(URI.create("https://media.fake.local/pronunciation-videos/%s/audio.txt".formatted(id)))
+		PronunciationResponse response = new PronunciationResponse(id, PronunciationStatus.COMPLETED)
+				.audioUrl(URI.create("/api/v1/media/pronunciations/%s/audio".formatted(id)))
 				.renderMode("talking-head");
-		when(pronunciationVideoService.get(id)).thenReturn(response);
+		when(pronunciationService.get(id)).thenReturn(response);
 
-		mockMvc.perform(get("/api/v1/media/pronunciation-videos/{id}", id))
+		mockMvc.perform(get("/api/v1/media/pronunciations/{id}", id))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(id.toString()))
 				.andExpect(jsonPath("$.status").value("completed"))
@@ -72,9 +72,9 @@ class PronunciationVideoControllerTest {
 	@Test
 	void returnsGeneratedAudioBytes() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(pronunciationVideoService.getAudio(id)).thenReturn(new StoredMedia("audio/mpeg", "audio".getBytes()));
+		when(pronunciationService.getAudio(id)).thenReturn(new StoredMedia("audio/mpeg", "audio".getBytes()));
 
-		mockMvc.perform(get("/api/v1/media/pronunciation-videos/{id}/audio", id))
+		mockMvc.perform(get("/api/v1/media/pronunciations/{id}/audio", id))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType("audio/mpeg"))
 				.andExpect(content().bytes("audio".getBytes()));
@@ -82,7 +82,7 @@ class PronunciationVideoControllerTest {
 
 	@Test
 	void rejectsInvalidRequestBody() throws Exception {
-		mockMvc.perform(post("/api/v1/media/pronunciation-videos")
+		mockMvc.perform(post("/api/v1/media/pronunciations")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
@@ -97,10 +97,10 @@ class PronunciationVideoControllerTest {
 	@Test
 	void mapsMissingAssetToNotFound() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(pronunciationVideoService.get(id))
-				.thenThrow(new PronunciationVideoNotFoundException("Pronunciation video asset was not found"));
+		when(pronunciationService.get(id))
+				.thenThrow(new PronunciationNotFoundException("Pronunciation asset was not found"));
 
-		mockMvc.perform(get("/api/v1/media/pronunciation-videos/{id}", id))
+		mockMvc.perform(get("/api/v1/media/pronunciations/{id}", id))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.code").value("not_found"));
 	}
