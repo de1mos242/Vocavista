@@ -15,7 +15,7 @@ vocavista:
 
     elevenlabs:
       api-key: __missing__
-      voice-id: JBFqnCBsd6RMkjVDRZzb
+      voice-id: FGY2WhTYpPnrIDTdsKH5
       model-id: eleven_multilingual_v2
       output-format: mp3_44100_128
       first-word-speed: 0.72
