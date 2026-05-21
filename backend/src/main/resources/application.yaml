@@ -3,16 +3,13 @@ spring:
     name: vocavista-backend
   ai:
     openai:
-      api-key: ${VOCAVISTA_OPENAI_API_KEY:__missing__}
-      # base-url: ${VOCAVISTA_OPENAI_BASE_URL:https://api.openai.com}
-      chat:
-        model: ${VOCAVISTA_OPENAI_MODEL:gpt-4o-mini}
+      api-key: __missing__
     retry:
       max-attempts: 2
   datasource:
-    url: ${VOCAVISTA_DB_URL:jdbc:postgresql://localhost:5432/vocavista}
-    username: ${VOCAVISTA_DB_USERNAME:vocavista}
-    password: ${VOCAVISTA_DB_PASSWORD:vocavista}
+    url: jdbc:postgresql://localhost:5432/vocavista
+    username: vocavista
+    password: vocavista
   flyway:
     enabled: true
   jpa:
@@ -23,32 +20,8 @@ spring:
     virtual:
       enabled: true
 
-vocavista:
-  media:
-    script-template-version: ${VOCAVISTA_PRONUNCIATION_SCRIPT_TEMPLATE_VERSION:v5}
-    voice-config: ${VOCAVISTA_TTS_VOICE_CONFIG:default-clear-german}
-    s3:
-      endpoint: ${VOCAVISTA_S3_ENDPOINT:http://localhost:9000}
-      region: ${VOCAVISTA_S3_REGION:us-east-1}
-      bucket: ${VOCAVISTA_S3_BUCKET:vocavista-media}
-      access-key: ${VOCAVISTA_S3_ACCESS_KEY:rustfsadmin}
-      secret-key: ${VOCAVISTA_S3_SECRET_KEY:rustfsadmin}
-      path-style-access: ${VOCAVISTA_S3_PATH_STYLE_ACCESS:true}
-    elevenlabs:
-      base-url: ${VOCAVISTA_ELEVENLABS_BASE_URL:https://api.elevenlabs.io}
-      api-key: ${VOCAVISTA_ELEVENLABS_API_KEY:__missing__}
-      voice-id: ${VOCAVISTA_ELEVENLABS_VOICE_ID:FGY2WhTYpPnrIDTdsKH5}
-      model-id: ${VOCAVISTA_ELEVENLABS_MODEL_ID:eleven_multilingual_v2}
-      output-format: ${VOCAVISTA_ELEVENLABS_OUTPUT_FORMAT:mp3_44100_128}
-      stability: ${VOCAVISTA_ELEVENLABS_STABILITY:0.5}
-      similarity-boost: ${VOCAVISTA_ELEVENLABS_SIMILARITY_BOOST:0.75}
-      style: ${VOCAVISTA_ELEVENLABS_STYLE:0.0}
-      first-word-speed: ${VOCAVISTA_ELEVENLABS_FIRST_WORD_SPEED:0.72}
-      second-word-speed: ${VOCAVISTA_ELEVENLABS_SECOND_WORD_SPEED:0.9}
-      phrase-speed: ${VOCAVISTA_ELEVENLABS_PHRASE_SPEED:0.86}
-      use-speaker-boost: ${VOCAVISTA_ELEVENLABS_USE_SPEAKER_BOOST:true}
 server:
-  port: ${PORT:8080}
+  port: 8080
 
 management:
   endpoints:

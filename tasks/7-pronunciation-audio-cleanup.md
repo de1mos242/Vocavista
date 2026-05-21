@@ -40,10 +40,16 @@ Finish the pronunciation media cleanup by keeping only current audio-backed Talk
 - 2026-05-22: Removed fake TTS/storage production beans, the placeholder configured TTS provider, the pronunciation command-line runner, native-image plugin setup, and Hibernate enhancer setup.
 - 2026-05-22: Replaced fake-provider test usage with Mockito mocks and updated the TalkingHead preview to call `/api/v1/media/pronunciations`.
 - 2026-05-22: Trimmed product and architecture docs to current backend features and current runtime/test shape.
+- 2026-05-22: Removed short custom environment variable aliases from backend application config, local examples, and docs. Runtime overrides now use full Spring property names, while current pronunciation defaults live in code defaults instead of the main YAML file.
+- 2026-05-22: Added `ElevenLabsProperties` for the `vocavista.media.elevenlabs` block and changed `ElevenLabsTextToSpeechProvider` to consume that object instead of individual `@Value` parameters.
+- 2026-05-22: Replaced manual `modelName()` concatenation with `String.formatted(...)` for the ElevenLabs model identifier.
 
 ## Verification
 
 - 2026-05-22: `./mvnw clean test` passed.
+- 2026-05-22: `./mvnw test` passed after simplifying configuration defaults and examples.
+- 2026-05-22: `./mvnw test` passed after introducing ElevenLabs configuration properties.
+- 2026-05-22: `./mvnw -Dtest=ElevenLabsTextToSpeechProviderTest test` passed after simplifying `modelName()` formatting.
 
 ## Related Files
 

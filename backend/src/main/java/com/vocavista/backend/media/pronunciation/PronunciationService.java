@@ -32,8 +32,8 @@ class PronunciationService {
 	private final MediaStorageService mediaStorageService;
 	private final Clock clock = Clock.systemUTC();
 
-	@Value("${vocavista.media.script-template-version:v1}")
-	private String scriptTemplateVersion = "v1";
+	@Value("${vocavista.media.script-template-version:v5}")
+	private String scriptTemplateVersion = "v5";
 
 	@Value("${vocavista.media.voice-config:default-clear-german}")
 	private String voiceConfig = "default-clear-german";

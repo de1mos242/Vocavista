@@ -161,9 +161,9 @@ Responsibilities:
 
 Configuration:
 
-- `VOCAVISTA_OPENAI_API_KEY` for the API key.
-- `VOCAVISTA_OPENAI_MODEL` with a sensible default, for example `gpt-4.1-mini` or the current preferred small structured-output model.
-- `VOCAVISTA_OPENAI_BASE_URL` defaulting to `https://api.openai.com/v1`.
+- `spring.ai.openai.api-key` for the API key.
+- `spring.ai.openai.chat.model` with a sensible default, for example `gpt-4.1-mini` or the current preferred small structured-output model.
+- Spring AI's OpenAI base URL property when the default OpenAI endpoint is not used.
 
 ## AI Prompting
 
