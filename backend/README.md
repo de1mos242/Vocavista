@@ -49,6 +49,21 @@ Bucket: vocavista-media
 
 The `rustfs-create-bucket` compose service creates the `vocavista-media` bucket if it does not already exist.
 
+For local D-ID runs, expose RustFS through a temporary Cloudflare Tunnel:
+
+```bash
+docker compose up -d rustfs rustfs-create-bucket rustfs-tunnel
+docker compose logs rustfs-tunnel
+```
+
+Copy the generated `https://...trycloudflare.com` URL from the logs and use it as the public media base URL with the bucket name appended:
+
+```bash
+export VOCAVISTA_S3_PUBLIC_BASE_URL=https://your-tunnel.trycloudflare.com/vocavista-media
+```
+
+The local bucket is configured for anonymous object reads by `rustfs-create-bucket` so D-ID can fetch generated audio through the tunnel.
+
 Media storage configuration defaults for local development:
 
 ```bash
@@ -60,25 +75,64 @@ export VOCAVISTA_S3_SECRET_KEY=rustfsadmin
 export VOCAVISTA_S3_PATH_STYLE_ACCESS=true
 ```
 
-Optional real AI provider testing should be explicitly enabled through environment variables. Keep `VOCAVISTA_MEDIA_PROVIDER_MODE=fake` for normal automated tests. Set `VOCAVISTA_MEDIA_PROVIDER_MODE=real` and provide the relevant API keys when you intentionally want integration tests or local runs to call real providers:
+Local runtime defaults use real ElevenLabs TTS, local RustFS storage, and browser-side TalkingHead rendering. Provide the ElevenLabs key through the environment before starting the app:
 
 ```bash
-export VOCAVISTA_MEDIA_PROVIDER_MODE=real
-export VOCAVISTA_TTS_PROVIDER=openai
-export VOCAVISTA_LIPSYNC_PROVIDER=did
-export VOCAVISTA_OPENAI_API_KEY=
-export VOCAVISTA_ELEVENLABS_API_KEY=
-export VOCAVISTA_DID_API_KEY=
-export VOCAVISTA_HEYGEN_API_KEY=
+export VOCAVISTA_ELEVENLABS_API_KEY=...
+export VOCAVISTA_ELEVENLABS_VOICE_ID=JBFqnCBsd6RMkjVDRZzb
+export VOCAVISTA_ELEVENLABS_FIRST_WORD_SPEED=0.72
+export VOCAVISTA_ELEVENLABS_SECOND_WORD_SPEED=1.0
+export VOCAVISTA_ELEVENLABS_PHRASE_SPEED=0.86
 ```
+
+The default `talking-head` render mode stores only the generated audio and returns `audioUrl`; the browser preview animates a TalkingHead avatar locally without paying for D-ID video generation. Automated tests override the runtime defaults back to fake providers from `src/test/resources/application.yaml` so they do not call external services. To explicitly generate a D-ID MP4 instead, opt into video rendering:
+
+```bash
+export VOCAVISTA_MEDIA_RENDER_MODE=video
+export VOCAVISTA_LIPSYNC_PROVIDER=did
+export VOCAVISTA_DID_API_KEY=
+export VOCAVISTA_DID_SOURCE_URL=https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.png
+```
+
+`VOCAVISTA_DID_API_KEY` is used as the Basic auth token expected by D-ID. You may include the `Basic ` prefix or provide just the token value.
+
+D-ID must be able to fetch the generated audio URL. `localhost` RustFS URLs are not reachable from D-ID cloud, so real D-ID runs need a public S3-compatible bucket, a tunnel to local RustFS, or another public object URL configured through `VOCAVISTA_S3_PUBLIC_BASE_URL`.
+
+Run the browser TalkingHead preview after starting the app:
+
+```text
+http://localhost:8080/talking-head.html
+```
+
+The page loads TalkingHead/HeadAudio modules from public CDNs, calls `POST /api/v1/media/pronunciation-videos`, polls the returned id, and plays the completed `audioUrl` through a browser-rendered avatar. In `talking-head` mode, `audioUrl` is served back through the backend as `/api/v1/media/pronunciation-videos/{id}/audio` so browser WebAudio decoding does not depend on RustFS CORS settings.
 
 `backend/.env.example` lists the supported local storage and provider variables without real secret values. Real-provider tests should remain opt-in and skip automatically unless the required mode and credentials are present.
 
 Run the application:
 
 ```bash
+docker compose up -d postgres rustfs rustfs-create-bucket
+export VOCAVISTA_ELEVENLABS_API_KEY=...
 ./mvnw spring-boot:run
 ```
+
+Run one pronunciation-video generation from the command line without starting the web server:
+
+```bash
+./mvnw spring-boot:run \
+  -Dspring-boot.run.arguments="--spring.main.web-application-type=none --vocavista.media.pronunciation-video-command.enabled=true --vocavista.media.pronunciation-video-command.word=Hausaufgabe --vocavista.media.pronunciation-video-command.phrase=Ich mache meine Hausaufgabe nach dem Abendessen. --vocavista.media.pronunciation-video-command.language=de"
+```
+
+The command uses the same provider and storage configuration as the API, waits for completion or failure, prints the asset id/status and playable URL when available, then exits.
+
+For repeated local runs, copy the example local config and edit the word, phrase, provider, and storage settings there:
+
+```bash
+cp src/main/resources/application-local.example.yaml src/main/resources/application-local.yaml
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+`src/main/resources/application-local.yaml` is gitignored and loaded only when the `local` Spring profile is active. Keep secrets and personal overrides there, not in `src/main/resources/application.yaml`.
 
 Run tests:
 

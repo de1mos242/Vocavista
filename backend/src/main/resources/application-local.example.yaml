@@ -1,0 +1,44 @@
+# Copy this file to application-local.yaml and edit local-only values.
+# application-local.yaml is intentionally gitignored and loaded by the local Spring profile.
+
+vocavista:
+  media:
+    # Real ElevenLabs TTS, local RustFS storage, and browser TalkingHead rendering are the defaults.
+    # Keep the API key in VOCAVISTA_ELEVENLABS_API_KEY or in this gitignored local override.
+    provider-mode: real
+    tts-provider: elevenlabs
+    lipsync-provider: fake
+    render-mode: talking-head
+    storage-mode: s3
+
+    pronunciation-video-command:
+      enabled: false
+      word: Hausaufgabe
+      phrase: Ich mache meine Hausaufgabe nach dem Abendessen.
+      language: de
+      timeout-seconds: 120
+      poll-interval-millis: 500
+
+    s3:
+      endpoint: http://localhost:9000
+      region: us-east-1
+      bucket: vocavista-media
+      access-key: rustfsadmin
+      secret-key: rustfsadmin
+      path-style-access: true
+      # For D-ID local runs with the cloudflared compose service, replace this with:
+      # https://<generated>.trycloudflare.com/vocavista-media
+      public-base-url: http://localhost:9000/vocavista-media
+
+    elevenlabs:
+      api-key: __missing__
+      voice-id: JBFqnCBsd6RMkjVDRZzb
+      model-id: eleven_multilingual_v2
+      output-format: mp3_44100_128
+      first-word-speed: 0.72
+      second-word-speed: 1.0
+      phrase-speed: 0.86
+
+    did:
+      api-key: __missing__
+      source-url: https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.png

@@ -33,11 +33,19 @@ services:
       AWS_SECRET_ACCESS_KEY: rustfsadmin
       AWS_DEFAULT_REGION: us-east-1
     entrypoint: ["/bin/sh", "-c"]
-    command: >
-      'until aws --endpoint-url http://rustfs:9000 s3api head-bucket --bucket vocavista-media >/dev/null 2>&1; do
-        aws --endpoint-url http://rustfs:9000 s3 mb s3://vocavista-media >/dev/null 2>&1 && break;
-        sleep 2;
-      done'
+    command:
+      - |
+        until aws --endpoint-url http://rustfs:9000 s3api head-bucket --bucket vocavista-media >/dev/null 2>&1; do
+          aws --endpoint-url http://rustfs:9000 s3 mb s3://vocavista-media >/dev/null 2>&1 && break
+          sleep 2
+        done
+        aws --endpoint-url http://rustfs:9000 s3api put-bucket-policy --bucket vocavista-media --policy '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::vocavista-media/*"]}]}'
+
+  rustfs-tunnel:
+    image: cloudflare/cloudflared:latest
+    depends_on:
+      - rustfs
+    command: tunnel --no-autoupdate --url http://rustfs:9000
 
 volumes:
   vocavista-postgres-18-data:
