@@ -6,6 +6,4 @@ interface MediaStorageService {
 
 	StoredMedia read(String objectKey);
 
-	PlayableMedia playableUrl(String objectKey);
-
 }

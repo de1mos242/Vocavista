@@ -145,7 +145,7 @@
   <main>
     <section class="panel">
       <h1>TalkingHead pronunciation preview</h1>
-      <p>Generates only TTS audio on the backend by default, then animates a browser avatar locally instead of creating a D-ID MP4.</p>
+      <p>Generates TTS audio on the backend, then animates a browser avatar locally with TalkingHead.</p>
 
       <label>
         Word
@@ -267,7 +267,7 @@
     });
 
     async function createAsset() {
-      const response = await fetch("/api/v1/media/pronunciation-videos", {
+      const response = await fetch("/api/v1/media/pronunciations", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -286,7 +286,7 @@
 
     async function pollAsset(id) {
       for (let attempt = 0; attempt < 120; attempt += 1) {
-        const response = await fetch(`/api/v1/media/pronunciation-videos/${id}`);
+        const response = await fetch(`/api/v1/media/pronunciations/${id}`);
         if (!response.ok) {
           throw new Error(await response.text());
         }

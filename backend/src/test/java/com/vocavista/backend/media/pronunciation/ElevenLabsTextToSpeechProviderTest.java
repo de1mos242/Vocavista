@@ -19,9 +19,11 @@ class ElevenLabsTextToSpeechProviderTest {
 	void createsSpeechWithConfiguredVoiceAndModel() {
 		RestClient.Builder builder = RestClient.builder().baseUrl("https://api.elevenlabs.test");
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		ElevenLabsTextToSpeechProvider provider = new ElevenLabsTextToSpeechProvider(builder.build(), "api-key",
-				"voice-id", "eleven_multilingual_v2", "mp3_44100_128", 0.5, 0.75, 0.0, 0.72, 1.0, 0.86,
-				true);
+		ElevenLabsProperties properties = new ElevenLabsProperties();
+		properties.setApiKey("api-key");
+		properties.setVoiceId("voice-id");
+		properties.setSecondWordSpeed(1.0);
+		ElevenLabsTextToSpeechProvider provider = new ElevenLabsTextToSpeechProvider(builder.build(), properties);
 
 		server.expect(requestTo(
 				"https://api.elevenlabs.test/v1/text-to-speech/voice-id?output_format=mp3_44100_128"))
@@ -83,7 +85,7 @@ class ElevenLabsTextToSpeechProviderTest {
 
 		GeneratedAudio audio = provider.generate(new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.",
 				"de", "Hausaufgabe.\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
-				"default-clear-german", "default-talking-head"));
+				"default-clear-german"));
 
 		assertThat(audio.contentType()).isEqualTo("audio/mpeg");
 		assertThat(audio.bytes()).isEqualTo("first-second-phrase".getBytes());

@@ -1,0 +1,161 @@
+package com.vocavista.backend.media.pronunciation;
+
+import com.vocavista.backend.api.model.PronunciationRequest;
+import com.vocavista.backend.api.model.PronunciationResponse;
+import com.vocavista.backend.api.model.PronunciationStatus;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.util.HexFormat;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+@Service
+@RequiredArgsConstructor
+class PronunciationService {
+
+	private static final int MAX_WORD_LENGTH = 80;
+	private static final int MAX_PHRASE_LENGTH = 240;
+	private static final String RENDER_MODE = "talking-head";
+	private static final String SUPPORTED_LANGUAGE = "de";
+
+	private final PronunciationRepository pronunciationRepository;
+	private final PronunciationGenerationProcessor generationProcessor;
+	private final TextToSpeechProvider textToSpeechProvider;
+	private final MediaStorageService mediaStorageService;
+	private final Clock clock = Clock.systemUTC();
+
+	@Value("${vocavista.media.script-template-version:v5}")
+	private String scriptTemplateVersion = "v5";
+
+	@Value("${vocavista.media.voice-config:default-clear-german}")
+	private String voiceConfig = "default-clear-german";
+
+	PronunciationResponse create(PronunciationRequest request) {
+		NormalizedInput input = normalize(request);
+		String contentHash = contentHash(input);
+
+		return pronunciationRepository
+				.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(input.language(), contentHash)
+				.map(this::reuseOrRetry)
+				.orElseGet(() -> createQueuedAsset(input, contentHash));
+	}
+
+	PronunciationResponse get(UUID id) {
+		PronunciationAsset asset = pronunciationRepository.findById(id)
+				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
+		return toResponse(asset);
+	}
+
+	StoredMedia getAudio(UUID id) {
+		PronunciationAsset asset = pronunciationRepository.findById(id)
+				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
+		if (asset.getStatus() != PronunciationAssetStatus.COMPLETED || !StringUtils.hasText(asset.getAudioObjectKey())) {
+			throw new PronunciationNotFoundException("Pronunciation audio was not found");
+		}
+		return mediaStorageService.read(asset.getAudioObjectKey());
+	}
+
+	private PronunciationResponse createQueuedAsset(NormalizedInput input, String contentHash) {
+		PronunciationAsset asset = PronunciationAsset.queued(input.word(), input.phrase(), input.normalizedWord(),
+				input.normalizedPhrase(), input.language(), contentHash, OffsetDateTime.now(clock));
+		try {
+			PronunciationAsset savedAsset = pronunciationRepository.save(asset);
+			generationProcessor.process(savedAsset.getId());
+			return toResponse(savedAsset);
+		}
+		catch (DataIntegrityViolationException ex) {
+			return pronunciationRepository
+					.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(input.language(), contentHash)
+					.map(this::reuseOrRetry)
+					.orElseThrow(() -> ex);
+		}
+	}
+
+	private PronunciationResponse reuseOrRetry(PronunciationAsset asset) {
+		if (asset.getStatus() != PronunciationAssetStatus.FAILED) {
+			return toResponse(asset);
+		}
+
+		asset.setStatus(PronunciationAssetStatus.QUEUED);
+		asset.setAudioObjectKey(null);
+		asset.setAudioProvider(null);
+		asset.setAudioModel(null);
+		asset.setErrorCode(null);
+		asset.setErrorMessage(null);
+		asset.setCompletedAt(null);
+		asset.setUpdatedAt(OffsetDateTime.now(clock));
+		PronunciationAsset savedAsset = pronunciationRepository.save(asset);
+		generationProcessor.process(savedAsset.getId());
+		return toResponse(savedAsset);
+	}
+
+	private PronunciationResponse toResponse(PronunciationAsset asset) {
+		PronunciationResponse response = new PronunciationResponse(asset.getId(),
+				PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
+		response.setRenderMode(RENDER_MODE);
+		if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getAudioObjectKey())) {
+			response.setAudioUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/audio"));
+		}
+		if (asset.getStatus() == PronunciationAssetStatus.FAILED) {
+			response.setErrorCode(asset.getErrorCode());
+			response.setErrorMessage(asset.getErrorMessage());
+		}
+		return response;
+	}
+
+	private NormalizedInput normalize(PronunciationRequest request) {
+		if (request == null) {
+			throw new PronunciationValidationException("request body is required");
+		}
+
+		String word = trimAndCollapse(request.getWord());
+		String phrase = trimAndCollapse(request.getPhrase());
+		String language = request.getLanguage() == null ? "" : request.getLanguage().toString();
+		if (!StringUtils.hasText(word)) {
+			throw new PronunciationValidationException("word must not be blank");
+		}
+		if (word.length() > MAX_WORD_LENGTH) {
+			throw new PronunciationValidationException("word must not exceed 80 characters");
+		}
+		if (!StringUtils.hasText(phrase)) {
+			throw new PronunciationValidationException("phrase must not be blank");
+		}
+		if (phrase.length() > MAX_PHRASE_LENGTH) {
+			throw new PronunciationValidationException("phrase must not exceed 240 characters");
+		}
+		if (!SUPPORTED_LANGUAGE.equals(language)) {
+			throw new PronunciationValidationException("only German language code de is supported");
+		}
+		return new NormalizedInput(request.getWord(), request.getPhrase(), word, phrase, language);
+	}
+
+	private String contentHash(NormalizedInput input) {
+		String value = String.join("\n", input.language(), input.normalizedWord().toLowerCase(),
+				input.normalizedPhrase().toLowerCase(), scriptTemplateVersion, voiceConfig,
+				textToSpeechProvider.providerName(), textToSpeechProvider.modelName());
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+		}
+		catch (NoSuchAlgorithmException ex) {
+			throw new IllegalStateException("SHA-256 is not available", ex);
+		}
+	}
+
+	private static String trimAndCollapse(String value) {
+		return value == null ? "" : value.trim().replaceAll("\\s+", " ");
+	}
+
+	private record NormalizedInput(String word, String phrase, String normalizedWord, String normalizedPhrase,
+			String language) {
+	}
+
+}

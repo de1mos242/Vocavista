@@ -1,11 +1,8 @@
 package com.vocavista.backend.media.pronunciation;
 
 import java.net.URI;
-import java.time.Clock;
-import java.time.OffsetDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -19,34 +16,24 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Component
-@ConditionalOnProperty(prefix = "vocavista.media", name = "storage-mode", havingValue = "s3")
 class S3MediaStorageService implements MediaStorageService {
 
 	private final S3Client s3Client;
 	private final String bucket;
-	private final String publicBaseUrl;
-	private final long urlTtlSeconds;
-	private final Clock clock;
 
 	@Autowired
 	S3MediaStorageService(
-			@Value("${vocavista.media.s3.endpoint}") String endpoint,
-			@Value("${vocavista.media.s3.region}") String region,
-			@Value("${vocavista.media.s3.bucket}") String bucket,
-			@Value("${vocavista.media.s3.access-key}") String accessKey,
-			@Value("${vocavista.media.s3.secret-key}") String secretKey,
-			@Value("${vocavista.media.s3.path-style-access:true}") boolean pathStyleAccess,
-			@Value("${vocavista.media.s3.public-base-url}") String publicBaseUrl,
-			@Value("${vocavista.media.s3.url-ttl-seconds:3600}") long urlTtlSeconds) {
-		this(bucket, publicBaseUrl, urlTtlSeconds, Clock.systemUTC(), buildClient(endpoint, region, accessKey, secretKey,
-				pathStyleAccess));
+			@Value("${vocavista.media.s3.endpoint:http://localhost:9000}") String endpoint,
+			@Value("${vocavista.media.s3.region:us-east-1}") String region,
+			@Value("${vocavista.media.s3.bucket:vocavista-media}") String bucket,
+			@Value("${vocavista.media.s3.access-key:rustfsadmin}") String accessKey,
+			@Value("${vocavista.media.s3.secret-key:rustfsadmin}") String secretKey,
+			@Value("${vocavista.media.s3.path-style-access:true}") boolean pathStyleAccess) {
+		this(bucket, buildClient(endpoint, region, accessKey, secretKey, pathStyleAccess));
 	}
 
-	S3MediaStorageService(String bucket, String publicBaseUrl, long urlTtlSeconds, Clock clock, S3Client s3Client) {
+	S3MediaStorageService(String bucket, S3Client s3Client) {
 		this.bucket = bucket;
-		this.publicBaseUrl = publicBaseUrl;
-		this.urlTtlSeconds = urlTtlSeconds;
-		this.clock = clock;
 		this.s3Client = s3Client;
 	}
 
@@ -74,14 +61,8 @@ class S3MediaStorageService implements MediaStorageService {
 			return new StoredMedia(responseBytes.response().contentType(), responseBytes.asByteArray());
 		}
 		catch (RuntimeException ex) {
-			throw new PronunciationVideoNotFoundException("Generated media object was not found", ex);
+			throw new PronunciationNotFoundException("Generated media object was not found", ex);
 		}
-	}
-
-	@Override
-	public PlayableMedia playableUrl(String objectKey) {
-		return new PlayableMedia(URI.create(trimTrailingSlash(publicBaseUrl) + "/" + objectKey),
-				OffsetDateTime.now(clock).plusSeconds(urlTtlSeconds));
 	}
 
 	private static S3Client buildClient(
@@ -98,10 +79,6 @@ class S3MediaStorageService implements MediaStorageService {
 			builder.endpointOverride(URI.create(endpoint));
 		}
 		return builder.build();
-	}
-
-	private static String trimTrailingSlash(String value) {
-		return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
 	}
 
 }

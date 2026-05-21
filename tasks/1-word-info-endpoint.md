@@ -29,7 +29,7 @@ Implement the first API-first backend endpoint that accepts a German word and re
 
 - Use OpenAPI Generator Maven plugin `7.14.0` with Spring generator, interface-only APIs, and Jakarta validation.
 - Use Spring AI BOM and `spring-ai-starter-model-openai` version `2.0.0-M6`.
-- Configure OpenAI via Spring AI properties backed by `VOCAVISTA_OPENAI_API_KEY`, `VOCAVISTA_OPENAI_BASE_URL`, and `VOCAVISTA_OPENAI_MODEL`.
+- Configure OpenAI via Spring AI properties and override them with full Spring property names when needed.
 - Use `__missing__` as the default API-key sentinel so the app can start locally/tests can run without secrets; endpoint calls return controlled `503` when the sentinel is present.
 - Avoid default `temperature` configuration to keep GPT-5-family model selection possible.
 - Use MapStruct `1.6.3` for provider-to-API DTO mapping instead of hand-written DTO construction.
