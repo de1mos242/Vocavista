@@ -7,8 +7,6 @@ vocavista:
     # Keep the API key in VOCAVISTA_ELEVENLABS_API_KEY or in this gitignored local override.
     provider-mode: real
     tts-provider: elevenlabs
-    lipsync-provider: fake
-    render-mode: talking-head
     storage-mode: s3
 
     pronunciation-video-command:
@@ -26,9 +24,6 @@ vocavista:
       access-key: rustfsadmin
       secret-key: rustfsadmin
       path-style-access: true
-      # For D-ID local runs with the cloudflared compose service, replace this with:
-      # https://<generated>.trycloudflare.com/vocavista-media
-      public-base-url: http://localhost:9000/vocavista-media
 
     elevenlabs:
       api-key: __missing__
@@ -38,7 +33,3 @@ vocavista:
       first-word-speed: 0.72
       second-word-speed: 1.0
       phrase-speed: 0.86
-
-    did:
-      api-key: __missing__
-      source-url: https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.png

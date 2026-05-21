@@ -29,7 +29,6 @@ class PronunciationVideoServiceTest {
 	private PronunciationVideoGenerationProcessor generationProcessor;
 
 	private final TextToSpeechProvider textToSpeechProvider = new FakeTextToSpeechProvider();
-	private final LipSyncVideoProvider lipSyncVideoProvider = new FakeLipSyncVideoProvider();
 	private final MediaStorageService mediaStorageService = new FakeMediaStorageService();
 
 	@Test
@@ -61,7 +60,6 @@ class PronunciationVideoServiceTest {
 		assertThat(response.getStatus()).isEqualTo(PronunciationVideoStatus.COMPLETED);
 		assertThat(response.getAudioUrl())
 				.hasToString("/api/v1/media/pronunciation-videos/" + existingAsset.getId() + "/audio");
-		assertThat(response.getVideoUrl()).hasToString("https://media.fake.local/" + existingAsset.getVideoObjectKey());
 		assertThat(response.getRenderMode()).isEqualTo("talking-head");
 		verify(pronunciationVideoRepository, never()).save(any());
 		verify(generationProcessor, never()).process(any());
@@ -85,7 +83,6 @@ class PronunciationVideoServiceTest {
 		assertThat(existingAsset.getErrorCode()).isNull();
 		assertThat(existingAsset.getErrorMessage()).isNull();
 		assertThat(existingAsset.getAudioObjectKey()).isNull();
-		assertThat(existingAsset.getVideoObjectKey()).isNull();
 		verify(pronunciationVideoRepository).save(existingAsset);
 		verify(generationProcessor).process(existingAsset.getId());
 	}
@@ -100,7 +97,7 @@ class PronunciationVideoServiceTest {
 
 	private PronunciationVideoService service() {
 		return new PronunciationVideoService(pronunciationVideoRepository, generationProcessor, textToSpeechProvider,
-				lipSyncVideoProvider, mediaStorageService);
+				mediaStorageService);
 	}
 
 	private static PronunciationVideoRequest request(String word, String phrase) {
@@ -114,7 +111,6 @@ class PronunciationVideoServiceTest {
 		asset.setId(UUID.randomUUID());
 		asset.setStatus(PronunciationVideoAssetStatus.COMPLETED);
 		asset.setAudioObjectKey("pronunciation-videos/%s/audio.txt".formatted(asset.getId()));
-		asset.setVideoObjectKey("pronunciation-videos/%s/video.txt".formatted(asset.getId()));
 		asset.setCompletedAt(OffsetDateTime.now());
 		return asset;
 	}

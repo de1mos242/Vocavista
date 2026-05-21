@@ -83,7 +83,7 @@ class ElevenLabsTextToSpeechProviderTest {
 
 		GeneratedAudio audio = provider.generate(new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.",
 				"de", "Hausaufgabe.\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
-				"default-clear-german", "default-talking-head"));
+				"default-clear-german"));
 
 		assertThat(audio.contentType()).isEqualTo("audio/mpeg");
 		assertThat(audio.bytes()).isEqualTo("first-second-phrase".getBytes());

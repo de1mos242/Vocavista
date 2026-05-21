@@ -12,7 +12,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.vocavista.backend.api.model.PronunciationVideoResponse;
 import com.vocavista.backend.api.model.PronunciationVideoStatus;
 import java.net.URI;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,9 +58,7 @@ class PronunciationVideoControllerTest {
 		UUID id = UUID.randomUUID();
 		PronunciationVideoResponse response = new PronunciationVideoResponse(id, PronunciationVideoStatus.COMPLETED)
 				.audioUrl(URI.create("https://media.fake.local/pronunciation-videos/%s/audio.txt".formatted(id)))
-				.videoUrl(URI.create("https://media.fake.local/pronunciation-videos/%s/video.txt".formatted(id)))
-				.renderMode("talking-head")
-				.expiresAt(OffsetDateTime.parse("2026-05-15T12:00:00Z"));
+				.renderMode("talking-head");
 		when(pronunciationVideoService.get(id)).thenReturn(response);
 
 		mockMvc.perform(get("/api/v1/media/pronunciation-videos/{id}", id))
@@ -69,9 +66,7 @@ class PronunciationVideoControllerTest {
 				.andExpect(jsonPath("$.id").value(id.toString()))
 				.andExpect(jsonPath("$.status").value("completed"))
 				.andExpect(jsonPath("$.audioUrl").exists())
-				.andExpect(jsonPath("$.videoUrl").exists())
-				.andExpect(jsonPath("$.renderMode").value("talking-head"))
-				.andExpect(jsonPath("$.expiresAt").exists());
+				.andExpect(jsonPath("$.renderMode").value("talking-head"));
 	}
 
 	@Test

@@ -65,7 +65,7 @@ class PronunciationVideoCommandRunner implements CommandLineRunner {
 			response = pronunciationVideoService.get(response.getId());
 		}
 		if (!isTerminal(response.getStatus())) {
-			throw new PronunciationVideoCommandTimeoutException("Pronunciation video generation did not finish before timeout");
+			throw new PronunciationVideoCommandTimeoutException("Pronunciation media generation did not finish before timeout");
 		}
 		return response;
 	}
@@ -78,17 +78,11 @@ class PronunciationVideoCommandRunner implements CommandLineRunner {
 	private void print(PronunciationVideoResponse response) {
 		out.println("id=" + response.getId());
 		out.println("status=" + response.getStatus());
-		if (response.getVideoUrl() != null) {
-			out.println("videoUrl=" + response.getVideoUrl());
-		}
 		if (response.getAudioUrl() != null) {
 			out.println("audioUrl=" + response.getAudioUrl());
 		}
 		if (response.getRenderMode() != null) {
 			out.println("renderMode=" + response.getRenderMode());
-		}
-		if (response.getExpiresAt() != null) {
-			out.println("expiresAt=" + response.getExpiresAt());
 		}
 		if (response.getErrorCode() != null) {
 			out.println("errorCode=" + response.getErrorCode());

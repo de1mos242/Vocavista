@@ -21,16 +21,13 @@ class PronunciationVideoGenerationProcessorTest {
 		PronunciationVideoAsset asset = queuedAsset();
 		when(pronunciationVideoRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
 		PronunciationVideoGenerationProcessor processor = new PronunciationVideoGenerationProcessor(pronunciationVideoRepository,
-				new FakeTextToSpeechProvider(), new FakeLipSyncVideoProvider(), new FakeMediaStorageService());
+				new FakeTextToSpeechProvider(), new FakeMediaStorageService());
 
 		processor.process(asset.getId());
 
 		assertThat(asset.getStatus()).isEqualTo(PronunciationVideoAssetStatus.COMPLETED);
 		assertThat(asset.getAudioObjectKey()).endsWith("/audio.txt");
-		assertThat(asset.getVideoObjectKey()).isNull();
 		assertThat(asset.getAudioProvider()).isEqualTo("fake");
-		assertThat(asset.getVideoProvider()).isEqualTo("talkinghead-js");
-		assertThat(asset.getVideoModel()).isEqualTo("browser-audio-driven-viseme-v1");
 		assertThat(asset.getCompletedAt()).isNotNull();
 	}
 
@@ -55,7 +52,7 @@ class PronunciationVideoGenerationProcessorTest {
 			}
 		};
 		PronunciationVideoGenerationProcessor processor = new PronunciationVideoGenerationProcessor(pronunciationVideoRepository,
-				failingProvider, new FakeLipSyncVideoProvider(), new FakeMediaStorageService());
+				failingProvider, new FakeMediaStorageService());
 
 		processor.process(asset.getId());
 

@@ -23,12 +23,12 @@ class PronunciationVideoService {
 
 	private static final int MAX_WORD_LENGTH = 80;
 	private static final int MAX_PHRASE_LENGTH = 240;
+	private static final String RENDER_MODE = "talking-head";
 	private static final String SUPPORTED_LANGUAGE = "de";
 
 	private final PronunciationVideoRepository pronunciationVideoRepository;
 	private final PronunciationVideoGenerationProcessor generationProcessor;
 	private final TextToSpeechProvider textToSpeechProvider;
-	private final LipSyncVideoProvider lipSyncVideoProvider;
 	private final MediaStorageService mediaStorageService;
 	private final Clock clock = Clock.systemUTC();
 
@@ -37,12 +37,6 @@ class PronunciationVideoService {
 
 	@Value("${vocavista.media.voice-config:default-clear-german}")
 	private String voiceConfig = "default-clear-german";
-
-	@Value("${vocavista.media.avatar-config:default-talking-head}")
-	private String avatarConfig = "default-talking-head";
-
-	@Value("${vocavista.media.render-mode:talking-head}")
-	private String renderMode = "talking-head";
 
 	PronunciationVideoResponse create(PronunciationVideoRequest request) {
 		NormalizedInput input = normalize(request);
@@ -92,11 +86,8 @@ class PronunciationVideoService {
 
 		asset.setStatus(PronunciationVideoAssetStatus.QUEUED);
 		asset.setAudioObjectKey(null);
-		asset.setVideoObjectKey(null);
 		asset.setAudioProvider(null);
 		asset.setAudioModel(null);
-		asset.setVideoProvider(null);
-		asset.setVideoModel(null);
 		asset.setErrorCode(null);
 		asset.setErrorMessage(null);
 		asset.setCompletedAt(null);
@@ -109,21 +100,9 @@ class PronunciationVideoService {
 	private PronunciationVideoResponse toResponse(PronunciationVideoAsset asset) {
 		PronunciationVideoResponse response = new PronunciationVideoResponse(asset.getId(),
 				PronunciationVideoStatus.fromValue(asset.getStatus().name().toLowerCase()));
-		response.setRenderMode(renderMode);
+		response.setRenderMode(RENDER_MODE);
 		if (asset.getStatus() == PronunciationVideoAssetStatus.COMPLETED && StringUtils.hasText(asset.getAudioObjectKey())) {
-			if ("talking-head".equals(renderMode)) {
-				response.setAudioUrl(URI.create("/api/v1/media/pronunciation-videos/" + asset.getId() + "/audio"));
-			}
-			else {
-				PlayableMedia playableMedia = mediaStorageService.playableUrl(asset.getAudioObjectKey());
-				response.setAudioUrl(playableMedia.url());
-				response.setExpiresAt(playableMedia.expiresAt());
-			}
-		}
-		if (asset.getStatus() == PronunciationVideoAssetStatus.COMPLETED && StringUtils.hasText(asset.getVideoObjectKey())) {
-			PlayableMedia playableMedia = mediaStorageService.playableUrl(asset.getVideoObjectKey());
-			response.setVideoUrl(playableMedia.url());
-			response.setExpiresAt(playableMedia.expiresAt());
+			response.setAudioUrl(URI.create("/api/v1/media/pronunciation-videos/" + asset.getId() + "/audio"));
 		}
 		if (asset.getStatus() == PronunciationVideoAssetStatus.FAILED) {
 			response.setErrorCode(asset.getErrorCode());
@@ -160,9 +139,8 @@ class PronunciationVideoService {
 
 	private String contentHash(NormalizedInput input) {
 		String value = String.join("\n", input.language(), input.normalizedWord().toLowerCase(),
-				input.normalizedPhrase().toLowerCase(), scriptTemplateVersion, voiceConfig, avatarConfig, renderMode,
-				textToSpeechProvider.providerName(), textToSpeechProvider.modelName(), lipSyncVideoProvider.providerName(),
-				lipSyncVideoProvider.modelName());
+				input.normalizedPhrase().toLowerCase(), scriptTemplateVersion, voiceConfig,
+				textToSpeechProvider.providerName(), textToSpeechProvider.modelName());
 		try {
 			MessageDigest digest = MessageDigest.getInstance("SHA-256");
 			return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));

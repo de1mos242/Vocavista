@@ -1,6 +1,10 @@
+spring:
+  ai:
+    openai:
+      api-key: test-key
+
 vocavista:
   media:
     provider-mode: fake
     storage-mode: fake
     tts-provider: fake
-    lipsync-provider: fake

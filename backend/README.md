@@ -49,21 +49,6 @@ Bucket: vocavista-media
 
 The `rustfs-create-bucket` compose service creates the `vocavista-media` bucket if it does not already exist.
 
-For local D-ID runs, expose RustFS through a temporary Cloudflare Tunnel:
-
-```bash
-docker compose up -d rustfs rustfs-create-bucket rustfs-tunnel
-docker compose logs rustfs-tunnel
-```
-
-Copy the generated `https://...trycloudflare.com` URL from the logs and use it as the public media base URL with the bucket name appended:
-
-```bash
-export VOCAVISTA_S3_PUBLIC_BASE_URL=https://your-tunnel.trycloudflare.com/vocavista-media
-```
-
-The local bucket is configured for anonymous object reads by `rustfs-create-bucket` so D-ID can fetch generated audio through the tunnel.
-
 Media storage configuration defaults for local development:
 
 ```bash
@@ -85,18 +70,7 @@ export VOCAVISTA_ELEVENLABS_SECOND_WORD_SPEED=1.0
 export VOCAVISTA_ELEVENLABS_PHRASE_SPEED=0.86
 ```
 
-The default `talking-head` render mode stores only the generated audio and returns `audioUrl`; the browser preview animates a TalkingHead avatar locally without paying for D-ID video generation. Automated tests override the runtime defaults back to fake providers from `src/test/resources/application.yaml` so they do not call external services. To explicitly generate a D-ID MP4 instead, opt into video rendering:
-
-```bash
-export VOCAVISTA_MEDIA_RENDER_MODE=video
-export VOCAVISTA_LIPSYNC_PROVIDER=did
-export VOCAVISTA_DID_API_KEY=
-export VOCAVISTA_DID_SOURCE_URL=https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.png
-```
-
-`VOCAVISTA_DID_API_KEY` is used as the Basic auth token expected by D-ID. You may include the `Basic ` prefix or provide just the token value.
-
-D-ID must be able to fetch the generated audio URL. `localhost` RustFS URLs are not reachable from D-ID cloud, so real D-ID runs need a public S3-compatible bucket, a tunnel to local RustFS, or another public object URL configured through `VOCAVISTA_S3_PUBLIC_BASE_URL`.
+The backend stores generated audio and returns `audioUrl`; the browser preview animates a TalkingHead avatar locally. Automated tests override the runtime defaults back to fake providers from `src/test/resources/application.yaml` so they do not call external services.
 
 Run the browser TalkingHead preview after starting the app:
 
@@ -116,7 +90,7 @@ export VOCAVISTA_ELEVENLABS_API_KEY=...
 ./mvnw spring-boot:run
 ```
 
-Run one pronunciation-video generation from the command line without starting the web server:
+Run one pronunciation media generation from the command line without starting the web server:
 
 ```bash
 ./mvnw spring-boot:run \

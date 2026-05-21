@@ -44,20 +44,11 @@ class PronunciationVideoAsset {
 	@Column(name = "audio_object_key")
 	private String audioObjectKey;
 
-	@Column(name = "video_object_key")
-	private String videoObjectKey;
-
 	@Column(name = "audio_provider")
 	private String audioProvider;
 
 	@Column(name = "audio_model")
 	private String audioModel;
-
-	@Column(name = "video_provider")
-	private String videoProvider;
-
-	@Column(name = "video_model")
-	private String videoModel;
 
 	@Column(name = "content_hash", nullable = false)
 	private String contentHash;

@@ -22,7 +22,7 @@ To avoid high latency and control costs, media is generated **per word** (not pe
 
 ### 2.3 Visual Layer (Talking Head + Static Context)
 
-* **Part 1: Articulation (Lip-Sync):** The app uses a lip-sync API (such as D-ID or HeyGen) to display a talking head while the first two isolated words are spoken. This teaches the user the correct mouth movements.
+* **Part 1: Articulation (Lip-Sync):** The app uses browser-side TalkingHead rendering while the first two isolated words are spoken. This teaches the user the correct mouth movements without backend video generation.
 * **Part 2: Context Image (Scene Transition):** As soon as the example sentence begins in the audio track, the video crossfades to a matching, static image. This image is generated cost-effectively using **Nano Banana 2** (Gemini 3 Flash Image).
 * *Exception:* Expensive text-to-video models (like Veo) are exclusively reserved for highly dynamic or otherwise hard-to-explain verbs.
 

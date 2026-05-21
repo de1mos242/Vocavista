@@ -17,7 +17,6 @@ class PronunciationVideoGenerationProcessor {
 
 	private final PronunciationVideoRepository pronunciationVideoRepository;
 	private final TextToSpeechProvider textToSpeechProvider;
-	private final LipSyncVideoProvider lipSyncVideoProvider;
 	private final MediaStorageService mediaStorageService;
 	private final Clock clock = Clock.systemUTC();
 
@@ -26,12 +25,6 @@ class PronunciationVideoGenerationProcessor {
 
 	@Value("${vocavista.media.voice-config:default-clear-german}")
 	private String voiceConfig = "default-clear-german";
-
-	@Value("${vocavista.media.avatar-config:default-talking-head}")
-	private String avatarConfig = "default-talking-head";
-
-	@Value("${vocavista.media.render-mode:talking-head}")
-	private String renderMode = "talking-head";
 
 	@Async
 	@Transactional
@@ -52,21 +45,6 @@ class PronunciationVideoGenerationProcessor {
 			asset.setAudioObjectKey(audioObjectKey);
 			asset.setAudioProvider(textToSpeechProvider.providerName());
 			asset.setAudioModel(textToSpeechProvider.modelName());
-			if (isVideoRenderMode()) {
-				GeneratedVideo video = lipSyncVideoProvider.generate(script, audio,
-						mediaStorageService.playableUrl(audioObjectKey).url());
-				String videoObjectKey = "pronunciation-videos/" + asset.getId() + "/video."
-						+ extensionFor(video.contentType());
-				mediaStorageService.store(videoObjectKey, video.contentType(), video.bytes());
-				asset.setVideoObjectKey(videoObjectKey);
-				asset.setVideoProvider(lipSyncVideoProvider.providerName());
-				asset.setVideoModel(lipSyncVideoProvider.modelName());
-			}
-			else {
-				asset.setVideoObjectKey(null);
-				asset.setVideoProvider("talkinghead-js");
-				asset.setVideoModel("browser-audio-driven-viseme-v1");
-			}
 			asset.setStatus(PronunciationVideoAssetStatus.COMPLETED);
 			asset.setUpdatedAt(OffsetDateTime.now(clock));
 			asset.setCompletedAt(asset.getUpdatedAt());
@@ -79,12 +57,8 @@ class PronunciationVideoGenerationProcessor {
 		}
 	}
 
-	private boolean isVideoRenderMode() {
-		return "video".equalsIgnoreCase(renderMode);
-	}
-
 	private void markFailed(PronunciationVideoAsset asset, String code, String message, RuntimeException ex) {
-		log.warn("Pronunciation video generation failed for {}", asset.getId(), ex);
+		log.warn("Pronunciation media generation failed for {}", asset.getId(), ex);
 		asset.setStatus(PronunciationVideoAssetStatus.FAILED);
 		asset.setErrorCode(code);
 		asset.setErrorMessage(message);
@@ -95,7 +69,7 @@ class PronunciationVideoGenerationProcessor {
 		String text = "%s...\n\n%s!\n\n%s".formatted(asset.getNormalizedWord(), asset.getNormalizedWord(),
 				punctuated(asset.getNormalizedPhrase()));
 		return new PronunciationScript(asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage(), text,
-				scriptTemplateVersion, voiceConfig, avatarConfig);
+				scriptTemplateVersion, voiceConfig);
 	}
 
 	private static String punctuated(String value) {
@@ -106,7 +80,6 @@ class PronunciationVideoGenerationProcessor {
 		return switch (contentType) {
 			case "audio/mpeg" -> "mp3";
 			case "audio/wav" -> "wav";
-			case "video/mp4" -> "mp4";
 			case "text/plain" -> "txt";
 			default -> "bin";
 		};
