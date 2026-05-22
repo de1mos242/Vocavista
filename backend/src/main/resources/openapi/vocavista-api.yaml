@@ -95,15 +95,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/words/suggestions:
+    get:
+      tags:
+        - Words
+      operationId: getWordSuggestions
+      summary: Search cached words and generated pronunciations for autocomplete
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Word fragment to search for.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 80
+      responses:
+        '200':
+          description: Matching cached words and generated pronunciations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WordSuggestionsResponse'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     PronunciationRequest:
       type: object
       required:
+        - wordInfoId
         - word
         - phrase
         - language
       properties:
+        wordInfoId:
+          type: string
+          format: uuid
         word:
           type: string
           minLength: 1
@@ -120,9 +152,13 @@ components:
       type: object
       required:
         - id
+        - wordInfoId
         - status
       properties:
         id:
+          type: string
+          format: uuid
+        wordInfoId:
           type: string
           format: uuid
         status:
@@ -151,6 +187,7 @@ components:
       type: object
       required:
         - normalizedWord
+        - id
         - language
         - translations
         - partOfSpeech
@@ -160,6 +197,9 @@ components:
         - shortNote
         - examples
       properties:
+        id:
+          type: string
+          format: uuid
         normalizedWord:
           type: string
           minLength: 1
@@ -196,6 +236,47 @@ components:
           maxItems: 3
           items:
             $ref: '#/components/schemas/WordExample'
+    WordSuggestionsResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordSuggestion'
+    WordSuggestion:
+      type: object
+      required:
+        - word
+        - source
+      properties:
+        word:
+          type: string
+          minLength: 1
+        phrase:
+          type: string
+          nullable: true
+        source:
+          type: string
+          enum:
+            - word_info
+            - pronunciation
+        wordInfoId:
+          type: string
+          format: uuid
+          nullable: true
+        pronunciationId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          $ref: '#/components/schemas/PronunciationStatus'
+          nullable: true
+        audioUrl:
+          type: string
+          format: uri
+          nullable: true
     CompoundPart:
       type: object
       required:

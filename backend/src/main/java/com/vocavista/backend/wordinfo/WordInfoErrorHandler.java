@@ -23,7 +23,12 @@ class WordInfoErrorHandler {
 
 	@ExceptionHandler(AiProviderBadGatewayException.class)
 	ResponseEntity<ErrorResponse> handleBadGateway(AiProviderBadGatewayException ex) {
-		log.warn("AI provider returned an invalid response", ex);
+		if (ex.providerResponse() == null) {
+			log.warn("AI provider returned an invalid response", ex);
+		}
+		else {
+			log.warn("AI provider returned an invalid response. providerResponse={}", ex.providerResponse(), ex);
+		}
 		return error(HttpStatus.BAD_GATEWAY, "ai_provider_error", "AI provider returned an invalid response");
 	}
 

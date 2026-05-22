@@ -11,11 +11,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.springframework.util.StringUtils;
 
 @Mapper(componentModel = "spring")
 interface WordInfoMapper {
 
+	@Mapping(target = "id", ignore = true)
 	WordInfoResponse toApiResponse(ProviderWordInfo wordInfo);
 
 	CompoundPart toApiCompoundPart(ProviderWordInfo.CompoundPart compoundPart);

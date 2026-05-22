@@ -5,9 +5,11 @@ Vocavista is a language-learning application focused on German vocabulary practi
 ## Current Features
 
 - `GET /api/v1/words/info` returns compact German word information for learners who know English and Russian.
+- Generated word information is cached in PostgreSQL so repeated requests can avoid AI calls.
+- `GET /api/v1/words/suggestions` searches cached word info and generated pronunciations for autocomplete.
 - `POST /api/v1/media/pronunciations` queues or reuses generated pronunciation audio for a German word and phrase.
 - Generated pronunciation audio is stored in S3-compatible storage and served back through a same-origin `audioUrl` for browser playback.
-- `backend/src/main/resources/static/talking-head.html` is the current manual TalkingHead smoke preview.
+- `backend/src/main/resources/static/talking-head.html` is the current manual TalkingHead UI for searching words, selecting phrases, generating audio, and playing it with the avatar.
 
 ## Current Stack
 

@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
+import com.vocavista.backend.wordinfo.WordInfoRecord;
+import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,12 +36,16 @@ class PronunciationServiceTest {
 	@Mock
 	private MediaStorageService mediaStorageService;
 
+	@Mock
+	private WordInfoRepository wordInfoRepository;
+
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
 		when(textToSpeechProvider.providerName()).thenReturn("elevenlabs");
 		when(textToSpeechProvider.modelName()).thenReturn("model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.empty());
+		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
 		when(pronunciationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 		PronunciationService service = service();
 
@@ -58,6 +64,7 @@ class PronunciationServiceTest {
 		when(textToSpeechProvider.modelName()).thenReturn("model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.of(existingAsset));
+		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
 		PronunciationService service = service();
 
 		PronunciationResponse response = service.create(request("Hausaufgabe",
@@ -79,6 +86,7 @@ class PronunciationServiceTest {
 		when(textToSpeechProvider.modelName()).thenReturn("model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.of(existingAsset));
+		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
 		when(pronunciationRepository.save(existingAsset)).thenReturn(existingAsset);
 		PronunciationService service = service();
 
@@ -106,15 +114,15 @@ class PronunciationServiceTest {
 
 	private PronunciationService service() {
 		return new PronunciationService(pronunciationRepository, generationProcessor, textToSpeechProvider,
-				mediaStorageService);
+				mediaStorageService, wordInfoRepository);
 	}
 
 	private static PronunciationRequest request(String word, String phrase) {
-		return new PronunciationRequest(word, phrase, PronunciationRequest.LanguageEnum.DE);
+		return new PronunciationRequest(wordInfoId(), word, phrase, PronunciationRequest.LanguageEnum.DE);
 	}
 
 	private static PronunciationAsset completedAsset() {
-		PronunciationAsset asset = PronunciationAsset.queued("Hausaufgabe",
+		PronunciationAsset asset = PronunciationAsset.queued(wordInfoRecord(), "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
 		asset.setId(UUID.randomUUID());
@@ -125,7 +133,7 @@ class PronunciationServiceTest {
 	}
 
 	private static PronunciationAsset failedAsset() {
-		PronunciationAsset asset = PronunciationAsset.queued("Hausaufgabe",
+		PronunciationAsset asset = PronunciationAsset.queued(wordInfoRecord(), "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
 		asset.setId(UUID.randomUUID());
@@ -134,6 +142,22 @@ class PronunciationServiceTest {
 		asset.setErrorCode("tts_provider_error");
 		asset.setErrorMessage("ElevenLabs failed");
 		return asset;
+	}
+
+	private static UUID wordInfoId() {
+		return UUID.fromString("11111111-1111-1111-1111-111111111111");
+	}
+
+	private static WordInfoRecord wordInfoRecord() {
+		WordInfoRecord record = new WordInfoRecord();
+		record.setId(wordInfoId());
+		record.setNormalizedQuery("hausaufgabe");
+		record.setNormalizedWord("Hausaufgabe");
+		record.setLanguage("de");
+		record.setResponseJson("{}");
+		record.setCreatedAt(OffsetDateTime.now());
+		record.setUpdatedAt(OffsetDateTime.now());
+		return record;
 	}
 
 }

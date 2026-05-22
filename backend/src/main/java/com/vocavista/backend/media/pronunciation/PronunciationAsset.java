@@ -1,10 +1,14 @@
 package com.vocavista.backend.media.pronunciation;
 
+import com.vocavista.backend.wordinfo.WordInfoRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -17,10 +21,14 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-class PronunciationAsset {
+public class PronunciationAsset {
 
 	@Id
 	private UUID id;
+
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "word_info_record_id", nullable = false)
+	private WordInfoRecord wordInfoRecord;
 
 	@Column(name = "normalized_word", nullable = false)
 	private String normalizedWord;
@@ -69,6 +77,7 @@ class PronunciationAsset {
 	private OffsetDateTime completedAt;
 
 	static PronunciationAsset queued(
+			WordInfoRecord wordInfoRecord,
 			String inputWord,
 			String inputPhrase,
 			String normalizedWord,
@@ -78,6 +87,7 @@ class PronunciationAsset {
 			OffsetDateTime now) {
 		PronunciationAsset asset = new PronunciationAsset();
 		asset.id = UUID.randomUUID();
+		asset.wordInfoRecord = wordInfoRecord;
 		asset.inputWord = inputWord;
 		asset.inputPhrase = inputPhrase;
 		asset.normalizedWord = normalizedWord;
