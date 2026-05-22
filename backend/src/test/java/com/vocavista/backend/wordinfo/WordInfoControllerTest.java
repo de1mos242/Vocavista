@@ -8,14 +8,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import com.vocavista.backend.media.pronunciation.PronunciationRepository;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Optional;
 
 @WebMvcTest(WordInfoController.class)
-@Import({ WordInfoService.class, ProviderWordInfoValidator.class, WordInfoMapperImpl.class, WordInfoErrorHandler.class })
+@Import({ WordInfoService.class, WordSuggestionService.class, ProviderWordInfoValidator.class, WordInfoMapperImpl.class,
+		WordInfoErrorHandler.class })
 class WordInfoControllerTest {
 
 	@Autowired
@@ -23,6 +29,17 @@ class WordInfoControllerTest {
 
 	@MockitoBean
 	private AiWordInfoProvider aiWordInfoProvider;
+
+	@MockitoBean
+	private WordInfoRepository wordInfoRepository;
+
+	@MockitoBean
+	private PronunciationRepository pronunciationRepository;
+
+	@BeforeEach
+	void setUp() {
+		when(wordInfoRepository.findByNormalizedQuery(anyString())).thenReturn(Optional.empty());
+	}
 
 	@Test
 	void returnsWordInfoForValidRequest() throws Exception {
@@ -35,6 +52,20 @@ class WordInfoControllerTest {
 				.andExpect(jsonPath("$.examples.length()").value(3));
 
 		verify(aiWordInfoProvider).generate("Hausaufgabe");
+	}
+
+	@Test
+	void returnsWordSuggestionsForValidQuery() throws Exception {
+		WordInfoRecord record = WordInfoRecord.create("hausaufgabe", "Hausaufgabe", "de", "{}", OffsetDateTime.now());
+		when(wordInfoRepository.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc("haus"))
+				.thenReturn(List.of(record));
+		when(pronunciationRepository.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc("haus"))
+				.thenReturn(List.of());
+
+		mockMvc.perform(get("/api/v1/words/suggestions").param("query", "haus"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].word").value("Hausaufgabe"))
+				.andExpect(jsonPath("$.items[0].source").value("word_info"));
 	}
 
 	@Test

@@ -1,7 +1,13 @@
 package com.vocavista.backend.wordinfo;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vocavista.backend.api.model.WordInfoResponse;
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -14,16 +20,56 @@ class WordInfoService {
 	private final AiWordInfoProvider aiWordInfoProvider;
 	private final ProviderWordInfoValidator providerWordInfoValidator;
 	private final WordInfoMapper wordInfoMapper;
+	private final WordInfoRepository wordInfoRepository;
+	private final ObjectMapper objectMapper = new ObjectMapper();
+	private final Clock clock = Clock.systemUTC();
 
 	WordInfoResponse getWordInfo(String word) {
 		String trimmedWord = trimAndValidate(word);
-		ProviderWordInfo providerWordInfo = aiWordInfoProvider.generate(trimmedWord);
-		providerWordInfoValidator.validate(providerWordInfo);
-		return wordInfoMapper.toApiResponse(providerWordInfo);
+		String normalizedQuery = normalizeQuery(trimmedWord);
+		return wordInfoRepository.findByNormalizedQuery(normalizedQuery)
+				.map(this::toResponse)
+				.orElseGet(() -> generateAndStore(trimmedWord, normalizedQuery));
+	}
+
+	private WordInfoResponse generateAndStore(String word, String normalizedQuery) {
+		ProviderWordInfo providerWordInfo = aiWordInfoProvider.generate(word);
+		try {
+			providerWordInfoValidator.validate(providerWordInfo);
+		}
+		catch (AiProviderBadGatewayException ex) {
+			throw new AiProviderBadGatewayException(ex.getMessage(), ex, providerWordInfo);
+		}
+		WordInfoResponse response = wordInfoMapper.toApiResponse(providerWordInfo);
+		store(normalizedQuery, response);
+		return response;
+	}
+
+	private void store(String normalizedQuery, WordInfoResponse response) {
+		try {
+			OffsetDateTime now = OffsetDateTime.now(clock);
+			wordInfoRepository.save(WordInfoRecord.create(normalizedQuery, response.getNormalizedWord(),
+					response.getLanguage().getValue(), objectMapper.writeValueAsString(response), now));
+		}
+		catch (DataIntegrityViolationException ex) {
+			// Another request stored the same query first; returning this response is still correct.
+		}
+		catch (JsonProcessingException ex) {
+			throw new IllegalStateException("Could not store word info response", ex);
+		}
+	}
+
+	private WordInfoResponse toResponse(WordInfoRecord record) {
+		try {
+			return objectMapper.readValue(record.getResponseJson(), WordInfoResponse.class);
+		}
+		catch (JsonProcessingException ex) {
+			throw new IllegalStateException("Could not read stored word info response", ex);
+		}
 	}
 
 	private static String trimAndValidate(String word) {
-		String trimmedWord = word == null ? "" : word.trim();
+		String trimmedWord = word == null ? "" : word.trim().replaceAll("\\s+", " ");
 		if (!StringUtils.hasText(trimmedWord)) {
 			throw new WordInfoValidationException("word must not be blank");
 		}
@@ -31,6 +77,10 @@ class WordInfoService {
 			throw new WordInfoValidationException("word must not exceed 80 characters");
 		}
 		return trimmedWord;
+	}
+
+	static String normalizeQuery(String word) {
+		return word.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
 	}
 
 }

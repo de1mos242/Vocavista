@@ -17,7 +17,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-class PronunciationAsset {
+public class PronunciationAsset {
 
 	@Id
 	private UUID id;
