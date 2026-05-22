@@ -34,20 +34,23 @@ class PronunciationControllerTest {
 	@Test
 	void queuesPronunciationForValidRequest() throws Exception {
 		UUID id = UUID.randomUUID();
+		UUID wordInfoId = UUID.randomUUID();
 		when(pronunciationService.create(any()))
-				.thenReturn(new PronunciationResponse(id, PronunciationStatus.QUEUED));
+				.thenReturn(new PronunciationResponse(id, wordInfoId, PronunciationStatus.QUEUED));
 
 		mockMvc.perform(post("/api/v1/media/pronunciations")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
+						  "wordInfoId": "%s",
 						  "word": "Hausaufgabe",
 						  "phrase": "Ich mache meine Hausaufgabe nach dem Abendessen.",
 						  "language": "de"
 						}
-						"""))
+						""".formatted(wordInfoId)))
 				.andExpect(status().isAccepted())
 				.andExpect(jsonPath("$.id").value(id.toString()))
+				.andExpect(jsonPath("$.wordInfoId").value(wordInfoId.toString()))
 				.andExpect(jsonPath("$.status").value("queued"));
 
 		verify(pronunciationService).create(any());
@@ -56,7 +59,8 @@ class PronunciationControllerTest {
 	@Test
 	void returnsCompletedPronunciationStatus() throws Exception {
 		UUID id = UUID.randomUUID();
-		PronunciationResponse response = new PronunciationResponse(id, PronunciationStatus.COMPLETED)
+		UUID wordInfoId = UUID.randomUUID();
+		PronunciationResponse response = new PronunciationResponse(id, wordInfoId, PronunciationStatus.COMPLETED)
 				.audioUrl(URI.create("/api/v1/media/pronunciations/%s/audio".formatted(id)))
 				.renderMode("talking-head");
 		when(pronunciationService.get(id)).thenReturn(response);
@@ -64,6 +68,7 @@ class PronunciationControllerTest {
 		mockMvc.perform(get("/api/v1/media/pronunciations/{id}", id))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(id.toString()))
+				.andExpect(jsonPath("$.wordInfoId").value(wordInfoId.toString()))
 				.andExpect(jsonPath("$.status").value("completed"))
 				.andExpect(jsonPath("$.audioUrl").exists())
 				.andExpect(jsonPath("$.renderMode").value("talking-head"));

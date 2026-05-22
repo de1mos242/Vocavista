@@ -6,6 +6,7 @@ import com.vocavista.backend.api.model.WordInfoResponse;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Locale;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -41,18 +42,22 @@ class WordInfoService {
 			throw new AiProviderBadGatewayException(ex.getMessage(), ex, providerWordInfo);
 		}
 		WordInfoResponse response = wordInfoMapper.toApiResponse(providerWordInfo);
-		store(normalizedQuery, response);
-		return response;
+		return store(normalizedQuery, response);
 	}
 
-	private void store(String normalizedQuery, WordInfoResponse response) {
+	private WordInfoResponse store(String normalizedQuery, WordInfoResponse response) {
+		UUID id = UUID.randomUUID();
+		response.setId(id);
 		try {
 			OffsetDateTime now = OffsetDateTime.now(clock);
-			wordInfoRepository.save(WordInfoRecord.create(normalizedQuery, response.getNormalizedWord(),
+			wordInfoRepository.save(WordInfoRecord.create(id, normalizedQuery, response.getNormalizedWord(),
 					response.getLanguage().getValue(), objectMapper.writeValueAsString(response), now));
+			return response;
 		}
 		catch (DataIntegrityViolationException ex) {
-			// Another request stored the same query first; returning this response is still correct.
+			return wordInfoRepository.findByNormalizedQuery(normalizedQuery)
+					.map(this::toResponse)
+					.orElseThrow(() -> ex);
 		}
 		catch (JsonProcessingException ex) {
 			throw new IllegalStateException("Could not store word info response", ex);
@@ -61,7 +66,9 @@ class WordInfoService {
 
 	private WordInfoResponse toResponse(WordInfoRecord record) {
 		try {
-			return objectMapper.readValue(record.getResponseJson(), WordInfoResponse.class);
+			WordInfoResponse response = objectMapper.readValue(record.getResponseJson(), WordInfoResponse.class);
+			response.setId(record.getId());
+			return response;
 		}
 		catch (JsonProcessingException ex) {
 			throw new IllegalStateException("Could not read stored word info response", ex);

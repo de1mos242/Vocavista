@@ -265,6 +265,7 @@
     let headAudioReady = false;
     let selectedSuggestion;
     let suggestionTimer;
+    let currentWordInfoId;
 
     async function initAvatar() {
       head = new TalkingHead(avatarNode, {
@@ -365,6 +366,7 @@
 
     function selectSuggestion(item) {
       selectedSuggestion = item;
+      currentWordInfoId = item.wordInfoId;
       wordInput.value = item.word;
       if (item.phrase) {
         phraseInput.value = item.phrase;
@@ -403,6 +405,7 @@
     }
 
     function renderWordInfo(info) {
+      currentWordInfoId = info.id;
       renderWordVariants(info);
 
       const translations = [
@@ -454,6 +457,7 @@
       button.innerHTML = `${escapeHtml(info.normalizedWord)}<small>Normalized word from word info</small>`;
       button.addEventListener("click", () => {
         wordInput.value = info.normalizedWord;
+        currentWordInfoId = info.id;
         selectedSuggestion = undefined;
         setStatus(`Using normalized word for audio: ${info.normalizedWord}`);
       });
@@ -461,6 +465,7 @@
     }
 
     wordInput.addEventListener("input", () => {
+      currentWordInfoId = undefined;
       clearTimeout(suggestionTimer);
       suggestionTimer = setTimeout(() => {
         searchSuggestions().catch((error) => setStatus(error.message));
@@ -474,10 +479,15 @@
     searchWordButton.addEventListener("click", loadWordInfo);
 
     async function createAsset() {
+      if (!currentWordInfoId) {
+        throw new Error("Search word info before generating audio.");
+      }
+
       const response = await fetch("/api/v1/media/pronunciations", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          wordInfoId: currentWordInfoId,
           word: wordInput.value,
           phrase: phraseInput.value,
           language: "de"

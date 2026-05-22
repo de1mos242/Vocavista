@@ -10,6 +10,7 @@ Create a simple end-to-end UI flow that lets a user search for a German word, vi
 - Add a focused `WordSuggestionService` with a simple contains search for autocomplete.
 - Search suggestions across cached word-info records and existing pronunciation assets.
 - Extend the existing static `talking-head.html` preview rather than adding a separate frontend app.
+- Link every generated pronunciation asset to the word-info record it was generated from.
 
 ## Constraints
 
@@ -21,6 +22,8 @@ Create a simple end-to-end UI flow that lets a user search for a German word, vi
 
 - Add an OpenAPI `GET /api/v1/words/suggestions` endpoint.
 - Store word-info records with the normalized query and serialized API response.
+- Return the persisted word-info ID from word-info responses and require it when creating pronunciation audio.
+- Store `pronunciation_assets.word_info_record_id` as a non-null foreign key to `word_info_records(id)`.
 - Return pronunciation suggestions with phrase and reusable audio metadata when available.
 - Return cached word-info suggestions without phrase so selecting one can load the cached word-info response.
 
@@ -33,6 +36,7 @@ Create a simple end-to-end UI flow that lets a user search for a German word, vi
 - 2026-05-22: Moved malformed AI response dump from the exception message into the service log entry.
 - 2026-05-22: Moved malformed AI response dump into the existing `WordInfoErrorHandler` invalid-response log by attaching the parsed provider response to the bad-gateway exception.
 - 2026-05-22: Added normalized word variants under the search button and changed example phrase selection to use the word-info normalized word for pronunciation audio.
+- 2026-05-22: Linked generated pronunciation assets to persisted word-info records through required `wordInfoId` API fields and a non-null database foreign key.
 
 ## Verification
 
@@ -42,6 +46,7 @@ Create a simple end-to-end UI flow that lets a user search for a German word, vi
 - 2026-05-22: `./mvnw test` passed after moving response dump to logging with 29 tests.
 - 2026-05-22: `./mvnw test` passed after moving response dump to the error-handler log with 29 tests.
 - 2026-05-22: `./mvnw test` passed after normalized-word UI change with 29 tests.
+- 2026-05-22: `./mvnw test` passed after requiring word-info linkage for pronunciation audio with 29 tests.
 
 ## Links
 

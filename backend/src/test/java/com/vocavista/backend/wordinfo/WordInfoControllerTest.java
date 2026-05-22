@@ -18,6 +18,7 @@ import com.vocavista.backend.media.pronunciation.PronunciationRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @WebMvcTest(WordInfoController.class)
 @Import({ WordInfoService.class, WordSuggestionService.class, ProviderWordInfoValidator.class, WordInfoMapperImpl.class,
@@ -47,6 +48,7 @@ class WordInfoControllerTest {
 
 		mockMvc.perform(get("/api/v1/words/info").param("word", " Hausaufgabe "))
 				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").exists())
 				.andExpect(jsonPath("$.normalizedWord").value("Hausaufgabe"))
 				.andExpect(jsonPath("$.partOfSpeech").value("noun"))
 				.andExpect(jsonPath("$.examples.length()").value(3));
@@ -56,7 +58,9 @@ class WordInfoControllerTest {
 
 	@Test
 	void returnsWordSuggestionsForValidQuery() throws Exception {
-		WordInfoRecord record = WordInfoRecord.create("hausaufgabe", "Hausaufgabe", "de", "{}", OffsetDateTime.now());
+		UUID wordInfoId = UUID.randomUUID();
+		WordInfoRecord record = WordInfoRecord.create(wordInfoId, "hausaufgabe", "Hausaufgabe", "de", "{}",
+				OffsetDateTime.now());
 		when(wordInfoRepository.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc("haus"))
 				.thenReturn(List.of(record));
 		when(pronunciationRepository.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc("haus"))
@@ -65,6 +69,7 @@ class WordInfoControllerTest {
 		mockMvc.perform(get("/api/v1/words/suggestions").param("query", "haus"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items[0].word").value("Hausaufgabe"))
+				.andExpect(jsonPath("$.items[0].wordInfoId").value(wordInfoId.toString()))
 				.andExpect(jsonPath("$.items[0].source").value("word_info"));
 	}
 

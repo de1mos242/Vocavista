@@ -15,7 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-class WordInfoRecord {
+public class WordInfoRecord {
 
 	@Id
 	private UUID id;
@@ -38,10 +38,10 @@ class WordInfoRecord {
 	@Column(name = "updated_at", nullable = false)
 	private OffsetDateTime updatedAt;
 
-	static WordInfoRecord create(String normalizedQuery, String normalizedWord, String language, String responseJson,
+	static WordInfoRecord create(UUID id, String normalizedQuery, String normalizedWord, String language, String responseJson,
 			OffsetDateTime now) {
 		WordInfoRecord record = new WordInfoRecord();
-		record.id = UUID.randomUUID();
+		record.id = id;
 		record.normalizedQuery = normalizedQuery;
 		record.normalizedWord = normalizedWord;
 		record.language = language;

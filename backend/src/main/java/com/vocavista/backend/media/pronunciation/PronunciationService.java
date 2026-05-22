@@ -3,6 +3,8 @@ package com.vocavista.backend.media.pronunciation;
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
+import com.vocavista.backend.wordinfo.WordInfoRecord;
+import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -30,6 +32,7 @@ class PronunciationService {
 	private final PronunciationGenerationProcessor generationProcessor;
 	private final TextToSpeechProvider textToSpeechProvider;
 	private final MediaStorageService mediaStorageService;
+	private final WordInfoRepository wordInfoRepository;
 	private final Clock clock = Clock.systemUTC();
 
 	@Value("${vocavista.media.script-template-version:v5}")
@@ -64,7 +67,7 @@ class PronunciationService {
 	}
 
 	private PronunciationResponse createQueuedAsset(NormalizedInput input, String contentHash) {
-		PronunciationAsset asset = PronunciationAsset.queued(input.word(), input.phrase(), input.normalizedWord(),
+		PronunciationAsset asset = PronunciationAsset.queued(input.wordInfoRecord(), input.word(), input.phrase(), input.normalizedWord(),
 				input.normalizedPhrase(), input.language(), contentHash, OffsetDateTime.now(clock));
 		try {
 			PronunciationAsset savedAsset = pronunciationRepository.save(asset);
@@ -99,7 +102,7 @@ class PronunciationService {
 
 	private PronunciationResponse toResponse(PronunciationAsset asset) {
 		PronunciationResponse response = new PronunciationResponse(asset.getId(),
-				PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
+				asset.getWordInfoRecord().getId(), PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
 		response.setRenderMode(RENDER_MODE);
 		if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getAudioObjectKey())) {
 			response.setAudioUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/audio"));
@@ -119,6 +122,10 @@ class PronunciationService {
 		String word = trimAndCollapse(request.getWord());
 		String phrase = trimAndCollapse(request.getPhrase());
 		String language = request.getLanguage() == null ? "" : request.getLanguage().toString();
+		UUID wordInfoId = request.getWordInfoId();
+		if (wordInfoId == null) {
+			throw new PronunciationValidationException("wordInfoId is required");
+		}
 		if (!StringUtils.hasText(word)) {
 			throw new PronunciationValidationException("word must not be blank");
 		}
@@ -134,11 +141,13 @@ class PronunciationService {
 		if (!SUPPORTED_LANGUAGE.equals(language)) {
 			throw new PronunciationValidationException("only German language code de is supported");
 		}
-		return new NormalizedInput(request.getWord(), request.getPhrase(), word, phrase, language);
+		WordInfoRecord wordInfoRecord = wordInfoRepository.findById(wordInfoId)
+				.orElseThrow(() -> new PronunciationValidationException("wordInfoId must reference an existing word info record"));
+		return new NormalizedInput(wordInfoRecord, request.getWord(), request.getPhrase(), word, phrase, language);
 	}
 
 	private String contentHash(NormalizedInput input) {
-		String value = String.join("\n", input.language(), input.normalizedWord().toLowerCase(),
+		String value = String.join("\n", input.language(), input.wordInfoRecord().getId().toString(), input.normalizedWord().toLowerCase(),
 				input.normalizedPhrase().toLowerCase(), scriptTemplateVersion, voiceConfig,
 				textToSpeechProvider.providerName(), textToSpeechProvider.modelName());
 		try {
@@ -154,7 +163,7 @@ class PronunciationService {
 		return value == null ? "" : value.trim().replaceAll("\\s+", " ");
 	}
 
-	private record NormalizedInput(String word, String phrase, String normalizedWord, String normalizedPhrase,
+	private record NormalizedInput(WordInfoRecord wordInfoRecord, String word, String phrase, String normalizedWord, String normalizedPhrase,
 			String language) {
 	}
 

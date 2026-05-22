@@ -5,7 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-interface WordInfoRepository extends JpaRepository<WordInfoRecord, UUID> {
+public interface WordInfoRepository extends JpaRepository<WordInfoRecord, UUID> {
 
 	Optional<WordInfoRecord> findByNormalizedQuery(String normalizedQuery);
 

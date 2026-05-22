@@ -29,6 +29,7 @@ class WordInfoServiceTest {
 
 		WordInfoResponse response = service.getWordInfo("  Hausaufgabe  ");
 
+		assertThat(response.getId()).isNotNull();
 		assertThat(response.getNormalizedWord()).isEqualTo("Hausaufgabe");
 		assertThat(response.getPartOfSpeech()).isEqualTo(PartOfSpeech.NOUN);
 		assertThat(response.getExamples()).hasSize(3);

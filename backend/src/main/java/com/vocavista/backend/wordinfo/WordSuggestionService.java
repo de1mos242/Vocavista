@@ -28,6 +28,7 @@ class WordSuggestionService {
 		for (WordInfoRecord record : wordInfoRepository
 				.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc(normalizedQuery)) {
 			WordSuggestion suggestion = new WordSuggestion(record.getNormalizedWord(), WordSuggestion.SourceEnum.WORD_INFO);
+			suggestion.setWordInfoId(record.getId());
 			suggestions.putIfAbsent(key(record.getNormalizedWord(), null), suggestion);
 		}
 
@@ -35,6 +36,7 @@ class WordSuggestionService {
 				.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc(normalizedQuery)) {
 			WordSuggestion suggestion = new WordSuggestion(asset.getNormalizedWord(), WordSuggestion.SourceEnum.PRONUNCIATION);
 			suggestion.setPhrase(asset.getNormalizedPhrase());
+			suggestion.setWordInfoId(asset.getWordInfoRecord().getId());
 			suggestion.setPronunciationId(asset.getId());
 			suggestion.setStatus(PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
 			if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getAudioObjectKey())) {

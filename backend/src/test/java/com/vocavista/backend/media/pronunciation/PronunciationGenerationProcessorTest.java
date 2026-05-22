@@ -6,8 +6,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.vocavista.backend.wordinfo.WordInfoRecord;
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -75,7 +77,9 @@ class PronunciationGenerationProcessorTest {
 	}
 
 	private static PronunciationAsset queuedAsset() {
-		return PronunciationAsset.queued("Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.",
+		WordInfoRecord wordInfoRecord = new WordInfoRecord();
+		wordInfoRecord.setId(UUID.randomUUID());
+		return PronunciationAsset.queued(wordInfoRecord, "Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.",
 				"Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
 	}
 
