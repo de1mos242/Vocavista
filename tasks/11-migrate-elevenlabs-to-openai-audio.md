@@ -76,6 +76,7 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: Changed malformed word-info exceptions to include `rawProviderResponse=...` directly in the exception message so plain stack traces show the raw model output, not only the error-handler log line.
 - 2026-05-25: Tuned OpenAI TTS defaults toward a livelier sound after real usage showed the default was less alive than ElevenLabs. Changed default voice from `marin` to `coral` and made the default instructions explicitly request warm, expressive, conversational German.
 - 2026-05-25: Replaced the initial raw `RestClient` speech call with the official OpenAI Java SDK. Added `com.openai:openai-java` as a direct dependency, built `SpeechCreateParams` through the SDK, and updated provider tests to assert SDK request params instead of HTTP JSON.
+- 2026-05-25: Replaced handwritten accessors in `OpenAiTextToSpeechProperties` with Lombok `@Getter` and `@Setter` to match the existing project dependency and reduce boilerplate.
 
 ## Verification
 
@@ -89,3 +90,4 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: `./mvnw -Dtest=OpenAiTextToSpeechProviderTest test` passed after tuning the default OpenAI TTS voice/instructions; 4 targeted tests passed.
 - 2026-05-25: `./mvnw -Dtest=OpenAiTextToSpeechProviderTest test` passed after replacing raw HTTP with the OpenAI Java SDK; 4 targeted tests passed.
 - 2026-05-25: `./mvnw test` passed after replacing raw HTTP with the OpenAI Java SDK; 32 tests passed.
+- 2026-05-25: `./mvnw -Dtest=OpenAiTextToSpeechProviderTest test` passed after converting OpenAI TTS properties to Lombok accessors; 4 targeted tests passed.
