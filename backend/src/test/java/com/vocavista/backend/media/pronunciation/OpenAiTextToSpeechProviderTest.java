@@ -2,59 +2,47 @@ package com.vocavista.backend.media.pronunciation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import com.openai.core.JsonValue;
+import com.openai.core.http.Headers;
+import com.openai.core.http.HttpResponse;
+import com.openai.errors.OpenAIServiceException;
+import com.openai.models.audio.speech.SpeechCreateParams;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
 
 class OpenAiTextToSpeechProviderTest {
 
 	@Test
 	void createsSpeechWithConfiguredVoiceModelAndInstructions() {
-		RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test");
-		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		OpenAiTextToSpeechProperties properties = properties();
-		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(builder.build(), properties);
-
-		server.expect(requestTo("https://api.openai.test/v1/audio/speech"))
-				.andExpect(method(HttpMethod.POST))
-				.andExpect(header("Authorization", "Bearer api-key"))
-				.andExpect(content().json("""
-						{
-						  "model": "gpt-4o-mini-tts",
-						  "voice": "coral",
-						  "input": "Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.",
-						  "instructions": "Speak clearly in German.",
-						  "response_format": "mp3"
-						}
-						"""))
-				.andRespond(withSuccess("audio".getBytes(), MediaType.APPLICATION_OCTET_STREAM));
+		CapturingSpeechGenerator speechGenerator = new CapturingSpeechGenerator("audio".getBytes());
+		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(speechGenerator, properties);
 
 		GeneratedAudio audio = provider.generate(new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.",
 				"de", "Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
 				"default-clear-german"));
 
+		SpeechCreateParams request = speechGenerator.request;
+		assertThat(request.model().asString()).isEqualTo("gpt-4o-mini-tts");
+		assertThat(request.voice().asString()).isEqualTo("coral");
+		assertThat(request.input()).isEqualTo("Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.");
+		assertThat(request.instructions()).contains("Speak clearly in German.");
+		assertThat(request.responseFormat().map(SpeechCreateParams.ResponseFormat::asString)).contains("mp3");
 		assertThat(audio.contentType()).isEqualTo("audio/mpeg");
 		assertThat(audio.bytes()).isEqualTo("audio".getBytes());
 		assertThat(provider.providerName()).isEqualTo("openai");
 		assertThat(provider.modelName()).contains("gpt-4o-mini-tts", "coral", "mp3", "Speak clearly in German.");
-		server.verify();
 	}
 
 	@Test
 	void failsWhenApiKeyIsMissing() {
 		OpenAiTextToSpeechProperties properties = properties();
 		properties.setApiKey("__missing__");
-		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(RestClient.create(), properties);
+		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(params -> new TestHttpResponse("audio".getBytes()),
+				properties);
 
 		assertThatThrownBy(() -> provider.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
@@ -63,32 +51,23 @@ class OpenAiTextToSpeechProviderTest {
 
 	@Test
 	void mapsProviderErrors() {
-		RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test");
-		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(builder.build(), properties());
-
-		server.expect(requestTo("https://api.openai.test/v1/audio/speech"))
-				.andRespond(withStatus(HttpStatus.BAD_REQUEST).body("bad request"));
+		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(params -> {
+			throw new TestOpenAIServiceException(400, "bad request");
+		}, properties());
 
 		assertThatThrownBy(() -> provider.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
-				.hasMessageContaining("OpenAI returned HTTP 400: bad request");
-		server.verify();
+				.hasMessageContaining("OpenAI returned HTTP 400");
 	}
 
 	@Test
 	void rejectsEmptyAudio() {
-		RestClient.Builder builder = RestClient.builder().baseUrl("https://api.openai.test");
-		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(builder.build(), properties());
-
-		server.expect(requestTo("https://api.openai.test/v1/audio/speech"))
-				.andRespond(withSuccess(new byte[0], MediaType.APPLICATION_OCTET_STREAM));
+		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(params -> new TestHttpResponse(new byte[0]),
+				properties());
 
 		assertThatThrownBy(() -> provider.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
 				.hasMessage("OpenAI returned empty audio");
-		server.verify();
 	}
 
 	private static OpenAiTextToSpeechProperties properties() {
@@ -103,6 +82,89 @@ class OpenAiTextToSpeechProviderTest {
 		return new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de",
 				"Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
 				"default-clear-german");
+	}
+
+	private static final class CapturingSpeechGenerator implements OpenAiTextToSpeechProvider.SpeechGenerator {
+
+		private final byte[] response;
+		private SpeechCreateParams request;
+
+		private CapturingSpeechGenerator(byte[] response) {
+			this.response = response;
+		}
+
+		@Override
+		public HttpResponse create(SpeechCreateParams params) {
+			request = params;
+			return new TestHttpResponse(response);
+		}
+
+	}
+
+	private record TestHttpResponse(byte[] bytes) implements HttpResponse {
+
+		@Override
+		public int statusCode() {
+			return 200;
+		}
+
+		@Override
+		public Headers headers() {
+			return Headers.builder().build();
+		}
+
+		@Override
+		public InputStream body() {
+			return new ByteArrayInputStream(bytes);
+		}
+
+		@Override
+		public void close() {
+		}
+
+	}
+
+	private static final class TestOpenAIServiceException extends OpenAIServiceException {
+
+		private final int statusCode;
+		private final JsonValue body;
+
+		private TestOpenAIServiceException(int statusCode, String body) {
+			super(body, null);
+			this.statusCode = statusCode;
+			this.body = JsonValue.from(body);
+		}
+
+		@Override
+		public int statusCode() {
+			return statusCode;
+		}
+
+		@Override
+		public Headers headers() {
+			return Headers.builder().build();
+		}
+
+		@Override
+		public JsonValue body() {
+			return body;
+		}
+
+		@Override
+		public Optional<String> code() {
+			return Optional.empty();
+		}
+
+		@Override
+		public Optional<String> param() {
+			return Optional.empty();
+		}
+
+		@Override
+		public Optional<String> type() {
+			return Optional.empty();
+		}
+
 	}
 
 }

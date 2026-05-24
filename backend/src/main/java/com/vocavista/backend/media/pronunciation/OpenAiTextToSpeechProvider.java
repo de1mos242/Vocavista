@@ -1,32 +1,31 @@
 package com.vocavista.backend.media.pronunciation;
 
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.core.http.HttpResponse;
+import com.openai.errors.OpenAIIoException;
+import com.openai.errors.OpenAIServiceException;
+import com.openai.models.audio.speech.SpeechCreateParams;
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestClient;
 
 @Component
 class OpenAiTextToSpeechProvider implements TextToSpeechProvider {
 
 	private static final String MISSING_API_KEY = "__missing__";
 
-	private final RestClient restClient;
+	private final SpeechGenerator speechGenerator;
 	private final OpenAiTextToSpeechProperties properties;
 
 	@Autowired
-	OpenAiTextToSpeechProvider(
-			RestClient.Builder restClientBuilder,
-			OpenAiTextToSpeechProperties properties) {
-		this(restClientBuilder.baseUrl(properties.getBaseUrl()).build(), properties);
+	OpenAiTextToSpeechProvider(OpenAiTextToSpeechProperties properties) {
+		this(createClient(properties).audio().speech()::create, properties);
 	}
 
-	OpenAiTextToSpeechProvider(RestClient restClient, OpenAiTextToSpeechProperties properties) {
-		this.restClient = restClient;
+	OpenAiTextToSpeechProvider(SpeechGenerator speechGenerator, OpenAiTextToSpeechProperties properties) {
+		this.speechGenerator = speechGenerator;
 		this.properties = properties;
 	}
 
@@ -36,17 +35,17 @@ class OpenAiTextToSpeechProvider implements TextToSpeechProvider {
 			throw new MediaGenerationException("tts_provider_not_configured", "OpenAI API key is not configured");
 		}
 
-		byte[] bytes = restClient.post()
-				.uri("/v1/audio/speech")
-				.header("Authorization", "Bearer " + properties.getApiKey())
-				.contentType(MediaType.APPLICATION_JSON)
-				.body(requestBody(script))
-				.retrieve()
-				.onStatus(HttpStatusCode::isError, (request, response) -> {
-					throw new MediaGenerationException("tts_provider_error", "OpenAI returned HTTP "
-							+ response.getStatusCode().value() + ": " + readBody(response.getBody()));
-				})
-				.body(byte[].class);
+		byte[] bytes;
+		try (HttpResponse response = speechGenerator.create(requestFor(script))) {
+			bytes = response.body().readAllBytes();
+		}
+		catch (OpenAIIoException | IOException ex) {
+			throw new MediaGenerationException("tts_provider_error", "OpenAI speech generation failed", ex);
+		}
+		catch (OpenAIServiceException ex) {
+			throw new MediaGenerationException("tts_provider_error",
+					"OpenAI returned HTTP " + ex.statusCode() + ": " + ex.body(), ex);
+		}
 
 		if (bytes == null || bytes.length == 0) {
 			throw new MediaGenerationException("tts_provider_error", "OpenAI returned empty audio");
@@ -65,14 +64,21 @@ class OpenAiTextToSpeechProvider implements TextToSpeechProvider {
 				properties.getResponseFormat(), properties.getInstructions(), "script-text");
 	}
 
-	private Map<String, Object> requestBody(PronunciationScript script) {
-		Map<String, Object> body = new LinkedHashMap<>();
-		body.put("model", properties.getModel());
-		body.put("voice", properties.getVoice());
-		body.put("input", script.text());
-		body.put("instructions", properties.getInstructions());
-		body.put("response_format", properties.getResponseFormat());
-		return body;
+	private SpeechCreateParams requestFor(PronunciationScript script) {
+		return SpeechCreateParams.builder()
+				.model(properties.getModel())
+				.voice(properties.getVoice())
+				.input(script.text())
+				.instructions(properties.getInstructions())
+				.responseFormat(SpeechCreateParams.ResponseFormat.of(properties.getResponseFormat()))
+				.build();
+	}
+
+	private static OpenAIClient createClient(OpenAiTextToSpeechProperties properties) {
+		return OpenAIOkHttpClient.builder()
+				.apiKey(properties.getApiKey())
+				.baseUrl(properties.getBaseUrl())
+				.build();
 	}
 
 	private static String contentTypeFor(String responseFormat) {
@@ -86,8 +92,11 @@ class OpenAiTextToSpeechProvider implements TextToSpeechProvider {
 		};
 	}
 
-	private static String readBody(java.io.InputStream body) throws IOException {
-		return new String(body.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+	@FunctionalInterface
+	interface SpeechGenerator {
+
+		HttpResponse create(SpeechCreateParams params);
+
 	}
 
 }
