@@ -13,15 +13,15 @@ import java.io.InputStream;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-class OpenAiTextToSpeechProviderTest {
+class PronunciationAudioGeneratorTest {
 
 	@Test
 	void createsSpeechWithConfiguredVoiceModelAndInstructions() {
 		OpenAiTextToSpeechProperties properties = properties();
 		CapturingSpeechGenerator speechGenerator = new CapturingSpeechGenerator("audio".getBytes());
-		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(speechGenerator, properties);
+		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(speechGenerator, properties);
 
-		GeneratedAudio audio = provider.generate(new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.",
+		GeneratedAudio audio = generator.generate(new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.",
 				"de", "Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
 				"default-clear-german"));
 
@@ -33,39 +33,39 @@ class OpenAiTextToSpeechProviderTest {
 		assertThat(request.responseFormat().map(SpeechCreateParams.ResponseFormat::asString)).contains("mp3");
 		assertThat(audio.contentType()).isEqualTo("audio/mpeg");
 		assertThat(audio.bytes()).isEqualTo("audio".getBytes());
-		assertThat(provider.providerName()).isEqualTo("openai");
-		assertThat(provider.modelName()).contains("gpt-4o-mini-tts", "coral", "mp3", "Speak clearly in German.");
+		assertThat(generator.providerName()).isEqualTo("openai");
+		assertThat(generator.modelName()).contains("gpt-4o-mini-tts", "coral", "mp3", "Speak clearly in German.");
 	}
 
 	@Test
 	void failsWhenApiKeyIsMissing() {
 		OpenAiTextToSpeechProperties properties = properties();
 		properties.setApiKey("__missing__");
-		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(params -> new TestHttpResponse("audio".getBytes()),
+		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(params -> new TestHttpResponse("audio".getBytes()),
 				properties);
 
-		assertThatThrownBy(() -> provider.generate(script()))
+		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
 				.hasMessage("OpenAI API key is not configured");
 	}
 
 	@Test
 	void mapsProviderErrors() {
-		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(params -> {
+		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(params -> {
 			throw new TestOpenAIServiceException(400, "bad request");
 		}, properties());
 
-		assertThatThrownBy(() -> provider.generate(script()))
+		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
 				.hasMessageContaining("OpenAI returned HTTP 400");
 	}
 
 	@Test
 	void rejectsEmptyAudio() {
-		OpenAiTextToSpeechProvider provider = new OpenAiTextToSpeechProvider(params -> new TestHttpResponse(new byte[0]),
+		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(params -> new TestHttpResponse(new byte[0]),
 				properties());
 
-		assertThatThrownBy(() -> provider.generate(script()))
+		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
 				.hasMessage("OpenAI returned empty audio");
 	}
@@ -84,7 +84,7 @@ class OpenAiTextToSpeechProviderTest {
 				"default-clear-german");
 	}
 
-	private static final class CapturingSpeechGenerator implements OpenAiTextToSpeechProvider.SpeechGenerator {
+	private static final class CapturingSpeechGenerator implements PronunciationAudioGenerator.SpeechGenerator {
 
 		private final byte[] response;
 		private SpeechCreateParams request;

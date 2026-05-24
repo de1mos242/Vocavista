@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
-class OpenAiTextToSpeechProvider implements TextToSpeechProvider {
+class PronunciationAudioGenerator {
 
 	private static final String MISSING_API_KEY = "__missing__";
 
@@ -20,16 +20,15 @@ class OpenAiTextToSpeechProvider implements TextToSpeechProvider {
 	private final OpenAiTextToSpeechProperties properties;
 
 	@Autowired
-	OpenAiTextToSpeechProvider(OpenAiTextToSpeechProperties properties) {
+	PronunciationAudioGenerator(OpenAiTextToSpeechProperties properties) {
 		this(createClient(properties).audio().speech()::create, properties);
 	}
 
-	OpenAiTextToSpeechProvider(SpeechGenerator speechGenerator, OpenAiTextToSpeechProperties properties) {
+	PronunciationAudioGenerator(SpeechGenerator speechGenerator, OpenAiTextToSpeechProperties properties) {
 		this.speechGenerator = speechGenerator;
 		this.properties = properties;
 	}
 
-	@Override
 	public GeneratedAudio generate(PronunciationScript script) {
 		if (!StringUtils.hasText(properties.getApiKey()) || MISSING_API_KEY.equals(properties.getApiKey())) {
 			throw new MediaGenerationException("tts_provider_not_configured", "OpenAI API key is not configured");
@@ -53,12 +52,10 @@ class OpenAiTextToSpeechProvider implements TextToSpeechProvider {
 		return new GeneratedAudio(bytes, contentTypeFor(properties.getResponseFormat()));
 	}
 
-	@Override
 	public String providerName() {
 		return "openai";
 	}
 
-	@Override
 	public String modelName() {
 		return "%s:%s:%s:%s:%s".formatted(properties.getModel(), properties.getVoice(),
 				properties.getResponseFormat(), properties.getInstructions(), "script-text");

@@ -10,7 +10,7 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 
 ## Starting State
 
-- `ElevenLabsTextToSpeechProvider` is the only production `TextToSpeechProvider`.
+- `ElevenLabsTextToSpeechProvider` is the only production audio generation implementation behind `TextToSpeechProvider`.
 - A pronunciation asset stores generated audio in S3-compatible storage and records `audioProvider` plus `audioModel` metadata.
 - Cache keys include language, word-info ID, normalized word, normalized phrase, script template version, voice config, provider name, and model name.
 - The current provider makes three TTS requests: first isolated word slower, second isolated word faster, then phrase at medium speed.
@@ -18,7 +18,7 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 
 ## Implemented State
 
-- `OpenAiTextToSpeechProvider` is the only production `TextToSpeechProvider`.
+- `PronunciationAudioGenerator` is the only production pronunciation audio generator. It uses the official OpenAI Java SDK directly; the old `TextToSpeechProvider` interface was removed because provider swapping is no longer supported.
 - The provider uses the official OpenAI Java SDK speech API with `gpt-4o-mini-tts`, default voice `coral`, and default `mp3` output.
 - The OpenAI audio provider uses `vocavista.media.openai.api-key`, which defaults to the existing `spring.ai.openai.api-key` so local runtime only needs `SPRING_AI_OPENAI_API_KEY`.
 - The Spring `local` profile is active by default so `application-local.yaml` overrides are loaded automatically when present.
@@ -46,7 +46,7 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 
 ## Recommended Direction
 
-- Implement an `OpenAiTextToSpeechProvider` using the official OpenAI Java SDK speech API and default it to `gpt-4o-mini-tts`.
+- Implement `PronunciationAudioGenerator` using the official OpenAI Java SDK speech API and default it to `gpt-4o-mini-tts`.
 - Start with one request using the existing `PronunciationScript.text()` and instructions that ask for: clear German pronunciation, first word slow with pause, second word normal/confident, then the phrase naturally.
 - If playback quality loses the current segment-speed behavior, fall back to three OpenAI speech requests with segment-specific instructions and join the outputs as the current provider does.
 - Default output to `mp3` for compatibility with existing storage/playback unless TalkingHead/browser latency testing shows `wav` is materially better.
@@ -77,6 +77,7 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: Tuned OpenAI TTS defaults toward a livelier sound after real usage showed the default was less alive than ElevenLabs. Changed default voice from `marin` to `coral` and made the default instructions explicitly request warm, expressive, conversational German.
 - 2026-05-25: Replaced the initial raw `RestClient` speech call with the official OpenAI Java SDK. Added `com.openai:openai-java` as a direct dependency, built `SpeechCreateParams` through the SDK, and updated provider tests to assert SDK request params instead of HTTP JSON.
 - 2026-05-25: Replaced handwritten accessors in `OpenAiTextToSpeechProperties` with Lombok `@Getter` and `@Setter` to match the existing project dependency and reduce boilerplate.
+- 2026-05-25: Removed the leftover `TextToSpeechProvider` interface and renamed `OpenAiTextToSpeechProvider` to `PronunciationAudioGenerator`, since OpenAI is now the only supported audio generation path.
 
 ## Verification
 
@@ -91,3 +92,5 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: `./mvnw -Dtest=OpenAiTextToSpeechProviderTest test` passed after replacing raw HTTP with the OpenAI Java SDK; 4 targeted tests passed.
 - 2026-05-25: `./mvnw test` passed after replacing raw HTTP with the OpenAI Java SDK; 32 tests passed.
 - 2026-05-25: `./mvnw -Dtest=OpenAiTextToSpeechProviderTest test` passed after converting OpenAI TTS properties to Lombok accessors; 4 targeted tests passed.
+- 2026-05-25: `./mvnw -Dtest=PronunciationAudioGeneratorTest,PronunciationGenerationProcessorTest,PronunciationServiceTest test` passed after removing `TextToSpeechProvider` and renaming the generator; 10 focused tests passed.
+- 2026-05-25: `./mvnw test` passed after removing `TextToSpeechProvider` and renaming the generator; 32 tests passed.
