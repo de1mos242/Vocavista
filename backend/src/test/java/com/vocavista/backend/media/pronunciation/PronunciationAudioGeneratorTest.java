@@ -11,6 +11,7 @@ import com.openai.models.audio.speech.SpeechCreateParams;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Optional;
+import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 class PronunciationAudioGeneratorTest {
@@ -84,7 +85,7 @@ class PronunciationAudioGeneratorTest {
 				"default-clear-german");
 	}
 
-	private static final class CapturingSpeechGenerator implements PronunciationAudioGenerator.SpeechGenerator {
+	private static final class CapturingSpeechGenerator implements Function<SpeechCreateParams, HttpResponse> {
 
 		private final byte[] response;
 		private SpeechCreateParams request;
@@ -94,7 +95,7 @@ class PronunciationAudioGeneratorTest {
 		}
 
 		@Override
-		public HttpResponse create(SpeechCreateParams params) {
+		public HttpResponse apply(SpeechCreateParams params) {
 			request = params;
 			return new TestHttpResponse(response);
 		}

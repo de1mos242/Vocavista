@@ -7,6 +7,7 @@ import com.openai.errors.OpenAIIoException;
 import com.openai.errors.OpenAIServiceException;
 import com.openai.models.audio.speech.SpeechCreateParams;
 import java.io.IOException;
+import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -16,7 +17,7 @@ class PronunciationAudioGenerator {
 
 	private static final String MISSING_API_KEY = "__missing__";
 
-	private final SpeechGenerator speechGenerator;
+	private final Function<SpeechCreateParams, HttpResponse> speechGenerator;
 	private final OpenAiTextToSpeechProperties properties;
 
 	@Autowired
@@ -24,7 +25,7 @@ class PronunciationAudioGenerator {
 		this(createClient(properties).audio().speech()::create, properties);
 	}
 
-	PronunciationAudioGenerator(SpeechGenerator speechGenerator, OpenAiTextToSpeechProperties properties) {
+	PronunciationAudioGenerator(Function<SpeechCreateParams, HttpResponse> speechGenerator, OpenAiTextToSpeechProperties properties) {
 		this.speechGenerator = speechGenerator;
 		this.properties = properties;
 	}
@@ -35,7 +36,7 @@ class PronunciationAudioGenerator {
 		}
 
 		byte[] bytes;
-		try (HttpResponse response = speechGenerator.create(requestFor(script))) {
+		try (HttpResponse response = speechGenerator.apply(requestFor(script))) {
 			bytes = response.body().readAllBytes();
 		}
 		catch (OpenAIIoException | IOException ex) {
@@ -87,13 +88,6 @@ class PronunciationAudioGenerator {
 			case "wav" -> "audio/wav";
 			default -> "audio/mpeg";
 		};
-	}
-
-	@FunctionalInterface
-	interface SpeechGenerator {
-
-		HttpResponse create(SpeechCreateParams params);
-
 	}
 
 }

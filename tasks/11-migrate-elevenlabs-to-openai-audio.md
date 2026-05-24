@@ -78,6 +78,7 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: Replaced the initial raw `RestClient` speech call with the official OpenAI Java SDK. Added `com.openai:openai-java` as a direct dependency, built `SpeechCreateParams` through the SDK, and updated provider tests to assert SDK request params instead of HTTP JSON.
 - 2026-05-25: Replaced handwritten accessors in `OpenAiTextToSpeechProperties` with Lombok `@Getter` and `@Setter` to match the existing project dependency and reduce boilerplate.
 - 2026-05-25: Removed the leftover `TextToSpeechProvider` interface and renamed `OpenAiTextToSpeechProvider` to `PronunciationAudioGenerator`, since OpenAI is now the only supported audio generation path.
+- 2026-05-25: Removed the custom `SpeechGenerator` functional interface and used `Function<SpeechCreateParams, HttpResponse>` directly for the SDK test seam.
 
 ## Verification
 
@@ -94,3 +95,4 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: `./mvnw -Dtest=OpenAiTextToSpeechProviderTest test` passed after converting OpenAI TTS properties to Lombok accessors; 4 targeted tests passed.
 - 2026-05-25: `./mvnw -Dtest=PronunciationAudioGeneratorTest,PronunciationGenerationProcessorTest,PronunciationServiceTest test` passed after removing `TextToSpeechProvider` and renaming the generator; 10 focused tests passed.
 - 2026-05-25: `./mvnw test` passed after removing `TextToSpeechProvider` and renaming the generator; 32 tests passed.
+- 2026-05-25: `./mvnw -Dtest=PronunciationAudioGeneratorTest,PronunciationGenerationProcessorTest,PronunciationServiceTest test` passed after replacing the custom functional interface with `Function`; 10 focused tests passed.
