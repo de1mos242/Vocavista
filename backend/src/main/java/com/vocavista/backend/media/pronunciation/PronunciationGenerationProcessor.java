@@ -78,7 +78,11 @@ class PronunciationGenerationProcessor {
 
 	private static String extensionFor(String contentType) {
 		return switch (contentType) {
+			case "audio/aac" -> "aac";
+			case "audio/flac" -> "flac";
 			case "audio/mpeg" -> "mp3";
+			case "audio/opus" -> "opus";
+			case "audio/pcm" -> "pcm";
 			case "audio/wav" -> "wav";
 			case "text/plain" -> "txt";
 			default -> "bin";

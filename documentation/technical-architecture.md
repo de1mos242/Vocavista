@@ -43,7 +43,7 @@ Local development uses RustFS from `backend/compose.yaml` with the `vocavista-me
 
 OpenAI is used for word information generation through Spring AI.
 
-ElevenLabs is used for pronunciation audio generation through Spring `RestClient`.
+OpenAI is also used for pronunciation audio generation through Spring `RestClient` and the `/v1/audio/speech` endpoint.
 
 Provider failures are mapped to controlled backend errors rather than exposing raw provider responses.
 

@@ -32,7 +32,7 @@ class PronunciationGenerationProcessorTest {
 		PronunciationAsset asset = queuedAsset();
 		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
 		when(textToSpeechProvider.generate(any())).thenReturn(new GeneratedAudio("audio".getBytes(), "audio/mpeg"));
-		when(textToSpeechProvider.providerName()).thenReturn("elevenlabs");
+		when(textToSpeechProvider.providerName()).thenReturn("openai");
 		when(textToSpeechProvider.modelName()).thenReturn("model");
 		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
 				textToSpeechProvider, mediaStorageService);
@@ -41,7 +41,7 @@ class PronunciationGenerationProcessorTest {
 
 		assertThat(asset.getStatus()).isEqualTo(PronunciationAssetStatus.COMPLETED);
 		assertThat(asset.getAudioObjectKey()).endsWith("/audio.mp3");
-		assertThat(asset.getAudioProvider()).isEqualTo("elevenlabs");
+		assertThat(asset.getAudioProvider()).isEqualTo("openai");
 		assertThat(asset.getCompletedAt()).isNotNull();
 		verify(mediaStorageService).store(eq(asset.getAudioObjectKey()), eq("audio/mpeg"), any(byte[].class));
 	}

@@ -34,12 +34,14 @@ class WordInfoService {
 	}
 
 	private WordInfoResponse generateAndStore(String word, String normalizedQuery) {
-		ProviderWordInfo providerWordInfo = aiWordInfoProvider.generate(word);
+		AiWordInfoResult providerResult = aiWordInfoProvider.generate(word);
+		ProviderWordInfo providerWordInfo = providerResult.wordInfo();
 		try {
 			providerWordInfoValidator.validate(providerWordInfo);
 		}
 		catch (AiProviderBadGatewayException ex) {
-			throw new AiProviderBadGatewayException(ex.getMessage(), ex, providerWordInfo);
+			throw new AiProviderBadGatewayException(withRawResponse(ex.getMessage(), providerResult.rawResponse()), ex,
+					providerResult.rawResponse());
 		}
 		WordInfoResponse response = wordInfoMapper.toApiResponse(providerWordInfo);
 		return store(normalizedQuery, response);
@@ -88,6 +90,10 @@ class WordInfoService {
 
 	static String normalizeQuery(String word) {
 		return word.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+	}
+
+	private static String withRawResponse(String message, String rawResponse) {
+		return rawResponse == null ? message : message + "; rawProviderResponse=" + rawResponse;
 	}
 
 }

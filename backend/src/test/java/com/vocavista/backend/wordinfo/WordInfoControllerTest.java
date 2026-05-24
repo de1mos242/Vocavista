@@ -44,7 +44,7 @@ class WordInfoControllerTest {
 
 	@Test
 	void returnsWordInfoForValidRequest() throws Exception {
-		when(aiWordInfoProvider.generate(anyString())).thenReturn(SampleWordInfos.nounInfo());
+		when(aiWordInfoProvider.generate(anyString())).thenReturn(new AiWordInfoResult(SampleWordInfos.nounInfo(), "{}"));
 
 		mockMvc.perform(get("/api/v1/words/info").param("word", " Hausaufgabe "))
 				.andExpect(status().isOk())

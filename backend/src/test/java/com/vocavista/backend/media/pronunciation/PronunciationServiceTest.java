@@ -41,7 +41,7 @@ class PronunciationServiceTest {
 
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
-		when(textToSpeechProvider.providerName()).thenReturn("elevenlabs");
+		when(textToSpeechProvider.providerName()).thenReturn("openai");
 		when(textToSpeechProvider.modelName()).thenReturn("model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.empty());
@@ -60,7 +60,7 @@ class PronunciationServiceTest {
 	@Test
 	void reusesExistingCachedAsset() {
 		PronunciationAsset existingAsset = completedAsset();
-		when(textToSpeechProvider.providerName()).thenReturn("elevenlabs");
+		when(textToSpeechProvider.providerName()).thenReturn("openai");
 		when(textToSpeechProvider.modelName()).thenReturn("model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.of(existingAsset));
@@ -82,7 +82,7 @@ class PronunciationServiceTest {
 	@Test
 	void retriesExistingFailedAsset() {
 		PronunciationAsset existingAsset = failedAsset();
-		when(textToSpeechProvider.providerName()).thenReturn("elevenlabs");
+		when(textToSpeechProvider.providerName()).thenReturn("openai");
 		when(textToSpeechProvider.modelName()).thenReturn("model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.of(existingAsset));
@@ -140,7 +140,7 @@ class PronunciationServiceTest {
 		asset.setStatus(PronunciationAssetStatus.FAILED);
 		asset.setAudioObjectKey("pronunciations/%s/audio.mp3".formatted(asset.getId()));
 		asset.setErrorCode("tts_provider_error");
-		asset.setErrorMessage("ElevenLabs failed");
+		asset.setErrorMessage("OpenAI failed");
 		return asset;
 	}
 

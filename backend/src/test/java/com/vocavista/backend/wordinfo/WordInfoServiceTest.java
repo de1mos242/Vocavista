@@ -24,7 +24,7 @@ class WordInfoServiceTest {
 		WordInfoRepository wordInfoRepository = emptyRepository();
 		WordInfoService service = new WordInfoService(word -> {
 			assertThat(word).isEqualTo("Hausaufgabe");
-			return SampleWordInfos.nounInfo();
+			return new AiWordInfoResult(SampleWordInfos.nounInfo(), SampleWordInfos.nounInfoJson());
 		}, providerWordInfoValidator, wordInfoMapper, wordInfoRepository);
 
 		WordInfoResponse response = service.getWordInfo("  Hausaufgabe  ");
@@ -38,8 +38,8 @@ class WordInfoServiceTest {
 
 	@Test
 	void rejectsBlankWordAfterTrimming() {
-		WordInfoService service = new WordInfoService(word -> SampleWordInfos.nounInfo(), providerWordInfoValidator,
-				wordInfoMapper, emptyRepository());
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(SampleWordInfos.nounInfo(), "{}"),
+				providerWordInfoValidator, wordInfoMapper, emptyRepository());
 
 		assertThatThrownBy(() -> service.getWordInfo("   ")).isInstanceOf(WordInfoValidationException.class);
 	}
@@ -55,12 +55,16 @@ class WordInfoServiceTest {
 				List.of(new ProviderWordInfo.WordExample("Ich mache meine Hausaufgabe.",
 						new ProviderWordInfo.LocalizedText(List.of("I do my homework."),
 								List.of("Я делаю домашнее задание.")))));
-		WordInfoService service = new WordInfoService(word -> malformedInfo, providerWordInfoValidator, wordInfoMapper,
-				emptyRepository());
+		String rawResponse = "{\"examples\":[{\"sentence\":\"Ich mache meine Hausaufgabe.\"}]}";
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(malformedInfo, rawResponse),
+				providerWordInfoValidator, wordInfoMapper, emptyRepository());
 
 		assertThatThrownBy(() -> service.getWordInfo("Hausaufgabe"))
 				.isInstanceOf(AiProviderBadGatewayException.class)
-				.hasMessageContaining("examples must contain exactly 3 items");
+				.hasMessageContaining("examples must contain exactly 3 items")
+				.hasMessageContaining("rawProviderResponse=" + rawResponse)
+				.extracting(ex -> ((AiProviderBadGatewayException) ex).providerResponse())
+				.isEqualTo(rawResponse);
 	}
 
 	private static WordInfoRepository emptyRepository() {

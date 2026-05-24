@@ -42,7 +42,7 @@ Generation behavior:
 
 - The word is spoken twice with different pacing.
 - The contextual phrase is spoken after the repeated word.
-- ElevenLabs generates the audio.
+- OpenAI generates the audio.
 - S3-compatible storage keeps the generated audio object.
 - The API returns `audioUrl` for same-origin browser playback when generation completes.
 - The TalkingHead preview lets the user search for a word, choose one of the generated example phrases, generate audio, and play it through the browser avatar.

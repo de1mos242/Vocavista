@@ -8,5 +8,7 @@ spring:
 
 vocavista:
   media:
-    elevenlabs:
-      api-key: __missing__
+    openai:
+      # Override these if a different OpenAI voice/instruction style sounds better.
+      voice: coral
+      instructions: Speak in lively, warm, expressive German like an encouraging language tutor. Keep pronunciation precise and natural, with real intonation rather than a flat reading. Say the target word slowly and clearly, pause, say it again with friendly confidence, pause, then say the full phrase naturally with conversational energy.

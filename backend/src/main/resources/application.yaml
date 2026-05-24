@@ -1,6 +1,8 @@
 spring:
   application:
     name: vocavista-backend
+  profiles:
+    active: local
   ai:
     openai:
       api-key: __missing__
@@ -41,3 +43,8 @@ info:
     name: Vocavista Backend
     description: Backend service for Vocavista
     version: @project.version@
+
+vocavista:
+  media:
+    openai:
+      api-key: ${spring.ai.openai.api-key:__missing__}
