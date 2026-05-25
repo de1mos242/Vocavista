@@ -72,7 +72,6 @@ class PronunciationAudioGenerator {
 	private static OpenAIClient createClient(OpenAiTextToSpeechProperties properties) {
 		return OpenAIOkHttpClient.builder()
 				.apiKey(properties.getApiKey())
-				.baseUrl(properties.getBaseUrl())
 				.build();
 	}
 

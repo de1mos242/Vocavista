@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties("vocavista.media.openai")
 public class OpenAiTextToSpeechProperties {
 
-	private String baseUrl = "https://api.openai.com";
 	private String apiKey = "__missing__";
 	private String model = "gpt-4o-mini-tts";
 	private String voice = "coral";

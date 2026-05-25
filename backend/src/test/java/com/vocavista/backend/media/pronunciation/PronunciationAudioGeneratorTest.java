@@ -68,7 +68,6 @@ class PronunciationAudioGeneratorTest {
 
 	private static OpenAiTextToSpeechProperties properties() {
 		OpenAiTextToSpeechProperties properties = new OpenAiTextToSpeechProperties();
-		properties.setBaseUrl("https://api.openai.test");
 		properties.setApiKey("api-key");
 		properties.setInstructions("Speak clearly in German.");
 		return properties;
