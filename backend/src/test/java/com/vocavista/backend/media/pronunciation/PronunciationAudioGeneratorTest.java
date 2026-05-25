@@ -11,7 +11,6 @@ import com.openai.models.audio.speech.SpeechCreateParams;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Optional;
-import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 class PronunciationAudioGeneratorTest {
@@ -19,14 +18,13 @@ class PronunciationAudioGeneratorTest {
 	@Test
 	void createsSpeechWithConfiguredVoiceModelAndInstructions() {
 		OpenAiTextToSpeechProperties properties = properties();
-		CapturingSpeechGenerator speechGenerator = new CapturingSpeechGenerator("audio".getBytes());
-		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(speechGenerator, properties);
+		TestPronunciationAudioGenerator generator = new TestPronunciationAudioGenerator(properties, "audio".getBytes());
 
 		GeneratedAudio audio = generator.generate(new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.",
 				"de", "Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
 				"default-clear-german"));
 
-		SpeechCreateParams request = speechGenerator.request;
+		SpeechCreateParams request = generator.request;
 		assertThat(request.model().asString()).isEqualTo("gpt-4o-mini-tts");
 		assertThat(request.voice().asString()).isEqualTo("coral");
 		assertThat(request.input()).isEqualTo("Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.");
@@ -42,8 +40,7 @@ class PronunciationAudioGeneratorTest {
 	void failsWhenApiKeyIsMissing() {
 		OpenAiTextToSpeechProperties properties = properties();
 		properties.setApiKey("__missing__");
-		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(params -> new TestHttpResponse("audio".getBytes()),
-				properties);
+		PronunciationAudioGenerator generator = new TestPronunciationAudioGenerator(properties, "audio".getBytes());
 
 		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
@@ -52,9 +49,8 @@ class PronunciationAudioGeneratorTest {
 
 	@Test
 	void mapsProviderErrors() {
-		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(params -> {
-			throw new TestOpenAIServiceException(400, "bad request");
-		}, properties());
+		PronunciationAudioGenerator generator = new TestPronunciationAudioGenerator(properties(),
+				new TestOpenAIServiceException(400, "bad request"));
 
 		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
@@ -63,8 +59,7 @@ class PronunciationAudioGeneratorTest {
 
 	@Test
 	void rejectsEmptyAudio() {
-		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(params -> new TestHttpResponse(new byte[0]),
-				properties());
+		PronunciationAudioGenerator generator = new TestPronunciationAudioGenerator(properties(), new byte[0]);
 
 		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
@@ -85,19 +80,31 @@ class PronunciationAudioGeneratorTest {
 				"default-clear-german");
 	}
 
-	private static final class CapturingSpeechGenerator implements Function<SpeechCreateParams, HttpResponse> {
+	private static final class TestPronunciationAudioGenerator extends PronunciationAudioGenerator {
 
-		private final byte[] response;
+		private final byte[] responseBytes;
+		private final OpenAIServiceException exception;
 		private SpeechCreateParams request;
 
-		private CapturingSpeechGenerator(byte[] response) {
-			this.response = response;
+		private TestPronunciationAudioGenerator(OpenAiTextToSpeechProperties properties, byte[] responseBytes) {
+			super(properties);
+			this.responseBytes = responseBytes;
+			this.exception = null;
+		}
+
+		private TestPronunciationAudioGenerator(OpenAiTextToSpeechProperties properties, OpenAIServiceException exception) {
+			super(properties);
+			this.responseBytes = null;
+			this.exception = exception;
 		}
 
 		@Override
-		public HttpResponse apply(SpeechCreateParams params) {
+		HttpResponse createSpeech(SpeechCreateParams params) {
 			request = params;
-			return new TestHttpResponse(response);
+			if (exception != null) {
+				throw exception;
+			}
+			return new TestHttpResponse(responseBytes);
 		}
 
 	}

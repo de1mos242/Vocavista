@@ -7,8 +7,6 @@ import com.openai.errors.OpenAIIoException;
 import com.openai.errors.OpenAIServiceException;
 import com.openai.models.audio.speech.SpeechCreateParams;
 import java.io.IOException;
-import java.util.function.Function;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -17,17 +15,12 @@ class PronunciationAudioGenerator {
 
 	private static final String MISSING_API_KEY = "__missing__";
 
-	private final Function<SpeechCreateParams, HttpResponse> speechGenerator;
 	private final OpenAiTextToSpeechProperties properties;
+	private final OpenAIClient openAIClient;
 
-	@Autowired
 	PronunciationAudioGenerator(OpenAiTextToSpeechProperties properties) {
-		this(createClient(properties).audio().speech()::create, properties);
-	}
-
-	PronunciationAudioGenerator(Function<SpeechCreateParams, HttpResponse> speechGenerator, OpenAiTextToSpeechProperties properties) {
-		this.speechGenerator = speechGenerator;
 		this.properties = properties;
+		this.openAIClient = createClient(properties);
 	}
 
 	public GeneratedAudio generate(PronunciationScript script) {
@@ -36,7 +29,7 @@ class PronunciationAudioGenerator {
 		}
 
 		byte[] bytes;
-		try (HttpResponse response = speechGenerator.apply(requestFor(script))) {
+		try (HttpResponse response = createSpeech(requestFor(script))) {
 			bytes = response.body().readAllBytes();
 		}
 		catch (OpenAIIoException | IOException ex) {
@@ -51,6 +44,10 @@ class PronunciationAudioGenerator {
 			throw new MediaGenerationException("tts_provider_error", "OpenAI returned empty audio");
 		}
 		return new GeneratedAudio(bytes, contentTypeFor(properties.getResponseFormat()));
+	}
+
+	HttpResponse createSpeech(SpeechCreateParams params) {
+		return openAIClient.audio().speech().create(params);
 	}
 
 	public String providerName() {
