@@ -61,10 +61,33 @@ class WordInfoServiceTest {
 
 		assertThatThrownBy(() -> service.getWordInfo("Hausaufgabe"))
 				.isInstanceOf(AiProviderBadGatewayException.class)
-				.hasMessageContaining("examples must contain exactly 3 items")
+				.hasMessageContaining("examples must contain at least 3 items")
 				.hasMessageContaining("rawProviderResponse=" + rawResponse)
 				.extracting(ex -> ((AiProviderBadGatewayException) ex).providerResponse())
 				.isEqualTo(rawResponse);
+	}
+
+	@Test
+	void keepsFirstThreeExamplesWhenProviderReturnsMore() {
+		ProviderWordInfo wordInfo = withExtraExample(SampleWordInfos.nounInfo());
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(wordInfo, SampleWordInfos.nounInfoJson()),
+				providerWordInfoValidator, wordInfoMapper, emptyRepository());
+
+		WordInfoResponse response = service.getWordInfo("Hausaufgabe");
+
+		assertThat(response.getExamples()).hasSize(3);
+		assertThat(response.getExamples())
+				.extracting(example -> example.getSentence())
+				.doesNotContain("Extra sentence that should be ignored.");
+	}
+
+	private static ProviderWordInfo withExtraExample(ProviderWordInfo wordInfo) {
+		List<ProviderWordInfo.WordExample> examples = new java.util.ArrayList<>(wordInfo.examples());
+		examples.add(new ProviderWordInfo.WordExample("Extra sentence that should be ignored.",
+				new ProviderWordInfo.LocalizedText(List.of("Ignored extra example."), List.of("Ignoriert."))));
+		return new ProviderWordInfo(wordInfo.normalizedWord(), wordInfo.language(), wordInfo.translations(),
+				wordInfo.partOfSpeech(), wordInfo.gender(), wordInfo.article(), wordInfo.plural(), wordInfo.frequency(),
+				wordInfo.isCompound(), wordInfo.compoundParts(), wordInfo.shortNote(), examples);
 	}
 
 	private static WordInfoRepository emptyRepository() {

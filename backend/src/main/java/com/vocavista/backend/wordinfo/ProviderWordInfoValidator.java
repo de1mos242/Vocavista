@@ -33,8 +33,8 @@ class ProviderWordInfoValidator {
 		}
 		wordInfo.compoundParts().forEach(this::validateCompoundPart);
 		requireLocalizedText(wordInfo.shortNote(), "shortNote");
-		if (wordInfo.examples() == null || wordInfo.examples().size() != 3) {
-			throw malformed("examples must contain exactly 3 items");
+		if (wordInfo.examples() == null || wordInfo.examples().size() < 3) {
+			throw malformed("examples must contain at least 3 items");
 		}
 		wordInfo.examples().forEach(this::validateExample);
 		if (wordInfo.partOfSpeech() == ProviderWordInfo.ProviderPartOfSpeech.noun) {

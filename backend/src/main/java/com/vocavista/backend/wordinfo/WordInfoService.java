@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vocavista.backend.api.model.WordInfoResponse;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,7 @@ class WordInfoService {
 
 	private WordInfoResponse generateAndStore(String word, String normalizedQuery) {
 		AiWordInfoResult providerResult = aiWordInfoProvider.generate(word);
-		ProviderWordInfo providerWordInfo = providerResult.wordInfo();
+		ProviderWordInfo providerWordInfo = keepFirstThreeExamples(providerResult.wordInfo());
 		try {
 			providerWordInfoValidator.validate(providerWordInfo);
 		}
@@ -45,6 +46,16 @@ class WordInfoService {
 		}
 		WordInfoResponse response = wordInfoMapper.toApiResponse(providerWordInfo);
 		return store(normalizedQuery, response);
+	}
+
+	private static ProviderWordInfo keepFirstThreeExamples(ProviderWordInfo wordInfo) {
+		if (wordInfo == null || wordInfo.examples() == null || wordInfo.examples().size() <= 3) {
+			return wordInfo;
+		}
+		return new ProviderWordInfo(wordInfo.normalizedWord(), wordInfo.language(), wordInfo.translations(),
+				wordInfo.partOfSpeech(), wordInfo.gender(), wordInfo.article(), wordInfo.plural(), wordInfo.frequency(),
+				wordInfo.isCompound(), wordInfo.compoundParts(), wordInfo.shortNote(),
+				List.copyOf(wordInfo.examples().subList(0, 3)));
 	}
 
 	private WordInfoResponse store(String normalizedQuery, WordInfoResponse response) {

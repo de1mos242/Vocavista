@@ -80,6 +80,7 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: Removed the leftover `TextToSpeechProvider` interface and renamed `OpenAiTextToSpeechProvider` to `PronunciationAudioGenerator`, since OpenAI is now the only supported audio generation path.
 - 2026-05-25: Simplified `PronunciationAudioGenerator` to one constructor and no injected lambda/function field. The generator now owns the OpenAI client and calls the SDK directly; tests override only the SDK call method.
 - 2026-05-25: Fixed OpenAI SDK 404s by removing the custom `baseUrl` property and `.baseUrl(...)` builder call. The SDK now uses its default OpenAI API base URL instead of the old raw-HTTP base URL.
+- 2026-05-25: Relaxed word-info example handling. If the AI provider returns more than 3 examples, the backend keeps the first 3 and discards the rest before validation/storage; fewer than 3 examples still fails validation.
 
 ## Verification
 
@@ -100,3 +101,5 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: `./mvnw test` passed after simplifying `PronunciationAudioGenerator`; 32 tests passed.
 - 2026-05-25: `./mvnw -Dtest=PronunciationAudioGeneratorTest,PronunciationGenerationProcessorTest,PronunciationServiceTest test` passed after removing the SDK base URL override; 10 focused tests passed.
 - 2026-05-25: `./mvnw test` passed after removing the SDK base URL override; 32 tests passed.
+- 2026-05-25: `./mvnw -Dtest=WordInfoServiceTest,WordInfoControllerTest,SpringAiOpenAiWordInfoProviderTest test` passed after allowing extra provider examples; 17 targeted tests passed.
+- 2026-05-25: `./mvnw test` passed after allowing extra provider examples; 33 tests passed.
