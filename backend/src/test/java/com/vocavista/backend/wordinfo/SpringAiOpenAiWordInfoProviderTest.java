@@ -35,11 +35,13 @@ class SpringAiOpenAiWordInfoProviderTest {
 		when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse(SampleWordInfos.nounInfoJson()));
 		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", "gpt-4o-mini");
 
-		ProviderWordInfo wordInfo = provider.generate("Hausaufgabe");
+		AiWordInfoResult result = provider.generate("Hausaufgabe");
+		ProviderWordInfo wordInfo = result.wordInfo();
 
 		assertThat(wordInfo.normalizedWord()).isEqualTo("Hausaufgabe");
 		assertThat(wordInfo.examples()).hasSize(3);
 		assertThat(wordInfo.translations().en()).contains("homework");
+		assertThat(result.rawResponse()).isEqualTo(SampleWordInfos.nounInfoJson());
 	}
 
 	@Test
@@ -85,10 +87,15 @@ class SpringAiOpenAiWordInfoProviderTest {
 	@Test
 	void mapsMalformedProviderJsonToBadGateway() {
 		ChatModel chatModel = mock(ChatModel.class);
-		when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse("{not-json"));
+		String rawResponse = "{not-json";
+		when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse(rawResponse));
 		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", "gpt-4o-mini");
 
-		assertThatThrownBy(() -> provider.generate("Hausaufgabe")).isInstanceOf(AiProviderBadGatewayException.class);
+		assertThatThrownBy(() -> provider.generate("Hausaufgabe"))
+				.isInstanceOf(AiProviderBadGatewayException.class)
+				.hasMessageContaining("rawProviderResponse=" + rawResponse)
+				.extracting(ex -> ((AiProviderBadGatewayException) ex).providerResponse())
+				.isEqualTo(rawResponse);
 	}
 
 	@Test

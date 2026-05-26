@@ -52,18 +52,19 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 	}
 
 	@Override
-	public ProviderWordInfo generate(String word) {
+	public AiWordInfoResult generate(String word) {
 		if (!StringUtils.hasText(apiKey) || MISSING_API_KEY.equals(apiKey)) {
 			throw new AiProviderUnavailableException("AI provider is not configured");
 		}
 
+		String content = null;
 		try {
 			ChatResponse response = chatModel.call(promptFor(word));
-			String content = response.getResult().getOutput().getText();
+			content = response.getResult().getOutput().getText();
 			if (!StringUtils.hasText(content)) {
 				throw new AiProviderBadGatewayException("AI provider returned empty content");
 			}
-			return outputConverter.convert(content);
+			return new AiWordInfoResult(outputConverter.convert(content), content);
 		}
 		catch (TransientAiException ex) {
 			throw new AiProviderUnavailableException("AI provider is unavailable", ex);
@@ -84,7 +85,8 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 			throw ex;
 		}
 		catch (RuntimeException ex) {
-			throw new AiProviderBadGatewayException("AI provider returned malformed content", ex);
+			throw new AiProviderBadGatewayException(withRawResponse("AI provider returned malformed content", content), ex,
+					content);
 		}
 	}
 
@@ -108,6 +110,10 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 
 	private static boolean isTemporarilyUnavailable(OpenAIServiceException ex) {
 		return ex.statusCode() == 429 || ex.statusCode() >= 500;
+	}
+
+	private static String withRawResponse(String message, String rawResponse) {
+		return rawResponse == null ? message : message + "; rawProviderResponse=" + rawResponse;
 	}
 
 }

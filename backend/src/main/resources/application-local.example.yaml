@@ -5,8 +5,7 @@ spring:
   ai:
     openai:
       api-key: __missing__
-
-vocavista:
-  media:
-    elevenlabs:
-      api-key: __missing__
+      audio:
+        speech:
+          # Override this if a different OpenAI voice sounds better.
+          voice: coral

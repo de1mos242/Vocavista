@@ -31,7 +31,7 @@ class PronunciationServiceTest {
 	private PronunciationGenerationProcessor generationProcessor;
 
 	@Mock
-	private TextToSpeechProvider textToSpeechProvider;
+	private PronunciationAudioGenerator pronunciationAudioGenerator;
 
 	@Mock
 	private MediaStorageService mediaStorageService;
@@ -41,8 +41,8 @@ class PronunciationServiceTest {
 
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
-		when(textToSpeechProvider.providerName()).thenReturn("elevenlabs");
-		when(textToSpeechProvider.modelName()).thenReturn("model");
+		when(pronunciationAudioGenerator.providerName()).thenReturn("openai");
+		when(pronunciationAudioGenerator.modelName()).thenReturn("model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.empty());
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
@@ -60,8 +60,8 @@ class PronunciationServiceTest {
 	@Test
 	void reusesExistingCachedAsset() {
 		PronunciationAsset existingAsset = completedAsset();
-		when(textToSpeechProvider.providerName()).thenReturn("elevenlabs");
-		when(textToSpeechProvider.modelName()).thenReturn("model");
+		when(pronunciationAudioGenerator.providerName()).thenReturn("openai");
+		when(pronunciationAudioGenerator.modelName()).thenReturn("model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.of(existingAsset));
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
@@ -82,8 +82,8 @@ class PronunciationServiceTest {
 	@Test
 	void retriesExistingFailedAsset() {
 		PronunciationAsset existingAsset = failedAsset();
-		when(textToSpeechProvider.providerName()).thenReturn("elevenlabs");
-		when(textToSpeechProvider.modelName()).thenReturn("model");
+		when(pronunciationAudioGenerator.providerName()).thenReturn("openai");
+		when(pronunciationAudioGenerator.modelName()).thenReturn("model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.of(existingAsset));
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
@@ -113,7 +113,7 @@ class PronunciationServiceTest {
 	}
 
 	private PronunciationService service() {
-		return new PronunciationService(pronunciationRepository, generationProcessor, textToSpeechProvider,
+		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationAudioGenerator,
 				mediaStorageService, wordInfoRepository);
 	}
 
@@ -140,7 +140,7 @@ class PronunciationServiceTest {
 		asset.setStatus(PronunciationAssetStatus.FAILED);
 		asset.setAudioObjectKey("pronunciations/%s/audio.mp3".formatted(asset.getId()));
 		asset.setErrorCode("tts_provider_error");
-		asset.setErrorMessage("ElevenLabs failed");
+		asset.setErrorMessage("OpenAI failed");
 		return asset;
 	}
 

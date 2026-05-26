@@ -30,7 +30,7 @@ class PronunciationService {
 
 	private final PronunciationRepository pronunciationRepository;
 	private final PronunciationGenerationProcessor generationProcessor;
-	private final TextToSpeechProvider textToSpeechProvider;
+	private final PronunciationAudioGenerator pronunciationAudioGenerator;
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
 	private final Clock clock = Clock.systemUTC();
@@ -149,7 +149,7 @@ class PronunciationService {
 	private String contentHash(NormalizedInput input) {
 		String value = String.join("\n", input.language(), input.wordInfoRecord().getId().toString(), input.normalizedWord().toLowerCase(),
 				input.normalizedPhrase().toLowerCase(), scriptTemplateVersion, voiceConfig,
-				textToSpeechProvider.providerName(), textToSpeechProvider.modelName());
+				pronunciationAudioGenerator.providerName(), pronunciationAudioGenerator.modelName());
 		try {
 			MessageDigest digest = MessageDigest.getInstance("SHA-256");
 			return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vocavista.backend.api.model.WordInfoResponse;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -34,15 +35,27 @@ class WordInfoService {
 	}
 
 	private WordInfoResponse generateAndStore(String word, String normalizedQuery) {
-		ProviderWordInfo providerWordInfo = aiWordInfoProvider.generate(word);
+		AiWordInfoResult providerResult = aiWordInfoProvider.generate(word);
+		ProviderWordInfo providerWordInfo = keepFirstThreeExamples(providerResult.wordInfo());
 		try {
 			providerWordInfoValidator.validate(providerWordInfo);
 		}
 		catch (AiProviderBadGatewayException ex) {
-			throw new AiProviderBadGatewayException(ex.getMessage(), ex, providerWordInfo);
+			throw new AiProviderBadGatewayException(withRawResponse(ex.getMessage(), providerResult.rawResponse()), ex,
+					providerResult.rawResponse());
 		}
 		WordInfoResponse response = wordInfoMapper.toApiResponse(providerWordInfo);
 		return store(normalizedQuery, response);
+	}
+
+	private static ProviderWordInfo keepFirstThreeExamples(ProviderWordInfo wordInfo) {
+		if (wordInfo == null || wordInfo.examples() == null || wordInfo.examples().size() <= 3) {
+			return wordInfo;
+		}
+		return new ProviderWordInfo(wordInfo.normalizedWord(), wordInfo.language(), wordInfo.translations(),
+				wordInfo.partOfSpeech(), wordInfo.gender(), wordInfo.article(), wordInfo.plural(), wordInfo.frequency(),
+				wordInfo.isCompound(), wordInfo.compoundParts(), wordInfo.shortNote(),
+				List.copyOf(wordInfo.examples().subList(0, 3)));
 	}
 
 	private WordInfoResponse store(String normalizedQuery, WordInfoResponse response) {
@@ -88,6 +101,10 @@ class WordInfoService {
 
 	static String normalizeQuery(String word) {
 		return word.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+	}
+
+	private static String withRawResponse(String message, String rawResponse) {
+		return rawResponse == null ? message : message + "; rawProviderResponse=" + rawResponse;
 	}
 
 }

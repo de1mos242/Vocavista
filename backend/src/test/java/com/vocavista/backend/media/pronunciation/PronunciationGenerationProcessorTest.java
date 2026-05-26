@@ -22,7 +22,7 @@ class PronunciationGenerationProcessorTest {
 	private PronunciationRepository pronunciationRepository;
 
 	@Mock
-	private TextToSpeechProvider textToSpeechProvider;
+	private PronunciationAudioGenerator pronunciationAudioGenerator;
 
 	@Mock
 	private MediaStorageService mediaStorageService;
@@ -31,17 +31,17 @@ class PronunciationGenerationProcessorTest {
 	void completesGenerationWithAudioOnlyTalkingHeadRenderModeByDefault() {
 		PronunciationAsset asset = queuedAsset();
 		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
-		when(textToSpeechProvider.generate(any())).thenReturn(new GeneratedAudio("audio".getBytes(), "audio/mpeg"));
-		when(textToSpeechProvider.providerName()).thenReturn("elevenlabs");
-		when(textToSpeechProvider.modelName()).thenReturn("model");
+		when(pronunciationAudioGenerator.generate(any())).thenReturn(new GeneratedAudio("audio".getBytes(), "audio/mpeg"));
+		when(pronunciationAudioGenerator.providerName()).thenReturn("openai");
+		when(pronunciationAudioGenerator.modelName()).thenReturn("model");
 		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
-				textToSpeechProvider, mediaStorageService);
+				pronunciationAudioGenerator, mediaStorageService);
 
 		processor.process(asset.getId());
 
 		assertThat(asset.getStatus()).isEqualTo(PronunciationAssetStatus.COMPLETED);
 		assertThat(asset.getAudioObjectKey()).endsWith("/audio.mp3");
-		assertThat(asset.getAudioProvider()).isEqualTo("elevenlabs");
+		assertThat(asset.getAudioProvider()).isEqualTo("openai");
 		assertThat(asset.getCompletedAt()).isNotNull();
 		verify(mediaStorageService).store(eq(asset.getAudioObjectKey()), eq("audio/mpeg"), any(byte[].class));
 	}
@@ -50,24 +50,10 @@ class PronunciationGenerationProcessorTest {
 	void marksAssetFailedWhenProviderFails() {
 		PronunciationAsset asset = queuedAsset();
 		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
-		TextToSpeechProvider failingProvider = new TextToSpeechProvider() {
-			@Override
-			public GeneratedAudio generate(PronunciationScript script) {
-				throw new MediaGenerationException("tts_error", "TTS failed");
-			}
-
-			@Override
-			public String providerName() {
-				return "test";
-			}
-
-			@Override
-			public String modelName() {
-				return "test";
-			}
-		};
+		when(pronunciationAudioGenerator.generate(any()))
+				.thenThrow(new MediaGenerationException("tts_error", "TTS failed"));
 		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
-				failingProvider, mediaStorageService);
+				pronunciationAudioGenerator, mediaStorageService);
 
 		processor.process(asset.getId());
 

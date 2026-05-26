@@ -16,7 +16,7 @@ Vocavista is a language-learning application focused on German vocabulary practi
 - Backend: Spring Boot 4 on Java 25.
 - Database: PostgreSQL with Flyway migrations.
 - Storage: S3-compatible object storage, using RustFS locally.
-- AI providers: OpenAI for word metadata and ElevenLabs for pronunciation audio.
+- AI providers: OpenAI for word metadata and pronunciation audio.
 
 ## Documentation
 

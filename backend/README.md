@@ -7,7 +7,7 @@ Spring Boot 4 backend service for Vocavista.
 - Amazon Corretto JDK 25 source target.
 - Spring Boot 4.0.6.
 - Spring Web MVC for REST APIs.
-- Spring RestClient for outbound AI provider calls.
+- Spring AI for outbound OpenAI provider calls.
 - Spring Data JPA with PostgreSQL.
 - Flyway for database migrations.
 - RustFS local S3-compatible object storage via Docker Compose.
@@ -48,11 +48,10 @@ Bucket: vocavista-media
 
 The `rustfs-create-bucket` compose service creates the `vocavista-media` bucket if it does not already exist.
 
-Local runtime defaults use real ElevenLabs TTS, local RustFS storage, and browser-side TalkingHead rendering. Provide the required API keys through full Spring property names before starting the app:
+Local runtime defaults use real OpenAI TTS, local RustFS storage, and browser-side TalkingHead rendering. Provide the required API key through the full Spring property name before starting the app:
 
 ```bash
 export SPRING_AI_OPENAI_API_KEY=...
-export VOCAVISTA_MEDIA_ELEVENLABS_API_KEY=...
 ```
 
 The backend stores generated audio and returns `audioUrl`; the browser preview animates a TalkingHead avatar locally. Automated tests mock provider and storage boundaries where they exercise generation behavior, so they do not call external services.
@@ -72,7 +71,6 @@ Run the application:
 ```bash
 docker compose up -d postgres rustfs rustfs-create-bucket
 export SPRING_AI_OPENAI_API_KEY=...
-export VOCAVISTA_MEDIA_ELEVENLABS_API_KEY=...
 ./mvnw spring-boot:run
 ```
 
@@ -80,10 +78,10 @@ For local overrides, copy the example local config and edit provider and storage
 
 ```bash
 cp src/main/resources/application-local.example.yaml src/main/resources/application-local.yaml
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+./mvnw spring-boot:run
 ```
 
-`src/main/resources/application-local.yaml` is gitignored and loaded only when the `local` Spring profile is active. Keep secrets and personal overrides there, not in `src/main/resources/application.yaml`.
+`src/main/resources/application-local.yaml` is gitignored and loaded by the default active `local` Spring profile. Keep secrets and personal overrides there, not in `src/main/resources/application.yaml`.
 
 Run tests:
 

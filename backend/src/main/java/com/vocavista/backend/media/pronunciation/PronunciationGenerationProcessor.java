@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 class PronunciationGenerationProcessor {
 
 	private final PronunciationRepository pronunciationRepository;
-	private final TextToSpeechProvider textToSpeechProvider;
+	private final PronunciationAudioGenerator pronunciationAudioGenerator;
 	private final MediaStorageService mediaStorageService;
 	private final Clock clock = Clock.systemUTC();
 
@@ -37,14 +37,14 @@ class PronunciationGenerationProcessor {
 			asset.setUpdatedAt(now);
 
 			PronunciationScript script = scriptFor(asset);
-			GeneratedAudio audio = textToSpeechProvider.generate(script);
+			GeneratedAudio audio = pronunciationAudioGenerator.generate(script);
 			String audioObjectKey = "pronunciations/" + asset.getId() + "/audio."
 					+ extensionFor(audio.contentType());
 			mediaStorageService.store(audioObjectKey, audio.contentType(), audio.bytes());
 
 			asset.setAudioObjectKey(audioObjectKey);
-			asset.setAudioProvider(textToSpeechProvider.providerName());
-			asset.setAudioModel(textToSpeechProvider.modelName());
+			asset.setAudioProvider(pronunciationAudioGenerator.providerName());
+			asset.setAudioModel(pronunciationAudioGenerator.modelName());
 			asset.setStatus(PronunciationAssetStatus.COMPLETED);
 			asset.setUpdatedAt(OffsetDateTime.now(clock));
 			asset.setCompletedAt(asset.getUpdatedAt());
@@ -78,7 +78,11 @@ class PronunciationGenerationProcessor {
 
 	private static String extensionFor(String contentType) {
 		return switch (contentType) {
+			case "audio/aac" -> "aac";
+			case "audio/flac" -> "flac";
 			case "audio/mpeg" -> "mp3";
+			case "audio/opus" -> "opus";
+			case "audio/pcm" -> "pcm";
 			case "audio/wav" -> "wav";
 			case "text/plain" -> "txt";
 			default -> "bin";

@@ -27,7 +27,7 @@ class WordInfoErrorHandler {
 			log.warn("AI provider returned an invalid response", ex);
 		}
 		else {
-			log.warn("AI provider returned an invalid response. providerResponse={}", ex.providerResponse(), ex);
+			log.warn("AI provider returned an invalid response. rawProviderResponse={}", ex.providerResponse(), ex);
 		}
 		return error(HttpStatus.BAD_GATEWAY, "ai_provider_error", "AI provider returned an invalid response");
 	}

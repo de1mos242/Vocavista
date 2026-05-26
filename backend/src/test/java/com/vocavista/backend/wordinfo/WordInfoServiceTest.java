@@ -24,7 +24,7 @@ class WordInfoServiceTest {
 		WordInfoRepository wordInfoRepository = emptyRepository();
 		WordInfoService service = new WordInfoService(word -> {
 			assertThat(word).isEqualTo("Hausaufgabe");
-			return SampleWordInfos.nounInfo();
+			return new AiWordInfoResult(SampleWordInfos.nounInfo(), SampleWordInfos.nounInfoJson());
 		}, providerWordInfoValidator, wordInfoMapper, wordInfoRepository);
 
 		WordInfoResponse response = service.getWordInfo("  Hausaufgabe  ");
@@ -38,8 +38,8 @@ class WordInfoServiceTest {
 
 	@Test
 	void rejectsBlankWordAfterTrimming() {
-		WordInfoService service = new WordInfoService(word -> SampleWordInfos.nounInfo(), providerWordInfoValidator,
-				wordInfoMapper, emptyRepository());
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(SampleWordInfos.nounInfo(), "{}"),
+				providerWordInfoValidator, wordInfoMapper, emptyRepository());
 
 		assertThatThrownBy(() -> service.getWordInfo("   ")).isInstanceOf(WordInfoValidationException.class);
 	}
@@ -55,12 +55,39 @@ class WordInfoServiceTest {
 				List.of(new ProviderWordInfo.WordExample("Ich mache meine Hausaufgabe.",
 						new ProviderWordInfo.LocalizedText(List.of("I do my homework."),
 								List.of("Я делаю домашнее задание.")))));
-		WordInfoService service = new WordInfoService(word -> malformedInfo, providerWordInfoValidator, wordInfoMapper,
-				emptyRepository());
+		String rawResponse = "{\"examples\":[{\"sentence\":\"Ich mache meine Hausaufgabe.\"}]}";
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(malformedInfo, rawResponse),
+				providerWordInfoValidator, wordInfoMapper, emptyRepository());
 
 		assertThatThrownBy(() -> service.getWordInfo("Hausaufgabe"))
 				.isInstanceOf(AiProviderBadGatewayException.class)
-				.hasMessageContaining("examples must contain exactly 3 items");
+				.hasMessageContaining("examples must contain at least 3 items")
+				.hasMessageContaining("rawProviderResponse=" + rawResponse)
+				.extracting(ex -> ((AiProviderBadGatewayException) ex).providerResponse())
+				.isEqualTo(rawResponse);
+	}
+
+	@Test
+	void keepsFirstThreeExamplesWhenProviderReturnsMore() {
+		ProviderWordInfo wordInfo = withExtraExample(SampleWordInfos.nounInfo());
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(wordInfo, SampleWordInfos.nounInfoJson()),
+				providerWordInfoValidator, wordInfoMapper, emptyRepository());
+
+		WordInfoResponse response = service.getWordInfo("Hausaufgabe");
+
+		assertThat(response.getExamples()).hasSize(3);
+		assertThat(response.getExamples())
+				.extracting(example -> example.getSentence())
+				.doesNotContain("Extra sentence that should be ignored.");
+	}
+
+	private static ProviderWordInfo withExtraExample(ProviderWordInfo wordInfo) {
+		List<ProviderWordInfo.WordExample> examples = new java.util.ArrayList<>(wordInfo.examples());
+		examples.add(new ProviderWordInfo.WordExample("Extra sentence that should be ignored.",
+				new ProviderWordInfo.LocalizedText(List.of("Ignored extra example."), List.of("Ignoriert."))));
+		return new ProviderWordInfo(wordInfo.normalizedWord(), wordInfo.language(), wordInfo.translations(),
+				wordInfo.partOfSpeech(), wordInfo.gender(), wordInfo.article(), wordInfo.plural(), wordInfo.frequency(),
+				wordInfo.isCompound(), wordInfo.compoundParts(), wordInfo.shortNote(), examples);
 	}
 
 	private static WordInfoRepository emptyRepository() {

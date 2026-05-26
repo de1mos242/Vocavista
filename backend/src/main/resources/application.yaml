@@ -1,9 +1,16 @@
 spring:
   application:
     name: vocavista-backend
+  profiles:
+    active: local
   ai:
     openai:
       api-key: __missing__
+      audio:
+        speech:
+          model: gpt-4o-mini-tts
+          voice: coral
+          response-format: mp3
     retry:
       max-attempts: 2
   datasource:
