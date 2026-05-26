@@ -7,7 +7,7 @@ Spring Boot 4 backend service for Vocavista.
 - Amazon Corretto JDK 25 source target.
 - Spring Boot 4.0.6.
 - Spring Web MVC for REST APIs.
-- Spring RestClient for outbound AI provider calls.
+- Spring AI for outbound OpenAI provider calls.
 - Spring Data JPA with PostgreSQL.
 - Flyway for database migrations.
 - RustFS local S3-compatible object storage via Docker Compose.

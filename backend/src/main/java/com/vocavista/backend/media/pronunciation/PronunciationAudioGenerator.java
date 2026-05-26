@@ -1,56 +1,39 @@
 package com.vocavista.backend.media.pronunciation;
 
-import java.util.Map;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import com.openai.errors.OpenAIServiceException;
+import org.springframework.ai.audio.tts.TextToSpeechOptions;
+import org.springframework.ai.audio.tts.TextToSpeechModel;
+import org.springframework.ai.audio.tts.TextToSpeechPrompt;
+import org.springframework.ai.audio.tts.TextToSpeechResponse;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestClientResponseException;
 
 @Component
 class PronunciationAudioGenerator {
 
-	private static final String MISSING_API_KEY = "__missing__";
-	private static final String OPENAI_BASE_URL = "https://api.openai.com/v1";
+	private final TextToSpeechModel speechModel;
 
-	private final OpenAiTextToSpeechProperties properties;
-	private final RestClient restClient;
-
-	PronunciationAudioGenerator(OpenAiTextToSpeechProperties properties, RestClient.Builder restClientBuilder) {
-		this.properties = properties;
-		this.restClient = restClientBuilder.baseUrl(OPENAI_BASE_URL).build();
+	PronunciationAudioGenerator(TextToSpeechModel speechModel) {
+		this.speechModel = speechModel;
 	}
 
 	public GeneratedAudio generate(PronunciationScript script) {
-		if (!StringUtils.hasText(properties.getApiKey()) || MISSING_API_KEY.equals(properties.getApiKey())) {
-			throw new MediaGenerationException("tts_provider_not_configured", "OpenAI API key is not configured");
-		}
-
 		byte[] bytes;
 		try {
-			bytes = restClient.post()
-					.uri("/audio/speech")
-					.header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getApiKey())
-					.contentType(MediaType.APPLICATION_JSON)
-					.accept(MediaType.APPLICATION_OCTET_STREAM)
-					.body(requestFor(script))
-					.retrieve()
-					.body(byte[].class);
+			TextToSpeechResponse response = speechModel.call(new TextToSpeechPrompt(script.text()));
+			bytes = response.getResult().getOutput();
 		}
-		catch (RestClientResponseException ex) {
+		catch (OpenAIServiceException ex) {
 			throw new MediaGenerationException("tts_provider_error",
-					"OpenAI returned HTTP " + ex.getStatusCode().value() + ": " + ex.getResponseBodyAsString(), ex);
+					"OpenAI returned HTTP " + ex.statusCode() + ": " + ex.body(), ex);
 		}
-		catch (RestClientException ex) {
+		catch (RuntimeException ex) {
 			throw new MediaGenerationException("tts_provider_error", "OpenAI speech generation failed", ex);
 		}
 
-		if (bytes == null || bytes.length == 0) {
+		if (bytes.length == 0) {
 			throw new MediaGenerationException("tts_provider_error", "OpenAI returned empty audio");
 		}
-		return new GeneratedAudio(bytes, contentTypeFor(properties.getResponseFormat()));
+		return new GeneratedAudio(bytes, contentTypeFor(speechModel.getDefaultOptions().getFormat()));
 	}
 
 	public String providerName() {
@@ -58,17 +41,8 @@ class PronunciationAudioGenerator {
 	}
 
 	public String modelName() {
-		return "%s:%s:%s:%s:%s".formatted(properties.getModel(), properties.getVoice(),
-				properties.getResponseFormat(), properties.getInstructions(), "script-text");
-	}
-
-	private Map<String, String> requestFor(PronunciationScript script) {
-		return Map.of(
-				"model", properties.getModel(),
-				"voice", properties.getVoice(),
-				"input", script.text(),
-				"instructions", properties.getInstructions(),
-				"response_format", properties.getResponseFormat());
+		TextToSpeechOptions options = speechModel.getDefaultOptions();
+		return "%s:%s:%s:%s".formatted(options.getModel(), options.getVoice(), options.getFormat(), "script-text");
 	}
 
 	private static String contentTypeFor(String responseFormat) {

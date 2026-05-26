@@ -6,6 +6,11 @@ spring:
   ai:
     openai:
       api-key: __missing__
+      audio:
+        speech:
+          model: gpt-4o-mini-tts
+          voice: coral
+          response-format: mp3
     retry:
       max-attempts: 2
   datasource:
@@ -43,8 +48,3 @@ info:
     name: Vocavista Backend
     description: Backend service for Vocavista
     version: @project.version@
-
-vocavista:
-  media:
-    openai:
-      api-key: ${spring.ai.openai.api-key:__missing__}

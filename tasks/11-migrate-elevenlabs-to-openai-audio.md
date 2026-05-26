@@ -18,12 +18,12 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 
 ## Implemented State
 
-- `PronunciationAudioGenerator` is the only production pronunciation audio generator. It calls OpenAI speech generation directly with Spring `RestClient`; the old `TextToSpeechProvider` interface was removed because provider swapping is no longer supported.
-- The provider calls OpenAI `/v1/audio/speech` with `gpt-4o-mini-tts`, default voice `coral`, and default `mp3` output.
-- The OpenAI audio provider uses `vocavista.media.openai.api-key`, which defaults to the existing `spring.ai.openai.api-key` so local runtime only needs `SPRING_AI_OPENAI_API_KEY`.
+- `PronunciationAudioGenerator` is the only production pronunciation audio generator. It uses Spring AI `TextToSpeechModel`; the old `TextToSpeechProvider` interface was removed because provider swapping is no longer supported.
+- The provider uses Spring AI's OpenAI speech model with `gpt-4o-mini-tts`, default voice `coral`, and default `mp3` output.
+- The OpenAI audio provider uses Spring AI configuration: `spring.ai.openai.api-key` and `spring.ai.openai.audio.speech.*`, so local runtime only needs `SPRING_AI_OPENAI_API_KEY` unless overriding speech model/voice/format.
 - The Spring `local` profile is active by default so `application-local.yaml` overrides are loaded automatically when present.
-- Cache keys and persisted audio metadata identify provider `openai` and include model, voice, response format, and instructions through `modelName()`.
-- The pronunciation script is generated once and sent with instructions to speak clear German for a language learner: target word slowly, target word naturally, then the full phrase.
+- Cache keys and persisted audio metadata identify provider `openai` and include model, voice, response format, and script template through `modelName()`.
+- The pronunciation script is generated once and sent as the Spring AI speech prompt text. In Spring AI `2.0.0-M6`, `OpenAiAudioSpeechModel` supports model, voice, response format, and speed, but does not expose OpenAI's speech `instructions` field.
 - Word-info provider results now retain the raw OpenAI response string alongside the parsed DTO. Validation and parsing failures include `rawProviderResponse` in the thrown exception message and log it through the existing bad-gateway error handler.
 
 ## OpenAI Options
@@ -46,19 +46,19 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 
 ## Recommended Direction
 
-- Implement `PronunciationAudioGenerator` using a direct Spring `RestClient` POST to OpenAI speech generation and default it to `gpt-4o-mini-tts`.
-- Start with one request using the existing `PronunciationScript.text()` and instructions that ask for: clear German pronunciation, first word slow with pause, second word normal/confident, then the phrase naturally.
+- Implement `PronunciationAudioGenerator` using Spring AI `TextToSpeechModel` and default it to `gpt-4o-mini-tts`.
+- Start with one request using the existing `PronunciationScript.text()`.
 - If playback quality loses the current segment-speed behavior, fall back to three OpenAI speech requests with segment-specific instructions and join the outputs as the current provider does.
 - Default output to `mp3` for compatibility with existing storage/playback unless TalkingHead/browser latency testing shows `wav` is materially better.
-- Include OpenAI model, voice, response format, and instruction/template version in `modelName()` so cached audio is regenerated when voice settings change.
+- Include OpenAI model, voice, response format, and script template version in `modelName()` so cached audio is regenerated when voice settings change.
 
 ## Implementation Notes
 
 - Remove or disable ElevenLabs production configuration after OpenAI generation is working.
-- Use Spring `RestClient` directly for speech generation because the endpoint is a single POST and a direct SDK dependency made the generator tests unnecessarily complex.
+- Use Spring AI `TextToSpeechModel` for speech generation, matching the word-info provider's use of Spring AI `ChatModel`.
 - Keep provider exceptions mapped to `MediaGenerationException` codes consistent with existing behavior.
 - Update `README.md`, `.env.example`, `application-local.example.yaml`, and architecture/spec docs from ElevenLabs to OpenAI.
-- Update provider tests to assert HTTP request shape, output content type, missing API key, provider errors, and empty audio handling.
+- Update provider tests to assert Spring AI prompt text, output content type, provider errors, and empty audio handling.
 
 ## Remaining Follow-Up
 
@@ -82,6 +82,8 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: Fixed OpenAI SDK 404s by removing the custom `baseUrl` property and `.baseUrl(...)` builder call. The SDK now uses its default OpenAI API base URL instead of the old raw-HTTP base URL.
 - 2026-05-25: Relaxed word-info example handling. If the AI provider returns more than 3 examples, the backend keeps the first 3 and discards the rest before validation/storage; fewer than 3 examples still fails validation.
 - 2026-05-26: Removed the direct `com.openai:openai-java` dependency from the backend and changed pronunciation audio generation back to a direct Spring `RestClient` call. This keeps the TTS path small and removes the custom SDK test doubles from `PronunciationAudioGeneratorTest`.
+- 2026-05-26: Replaced the direct `RestClient` speech call with Spring AI `TextToSpeechModel`, matching the existing word-info `ChatModel` approach. Confirmed from Spring AI sources that `OpenAiAudioSpeechModel` internally uses the OpenAI SDK transitively and does not expose the speech `instructions` field in `2.0.0-M6`, so removed the unused custom instructions property.
+- 2026-05-26: Removed the custom `OpenAiTextToSpeechProperties` wrapper and aligned pronunciation audio configuration with Spring AI's own `spring.ai.openai.audio.speech.*` properties. `PronunciationAudioGenerator` now relies on the auto-configured speech model defaults instead of manually wiring Spring properties.
 
 ## Verification
 
@@ -106,3 +108,5 @@ Replace ElevenLabs pronunciation audio generation with OpenAI speech generation 
 - 2026-05-25: `./mvnw test` passed after allowing extra provider examples; 33 tests passed.
 - 2026-05-26: `./mvnw -Dtest=PronunciationAudioGeneratorTest test` passed after removing the direct OpenAI Java SDK dependency; 4 targeted tests passed.
 - 2026-05-26: `./mvnw test` passed after removing the direct OpenAI Java SDK dependency; 33 tests passed.
+- 2026-05-26: `./mvnw -Dtest=PronunciationAudioGeneratorTest test` passed after switching pronunciation TTS to Spring AI `TextToSpeechModel`; 3 targeted tests passed.
+- 2026-05-26: `./mvnw -Dtest=PronunciationAudioGeneratorTest,PronunciationGenerationProcessorTest,PronunciationServiceTest test` passed after simplifying Spring AI TTS wiring; 9 focused tests passed.
