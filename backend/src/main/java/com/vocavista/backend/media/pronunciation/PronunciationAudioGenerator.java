@@ -1,26 +1,26 @@
 package com.vocavista.backend.media.pronunciation;
 
-import com.openai.client.OpenAIClient;
-import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.core.http.HttpResponse;
-import com.openai.errors.OpenAIIoException;
-import com.openai.errors.OpenAIServiceException;
-import com.openai.models.audio.speech.SpeechCreateParams;
-import java.io.IOException;
+import java.util.Map;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 class PronunciationAudioGenerator {
 
 	private static final String MISSING_API_KEY = "__missing__";
+	private static final String OPENAI_BASE_URL = "https://api.openai.com/v1";
 
 	private final OpenAiTextToSpeechProperties properties;
-	private final OpenAIClient openAIClient;
+	private final RestClient restClient;
 
-	PronunciationAudioGenerator(OpenAiTextToSpeechProperties properties) {
+	PronunciationAudioGenerator(OpenAiTextToSpeechProperties properties, RestClient.Builder restClientBuilder) {
 		this.properties = properties;
-		this.openAIClient = createClient(properties);
+		this.restClient = restClientBuilder.baseUrl(OPENAI_BASE_URL).build();
 	}
 
 	public GeneratedAudio generate(PronunciationScript script) {
@@ -29,25 +29,28 @@ class PronunciationAudioGenerator {
 		}
 
 		byte[] bytes;
-		try (HttpResponse response = createSpeech(requestFor(script))) {
-			bytes = response.body().readAllBytes();
+		try {
+			bytes = restClient.post()
+					.uri("/audio/speech")
+					.header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getApiKey())
+					.contentType(MediaType.APPLICATION_JSON)
+					.accept(MediaType.APPLICATION_OCTET_STREAM)
+					.body(requestFor(script))
+					.retrieve()
+					.body(byte[].class);
 		}
-		catch (OpenAIIoException | IOException ex) {
-			throw new MediaGenerationException("tts_provider_error", "OpenAI speech generation failed", ex);
-		}
-		catch (OpenAIServiceException ex) {
+		catch (RestClientResponseException ex) {
 			throw new MediaGenerationException("tts_provider_error",
-					"OpenAI returned HTTP " + ex.statusCode() + ": " + ex.body(), ex);
+					"OpenAI returned HTTP " + ex.getStatusCode().value() + ": " + ex.getResponseBodyAsString(), ex);
+		}
+		catch (RestClientException ex) {
+			throw new MediaGenerationException("tts_provider_error", "OpenAI speech generation failed", ex);
 		}
 
 		if (bytes == null || bytes.length == 0) {
 			throw new MediaGenerationException("tts_provider_error", "OpenAI returned empty audio");
 		}
 		return new GeneratedAudio(bytes, contentTypeFor(properties.getResponseFormat()));
-	}
-
-	HttpResponse createSpeech(SpeechCreateParams params) {
-		return openAIClient.audio().speech().create(params);
 	}
 
 	public String providerName() {
@@ -59,20 +62,13 @@ class PronunciationAudioGenerator {
 				properties.getResponseFormat(), properties.getInstructions(), "script-text");
 	}
 
-	private SpeechCreateParams requestFor(PronunciationScript script) {
-		return SpeechCreateParams.builder()
-				.model(properties.getModel())
-				.voice(properties.getVoice())
-				.input(script.text())
-				.instructions(properties.getInstructions())
-				.responseFormat(SpeechCreateParams.ResponseFormat.of(properties.getResponseFormat()))
-				.build();
-	}
-
-	private static OpenAIClient createClient(OpenAiTextToSpeechProperties properties) {
-		return OpenAIOkHttpClient.builder()
-				.apiKey(properties.getApiKey())
-				.build();
+	private Map<String, String> requestFor(PronunciationScript script) {
+		return Map.of(
+				"model", properties.getModel(),
+				"voice", properties.getVoice(),
+				"input", script.text(),
+				"instructions", properties.getInstructions(),
+				"response_format", properties.getResponseFormat());
 	}
 
 	private static String contentTypeFor(String responseFormat) {

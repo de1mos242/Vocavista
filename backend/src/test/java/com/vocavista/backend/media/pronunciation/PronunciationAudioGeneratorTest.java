@@ -2,45 +2,58 @@ package com.vocavista.backend.media.pronunciation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.ExpectedCount.once;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.openai.core.JsonValue;
-import com.openai.core.http.Headers;
-import com.openai.core.http.HttpResponse;
-import com.openai.errors.OpenAIServiceException;
-import com.openai.models.audio.speech.SpeechCreateParams;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 class PronunciationAudioGeneratorTest {
 
 	@Test
-	void createsSpeechWithConfiguredVoiceModelAndInstructions() {
+	void createsSpeechRequestWithConfiguredVoiceModelAndInstructions() {
 		OpenAiTextToSpeechProperties properties = properties();
-		TestPronunciationAudioGenerator generator = new TestPronunciationAudioGenerator(properties, "audio".getBytes());
+		RestClient.Builder restClientBuilder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
+		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(properties, restClientBuilder);
+
+		server.expect(once(), requestTo("https://api.openai.com/v1/audio/speech"))
+				.andExpect(method(HttpMethod.POST))
+				.andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer api-key"))
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("$.model").value("gpt-4o-mini-tts"))
+				.andExpect(jsonPath("$.voice").value("coral"))
+				.andExpect(jsonPath("$.input").value("Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe."))
+				.andExpect(jsonPath("$.instructions").value("Speak clearly in German."))
+				.andExpect(jsonPath("$.response_format").value("mp3"))
+				.andRespond(withSuccess("audio".getBytes(), MediaType.APPLICATION_OCTET_STREAM));
 
 		GeneratedAudio audio = generator.generate(new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.",
 				"de", "Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
 				"default-clear-german"));
 
-		SpeechCreateParams request = generator.request;
-		assertThat(request.model().asString()).isEqualTo("gpt-4o-mini-tts");
-		assertThat(request.voice().asString()).isEqualTo("coral");
-		assertThat(request.input()).isEqualTo("Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.");
-		assertThat(request.instructions()).contains("Speak clearly in German.");
-		assertThat(request.responseFormat().map(SpeechCreateParams.ResponseFormat::asString)).contains("mp3");
 		assertThat(audio.contentType()).isEqualTo("audio/mpeg");
 		assertThat(audio.bytes()).isEqualTo("audio".getBytes());
 		assertThat(generator.providerName()).isEqualTo("openai");
 		assertThat(generator.modelName()).contains("gpt-4o-mini-tts", "coral", "mp3", "Speak clearly in German.");
+		server.verify();
 	}
 
 	@Test
 	void failsWhenApiKeyIsMissing() {
 		OpenAiTextToSpeechProperties properties = properties();
 		properties.setApiKey("__missing__");
-		PronunciationAudioGenerator generator = new TestPronunciationAudioGenerator(properties, "audio".getBytes());
+		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(properties, RestClient.builder());
 
 		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
@@ -49,21 +62,32 @@ class PronunciationAudioGeneratorTest {
 
 	@Test
 	void mapsProviderErrors() {
-		PronunciationAudioGenerator generator = new TestPronunciationAudioGenerator(properties(),
-				new TestOpenAIServiceException(400, "bad request"));
+		RestClient.Builder restClientBuilder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
+		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(properties(), restClientBuilder);
+
+		server.expect(once(), requestTo("https://api.openai.com/v1/audio/speech"))
+				.andRespond(withBadRequest().body("bad request"));
 
 		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
 				.hasMessageContaining("OpenAI returned HTTP 400");
+		server.verify();
 	}
 
 	@Test
 	void rejectsEmptyAudio() {
-		PronunciationAudioGenerator generator = new TestPronunciationAudioGenerator(properties(), new byte[0]);
+		RestClient.Builder restClientBuilder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
+		PronunciationAudioGenerator generator = new PronunciationAudioGenerator(properties(), restClientBuilder);
+
+		server.expect(once(), requestTo("https://api.openai.com/v1/audio/speech"))
+				.andRespond(withSuccess(new byte[0], MediaType.APPLICATION_OCTET_STREAM));
 
 		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
 				.hasMessage("OpenAI returned empty audio");
+		server.verify();
 	}
 
 	private static OpenAiTextToSpeechProperties properties() {
@@ -77,101 +101,6 @@ class PronunciationAudioGeneratorTest {
 		return new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de",
 				"Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
 				"default-clear-german");
-	}
-
-	private static final class TestPronunciationAudioGenerator extends PronunciationAudioGenerator {
-
-		private final byte[] responseBytes;
-		private final OpenAIServiceException exception;
-		private SpeechCreateParams request;
-
-		private TestPronunciationAudioGenerator(OpenAiTextToSpeechProperties properties, byte[] responseBytes) {
-			super(properties);
-			this.responseBytes = responseBytes;
-			this.exception = null;
-		}
-
-		private TestPronunciationAudioGenerator(OpenAiTextToSpeechProperties properties, OpenAIServiceException exception) {
-			super(properties);
-			this.responseBytes = null;
-			this.exception = exception;
-		}
-
-		@Override
-		HttpResponse createSpeech(SpeechCreateParams params) {
-			request = params;
-			if (exception != null) {
-				throw exception;
-			}
-			return new TestHttpResponse(responseBytes);
-		}
-
-	}
-
-	private record TestHttpResponse(byte[] bytes) implements HttpResponse {
-
-		@Override
-		public int statusCode() {
-			return 200;
-		}
-
-		@Override
-		public Headers headers() {
-			return Headers.builder().build();
-		}
-
-		@Override
-		public InputStream body() {
-			return new ByteArrayInputStream(bytes);
-		}
-
-		@Override
-		public void close() {
-		}
-
-	}
-
-	private static final class TestOpenAIServiceException extends OpenAIServiceException {
-
-		private final int statusCode;
-		private final JsonValue body;
-
-		private TestOpenAIServiceException(int statusCode, String body) {
-			super(body, null);
-			this.statusCode = statusCode;
-			this.body = JsonValue.from(body);
-		}
-
-		@Override
-		public int statusCode() {
-			return statusCode;
-		}
-
-		@Override
-		public Headers headers() {
-			return Headers.builder().build();
-		}
-
-		@Override
-		public JsonValue body() {
-			return body;
-		}
-
-		@Override
-		public Optional<String> code() {
-			return Optional.empty();
-		}
-
-		@Override
-		public Optional<String> param() {
-			return Optional.empty();
-		}
-
-		@Override
-		public Optional<String> type() {
-			return Optional.empty();
-		}
-
 	}
 
 }
