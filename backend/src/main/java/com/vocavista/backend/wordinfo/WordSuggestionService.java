@@ -39,8 +39,8 @@ class WordSuggestionService {
 			suggestion.setWordInfoId(asset.getWordInfoRecord().getId());
 			suggestion.setPronunciationId(asset.getId());
 			suggestion.setStatus(PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
-			if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getAudioObjectKey())) {
-				suggestion.setAudioUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/audio"));
+			if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getVideoObjectKey())) {
+				suggestion.setVideoUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video"));
 			}
 			suggestions.putIfAbsent(key(asset.getNormalizedWord(), asset.getNormalizedPhrase()), suggestion);
 		}

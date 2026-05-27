@@ -6,11 +6,6 @@ spring:
   ai:
     openai:
       api-key: __missing__
-      audio:
-        speech:
-          model: gpt-4o-mini-tts
-          voice: coral
-          response-format: mp3
     retry:
       max-attempts: 2
   datasource:
@@ -48,3 +43,13 @@ info:
     name: Vocavista Backend
     description: Backend service for Vocavista
     version: @project.version@
+
+vocavista:
+  media:
+    veo:
+      api-key: ${GOOGLE_AI_API_KEY:__missing__}
+      model: veo-3.1-lite-generate-preview
+      aspect-ratio: "9:16"
+      duration-seconds: 6
+      poll-interval: 5s
+      timeout: 8m

@@ -7,7 +7,7 @@ Spring Boot 4 backend service for Vocavista.
 - Amazon Corretto JDK 25 source target.
 - Spring Boot 4.0.6.
 - Spring Web MVC for REST APIs.
-- Spring AI for outbound OpenAI provider calls.
+- Spring AI for outbound OpenAI word-info provider calls.
 - Spring Data JPA with PostgreSQL.
 - Flyway for database migrations.
 - RustFS local S3-compatible object storage via Docker Compose.
@@ -48,21 +48,27 @@ Bucket: vocavista-media
 
 The `rustfs-create-bucket` compose service creates the `vocavista-media` bucket if it does not already exist.
 
-Local runtime defaults use real OpenAI TTS, local RustFS storage, and browser-side TalkingHead rendering. Provide the required API key through the full Spring property name before starting the app:
+Local runtime defaults use direct Veo video generation, local RustFS storage, and the Gemini API key from `GOOGLE_AI_API_KEY`:
+
+```bash
+export GOOGLE_AI_API_KEY=...
+```
+
+OpenAI remains required for word-info generation:
 
 ```bash
 export SPRING_AI_OPENAI_API_KEY=...
 ```
 
-The backend stores generated audio and returns `audioUrl`; the browser preview animates a TalkingHead avatar locally. Automated tests mock provider and storage boundaries where they exercise generation behavior, so they do not call external services.
+The backend stores generated video and returns `videoUrl`. Automated tests mock provider and storage boundaries where they exercise generation behavior, so they do not call external services.
 
-Run the browser TalkingHead preview after starting the app:
+Run the browser Veo video preview after starting the app:
 
 ```text
-http://localhost:8080/talking-head.html
+http://localhost:8080/veo-video.html
 ```
 
-The page loads TalkingHead/HeadAudio modules from public CDNs, calls `POST /api/v1/media/pronunciations`, polls the returned id, and plays the completed `audioUrl` through a browser-rendered avatar. The `audioUrl` is served back through the backend as `/api/v1/media/pronunciations/{id}/audio` so browser WebAudio decoding does not depend on RustFS CORS settings.
+The Veo page calls `POST /api/v1/media/pronunciations`, polls the returned id, and plays the completed `videoUrl`. Veo requests default to vertical `9:16` output. The prompt asks for a male speaker for masculine nouns, a female speaker for feminine nouns, and a young adult woman for neuter nouns and non-nouns.
 
 `backend/.env.example` lists optional local secret variables without real values. Other overrides should use full Spring property names, for example `VOCAVISTA_MEDIA_S3_ENDPOINT`.
 
@@ -70,6 +76,7 @@ Run the application:
 
 ```bash
 docker compose up -d postgres rustfs rustfs-create-bucket
+export GOOGLE_AI_API_KEY=...
 export SPRING_AI_OPENAI_API_KEY=...
 ./mvnw spring-boot:run
 ```

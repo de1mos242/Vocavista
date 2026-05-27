@@ -8,9 +8,9 @@ The current backend supports:
 
 - German word information for learners who know English and Russian.
 - Cached word autocomplete across generated word info and pronunciation records.
-- Pronunciation audio generation for a target word and contextual German phrase.
-- Browser-side TalkingHead playback using generated audio; the backend does not generate video.
-- Central media reuse by caching generated pronunciation audio metadata in PostgreSQL and storing audio in S3-compatible object storage.
+- Pronunciation media generation for a target word and contextual German phrase.
+- Direct Veo video playback for pronunciation media.
+- Central media reuse by caching generated pronunciation media metadata in PostgreSQL and storing media bytes in S3-compatible object storage.
 
 ## Word Information
 
@@ -32,7 +32,7 @@ Suggestions can include:
 
 - Cached word-info words.
 - Previously generated word and phrase pairs.
-- Existing pronunciation status and `audioUrl` when completed audio can be reused.
+- Existing pronunciation status plus `videoUrl` when completed media can be reused.
 
 ## Pronunciation Media
 
@@ -41,11 +41,13 @@ Suggestions can include:
 Generation behavior:
 
 - The word is spoken twice with different pacing.
+- For nouns with a known German article, the second repetition includes the article, for example `Zugabe ... die Zugabe ... ich möchte meine Zugabe machen`.
 - The contextual phrase is spoken after the repeated word.
-- OpenAI generates the audio.
-- S3-compatible storage keeps the generated audio object.
-- The API returns `audioUrl` for same-origin browser playback when generation completes.
-- The TalkingHead preview lets the user search for a word, choose one of the generated example phrases, generate audio, and play it through the browser avatar.
+- Veo generates a direct vertical lip-sync MP4.
+- For nouns with known gender, the Veo speaker follows the word gender: masculine uses a male speaker, feminine uses a female speaker, and neuter uses a young adult woman. Non-nouns also use a young adult woman.
+- S3-compatible storage keeps the generated video object.
+- The API returns `videoUrl` for same-origin browser playback when default video generation completes.
+- The dedicated Veo preview page lets the user search for a word, choose one of the generated example phrases, generate Veo video, and play the returned `videoUrl`.
 
 ## Current Technical Shape
 

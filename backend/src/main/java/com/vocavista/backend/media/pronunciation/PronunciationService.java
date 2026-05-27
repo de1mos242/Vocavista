@@ -25,21 +25,17 @@ class PronunciationService {
 
 	private static final int MAX_WORD_LENGTH = 80;
 	private static final int MAX_PHRASE_LENGTH = 240;
-	private static final String RENDER_MODE = "talking-head";
 	private static final String SUPPORTED_LANGUAGE = "de";
 
 	private final PronunciationRepository pronunciationRepository;
 	private final PronunciationGenerationProcessor generationProcessor;
-	private final PronunciationAudioGenerator pronunciationAudioGenerator;
+	private final PronunciationVideoGenerator pronunciationVideoGenerator;
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
 	private final Clock clock = Clock.systemUTC();
 
-	@Value("${vocavista.media.script-template-version:v5}")
-	private String scriptTemplateVersion = "v5";
-
-	@Value("${vocavista.media.voice-config:default-clear-german}")
-	private String voiceConfig = "default-clear-german";
+	@Value("${vocavista.media.script-template-version:v6}")
+	private String scriptTemplateVersion = "v6";
 
 	PronunciationResponse create(PronunciationRequest request) {
 		NormalizedInput input = normalize(request);
@@ -57,13 +53,13 @@ class PronunciationService {
 		return toResponse(asset);
 	}
 
-	StoredMedia getAudio(UUID id) {
+	StoredMedia getVideo(UUID id) {
 		PronunciationAsset asset = pronunciationRepository.findById(id)
 				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
-		if (asset.getStatus() != PronunciationAssetStatus.COMPLETED || !StringUtils.hasText(asset.getAudioObjectKey())) {
-			throw new PronunciationNotFoundException("Pronunciation audio was not found");
+		if (asset.getStatus() != PronunciationAssetStatus.COMPLETED || !StringUtils.hasText(asset.getVideoObjectKey())) {
+			throw new PronunciationNotFoundException("Pronunciation video was not found");
 		}
-		return mediaStorageService.read(asset.getAudioObjectKey());
+		return mediaStorageService.read(asset.getVideoObjectKey());
 	}
 
 	private PronunciationResponse createQueuedAsset(NormalizedInput input, String contentHash) {
@@ -88,9 +84,9 @@ class PronunciationService {
 		}
 
 		asset.setStatus(PronunciationAssetStatus.QUEUED);
-		asset.setAudioObjectKey(null);
-		asset.setAudioProvider(null);
-		asset.setAudioModel(null);
+		asset.setVideoObjectKey(null);
+		asset.setVideoProvider(null);
+		asset.setVideoModel(null);
 		asset.setErrorCode(null);
 		asset.setErrorMessage(null);
 		asset.setCompletedAt(null);
@@ -103,9 +99,8 @@ class PronunciationService {
 	private PronunciationResponse toResponse(PronunciationAsset asset) {
 		PronunciationResponse response = new PronunciationResponse(asset.getId(),
 				asset.getWordInfoRecord().getId(), PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
-		response.setRenderMode(RENDER_MODE);
-		if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getAudioObjectKey())) {
-			response.setAudioUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/audio"));
+		if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getVideoObjectKey())) {
+			response.setVideoUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video"));
 		}
 		if (asset.getStatus() == PronunciationAssetStatus.FAILED) {
 			response.setErrorCode(asset.getErrorCode());
@@ -148,8 +143,8 @@ class PronunciationService {
 
 	private String contentHash(NormalizedInput input) {
 		String value = String.join("\n", input.language(), input.wordInfoRecord().getId().toString(), input.normalizedWord().toLowerCase(),
-				input.normalizedPhrase().toLowerCase(), scriptTemplateVersion, voiceConfig,
-				pronunciationAudioGenerator.providerName(), pronunciationAudioGenerator.modelName());
+				input.normalizedPhrase().toLowerCase(), scriptTemplateVersion, pronunciationVideoGenerator.providerName(),
+				pronunciationVideoGenerator.modelName());
 		try {
 			MessageDigest digest = MessageDigest.getInstance("SHA-256");
 			return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));

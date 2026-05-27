@@ -31,7 +31,7 @@ class PronunciationServiceTest {
 	private PronunciationGenerationProcessor generationProcessor;
 
 	@Mock
-	private PronunciationAudioGenerator pronunciationAudioGenerator;
+	private PronunciationVideoGenerator pronunciationVideoGenerator;
 
 	@Mock
 	private MediaStorageService mediaStorageService;
@@ -41,8 +41,8 @@ class PronunciationServiceTest {
 
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
-		when(pronunciationAudioGenerator.providerName()).thenReturn("openai");
-		when(pronunciationAudioGenerator.modelName()).thenReturn("model");
+		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
+		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.empty());
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
@@ -58,10 +58,10 @@ class PronunciationServiceTest {
 	}
 
 	@Test
-	void reusesExistingCachedAsset() {
-		PronunciationAsset existingAsset = completedAsset();
-		when(pronunciationAudioGenerator.providerName()).thenReturn("openai");
-		when(pronunciationAudioGenerator.modelName()).thenReturn("model");
+	void reusesExistingCachedVideoAsset() {
+		PronunciationAsset existingAsset = completedVideoAsset();
+		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
+		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.of(existingAsset));
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
@@ -72,9 +72,8 @@ class PronunciationServiceTest {
 
 		assertThat(response.getId()).isEqualTo(existingAsset.getId());
 		assertThat(response.getStatus()).isEqualTo(PronunciationStatus.COMPLETED);
-		assertThat(response.getAudioUrl())
-				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/audio");
-		assertThat(response.getRenderMode()).isEqualTo("talking-head");
+		assertThat(response.getVideoUrl())
+				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/video");
 		verify(pronunciationRepository, never()).save(any());
 		verify(generationProcessor, never()).process(any());
 	}
@@ -82,8 +81,8 @@ class PronunciationServiceTest {
 	@Test
 	void retriesExistingFailedAsset() {
 		PronunciationAsset existingAsset = failedAsset();
-		when(pronunciationAudioGenerator.providerName()).thenReturn("openai");
-		when(pronunciationAudioGenerator.modelName()).thenReturn("model");
+		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
+		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
 				.thenReturn(Optional.of(existingAsset));
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
@@ -99,7 +98,7 @@ class PronunciationServiceTest {
 		assertThat(response.getErrorMessage()).isNull();
 		assertThat(existingAsset.getErrorCode()).isNull();
 		assertThat(existingAsset.getErrorMessage()).isNull();
-		assertThat(existingAsset.getAudioObjectKey()).isNull();
+		assertThat(existingAsset.getVideoObjectKey()).isNull();
 		verify(pronunciationRepository).save(existingAsset);
 		verify(generationProcessor).process(existingAsset.getId());
 	}
@@ -113,7 +112,7 @@ class PronunciationServiceTest {
 	}
 
 	private PronunciationService service() {
-		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationAudioGenerator,
+		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationVideoGenerator,
 				mediaStorageService, wordInfoRepository);
 	}
 
@@ -121,13 +120,13 @@ class PronunciationServiceTest {
 		return new PronunciationRequest(wordInfoId(), word, phrase, PronunciationRequest.LanguageEnum.DE);
 	}
 
-	private static PronunciationAsset completedAsset() {
+	private static PronunciationAsset completedVideoAsset() {
 		PronunciationAsset asset = PronunciationAsset.queued(wordInfoRecord(), "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
 		asset.setId(UUID.randomUUID());
 		asset.setStatus(PronunciationAssetStatus.COMPLETED);
-		asset.setAudioObjectKey("pronunciations/%s/audio.txt".formatted(asset.getId()));
+		asset.setVideoObjectKey("pronunciations/%s/video.mp4".formatted(asset.getId()));
 		asset.setCompletedAt(OffsetDateTime.now());
 		return asset;
 	}
@@ -138,9 +137,9 @@ class PronunciationServiceTest {
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
 		asset.setId(UUID.randomUUID());
 		asset.setStatus(PronunciationAssetStatus.FAILED);
-		asset.setAudioObjectKey("pronunciations/%s/audio.mp3".formatted(asset.getId()));
-		asset.setErrorCode("tts_provider_error");
-		asset.setErrorMessage("OpenAI failed");
+		asset.setVideoObjectKey("pronunciations/%s/video.mp4".formatted(asset.getId()));
+		asset.setErrorCode("video_provider_error");
+		asset.setErrorMessage("Veo failed");
 		return asset;
 	}
 

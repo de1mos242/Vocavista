@@ -8,9 +8,9 @@ Implemented API areas:
 
 - `GET /api/v1/words/info` for AI-generated German vocabulary metadata.
 - `GET /api/v1/words/suggestions` for simple autocomplete over cached word info and pronunciation assets.
-- `POST /api/v1/media/pronunciations` for reusable generated pronunciation audio.
+- `POST /api/v1/media/pronunciations` for reusable generated pronunciation media.
 - `GET /api/v1/media/pronunciations/{id}` for generation status.
-- `GET /api/v1/media/pronunciations/{id}/audio` for same-origin generated audio playback.
+- `GET /api/v1/media/pronunciations/{id}/video` for same-origin generated video playback.
 
 ## API Contract
 
@@ -28,10 +28,10 @@ Current persisted data:
 - Cached generated word-info responses.
 - Normalized pronunciation cache keys.
 - Generation status and errors.
-- Generated audio object keys.
-- Provider/model metadata for generated audio.
+- Generated video object keys.
+- Provider/model metadata for generated media.
 
-Generated audio bytes are not stored in PostgreSQL. They are stored in S3-compatible object storage.
+Generated media bytes are not stored in PostgreSQL. They are stored in S3-compatible object storage.
 
 ## Media Storage
 
@@ -39,11 +39,15 @@ The backend uses S3-compatible storage through `S3MediaStorageService`.
 
 Local development uses RustFS from `backend/compose.yaml` with the `vocavista-media` bucket.
 
+The static manual preview page is served by Spring MVC from `backend/src/main/resources/static/veo-video.html`.
+
 ## AI Providers
 
 OpenAI is used for word information generation through Spring AI.
 
-OpenAI is also used for pronunciation audio generation through Spring AI `TextToSpeechModel`.
+Google Veo is used for default direct pronunciation video generation. The configurable default model is `veo-3.1-lite-generate-preview`. Veo requests default to `9:16` vertical output.
+
+Pronunciation generation reads the linked word-info JSON for noun metadata. If the word is a noun and has an article, the second spoken repetition includes the article. If noun gender is available, the Veo prompt asks for a corresponding male or female speaker; neuter nouns and non-nouns use a young adult woman.
 
 Provider failures are mapped to controlled backend errors rather than exposing raw provider responses.
 

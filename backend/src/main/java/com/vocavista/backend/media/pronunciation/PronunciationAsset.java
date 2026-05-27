@@ -49,14 +49,14 @@ public class PronunciationAsset {
 	@Column(nullable = false)
 	private PronunciationAssetStatus status;
 
-	@Column(name = "audio_object_key")
-	private String audioObjectKey;
+	@Column(name = "video_object_key")
+	private String videoObjectKey;
 
-	@Column(name = "audio_provider")
-	private String audioProvider;
+	@Column(name = "video_provider")
+	private String videoProvider;
 
-	@Column(name = "audio_model")
-	private String audioModel;
+	@Column(name = "video_model")
+	private String videoModel;
 
 	@Column(name = "content_hash", nullable = false)
 	private String contentHash;
