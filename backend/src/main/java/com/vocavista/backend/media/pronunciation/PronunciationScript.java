@@ -6,5 +6,6 @@ record PronunciationScript(
 		String language,
 		String text,
 		String templateVersion,
-		String voiceConfig) {
+		String voiceConfig,
+		String speakerDescription) {
 }

@@ -36,4 +36,12 @@ class PronunciationController implements MediaApi {
 				.body(audio.bytes());
 	}
 
+	@GetMapping("/api/v1/media/pronunciations/{id}/video")
+	ResponseEntity<byte[]> getPronunciationVideo(@PathVariable UUID id) {
+		StoredMedia video = pronunciationService.getVideo(id);
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType(video.contentType() == null ? "video/mp4" : video.contentType()))
+				.body(video.bytes());
+	}
+
 }

@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vocavista Veo Pronunciation Video</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #090b0f;
+      color: #f7f1e8;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255, 119, 86, 0.34), transparent 24rem),
+        radial-gradient(circle at 82% 18%, rgba(126, 87, 255, 0.28), transparent 26rem),
+        linear-gradient(135deg, #090b0f 0%, #151017 48%, #07090d 100%);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(19rem, 29rem) minmax(24rem, 1fr);
+      gap: 1.25rem;
+      max-width: 78rem;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    section {
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 1.4rem;
+      background: rgba(12, 14, 20, 0.82);
+      box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.36);
+      overflow: hidden;
+    }
+
+    .panel {
+      padding: 1.25rem;
+    }
+
+    .eyebrow {
+      margin: 0 0 0.75rem;
+      color: #ffb58f;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.1rem, 5vw, 4.4rem);
+      line-height: 0.92;
+      letter-spacing: -0.07em;
+    }
+
+    p {
+      color: #d7ccbf;
+      line-height: 1.55;
+    }
+
+    a {
+      color: #ffc48c;
+      font-weight: 750;
+    }
+
+    label {
+      display: grid;
+      gap: 0.42rem;
+      margin-top: 1rem;
+      color: #f3e8dc;
+      font-weight: 720;
+    }
+
+    input, textarea, button {
+      font: inherit;
+      border-radius: 0.85rem;
+    }
+
+    input, textarea {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff9f1;
+      padding: 0.82rem 0.92rem;
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: rgba(255, 181, 143, 0.78);
+      box-shadow: 0 0 0 0.2rem rgba(255, 181, 143, 0.12);
+    }
+
+    textarea {
+      min-height: 5.2rem;
+      resize: vertical;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 1rem;
+      border: 0;
+      background: linear-gradient(135deg, #ff9c6a 0%, #ffd36d 100%);
+      color: #1e130b;
+      padding: 0.92rem 1rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #f7f1e8;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.62;
+    }
+
+    .status, .word-card {
+      border-radius: 0.9rem;
+      background: rgba(255, 255, 255, 0.07);
+      padding: 0.9rem;
+      color: #d7ccbf;
+      white-space: pre-wrap;
+    }
+
+    .status {
+      min-height: 5rem;
+      margin-top: 1rem;
+    }
+
+    .suggestions, .word-variants, .word-info {
+      display: grid;
+      gap: 0.55rem;
+      margin-top: 0.75rem;
+    }
+
+    .suggestion, .variant, .example {
+      width: 100%;
+      margin: 0;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff9f1;
+      text-align: left;
+      font-weight: 750;
+    }
+
+    small {
+      display: block;
+      margin-top: 0.25rem;
+      color: #bdb0a2;
+      font-weight: 540;
+    }
+
+    .stage {
+      display: grid;
+      min-height: min(72vh, 43rem);
+      place-items: center;
+      background:
+        radial-gradient(circle at center 18%, rgba(255, 211, 109, 0.13), transparent 24rem),
+        linear-gradient(155deg, #050608 0%, #10131a 100%);
+    }
+
+    video {
+      width: min(100%, 48rem);
+      max-height: 72vh;
+      border-radius: 1rem;
+      background: #030405;
+      box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.45);
+    }
+
+    .placeholder {
+      max-width: 28rem;
+      padding: 2rem;
+      text-align: center;
+      color: #bdb0a2;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
+
+      .stage {
+        min-height: 24rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel">
+      <p class="eyebrow">Veo 3.1 Lite pronunciation</p>
+      <h1>Generate lip-sync video directly.</h1>
+      <p>This page uses the new Veo video path. The older <a href="/talking-head.html">TalkingHead audio flow</a> is still available nearby.</p>
+
+      <label>
+        Word
+        <input id="word" value="Hausaufgabe" autocomplete="off">
+      </label>
+
+      <div id="suggestions" class="suggestions"></div>
+      <button id="search-word" class="secondary">Search word</button>
+      <div id="word-variants" class="word-variants"></div>
+      <div id="word-info" class="word-info"></div>
+
+      <label>
+        Phrase
+        <textarea id="phrase">Ich mache meine Hausaufgabe nach dem Abendessen.</textarea>
+      </label>
+
+      <button id="generate">Generate Veo video</button>
+      <div id="status" class="status">Search a word first, choose an example phrase, then generate video.</div>
+    </section>
+
+    <section class="stage">
+      <video id="video" controls playsinline></video>
+      <div id="placeholder" class="placeholder">Generated MP4 video will appear here when Veo completes.</div>
+    </section>
+  </main>
+
+  <script type="module">
+    const wordInput = document.querySelector("#word");
+    const phraseInput = document.querySelector("#phrase");
+    const searchWordButton = document.querySelector("#search-word");
+    const generateButton = document.querySelector("#generate");
+    const suggestionsNode = document.querySelector("#suggestions");
+    const wordVariantsNode = document.querySelector("#word-variants");
+    const wordInfoNode = document.querySelector("#word-info");
+    const statusNode = document.querySelector("#status");
+    const videoNode = document.querySelector("#video");
+    const placeholderNode = document.querySelector("#placeholder");
+
+    const sleep = (millis) => new Promise((resolve) => setTimeout(resolve, millis));
+
+    let selectedSuggestion;
+    let suggestionTimer;
+    let currentWordInfoId;
+
+    function setStatus(message) {
+      statusNode.textContent = message;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function describeSuggestion(item) {
+      if (item.source === "pronunciation") {
+        return `${item.phrase ?? "No phrase"}${item.status ? ` · ${item.status}` : ""}${item.renderMode ? ` · ${item.renderMode}` : ""}`;
+      }
+      return "Cached word info";
+    }
+
+    async function searchSuggestions() {
+      const query = wordInput.value.trim();
+      selectedSuggestion = undefined;
+      if (query.length < 2) {
+        suggestionsNode.replaceChildren();
+        return;
+      }
+
+      const response = await fetch(`/api/v1/words/suggestions?query=${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      suggestionsNode.replaceChildren();
+      data.items.forEach((item) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "suggestion";
+        button.innerHTML = `${escapeHtml(item.word)}<small>${escapeHtml(describeSuggestion(item))}</small>`;
+        button.addEventListener("click", () => selectSuggestion(item));
+        suggestionsNode.appendChild(button);
+      });
+    }
+
+    function selectSuggestion(item) {
+      selectedSuggestion = item;
+      currentWordInfoId = item.wordInfoId;
+      wordInput.value = item.word;
+      if (item.phrase) {
+        phraseInput.value = item.phrase;
+      }
+      suggestionsNode.replaceChildren();
+      if (item.renderMode === "veo-video" && item.videoUrl) {
+        setStatus("Selected an existing Veo video pronunciation. Generate will reuse it.");
+        return;
+      }
+      setStatus("Selected existing entry. Search word info or generate a new Veo video when ready.");
+    }
+
+    async function loadWordInfo() {
+      const word = wordInput.value.trim();
+      if (!word) {
+        setStatus("Enter a word first.");
+        return;
+      }
+
+      searchWordButton.disabled = true;
+      wordVariantsNode.replaceChildren();
+      wordInfoNode.replaceChildren();
+      try {
+        setStatus("Loading word info...");
+        const response = await fetch(`/api/v1/words/info?word=${encodeURIComponent(word)}`);
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        renderWordInfo(await response.json());
+        setStatus("Choose an example phrase, then generate Veo video.");
+      }
+      catch (error) {
+        setStatus(error.message);
+      }
+      finally {
+        searchWordButton.disabled = false;
+      }
+    }
+
+    function renderWordInfo(info) {
+      currentWordInfoId = info.id;
+      selectedSuggestion = undefined;
+      renderWordVariants(info);
+
+      const translations = [
+        ...(info.translations?.en ?? []),
+        ...(info.translations?.ru ?? [])
+      ].join(" · ");
+      const note = [
+        ...(info.shortNote?.en ?? []),
+        ...(info.shortNote?.ru ?? [])
+      ].join(" · ");
+
+      wordInfoNode.innerHTML = `
+        <div class="word-card">
+          <strong>${escapeHtml(info.normalizedWord)}</strong>
+          <small>${escapeHtml([info.article, info.partOfSpeech, info.frequency].filter(Boolean).join(" · "))}</small>
+          <small>${escapeHtml(translations)}</small>
+          <small>${escapeHtml(note)}</small>
+        </div>
+      `;
+
+      info.examples?.forEach((example) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "example";
+        const translation = [
+          ...(example.translations?.en ?? []),
+          ...(example.translations?.ru ?? [])
+        ].join(" · ");
+        button.innerHTML = `${escapeHtml(example.sentence)}<small>${escapeHtml(translation)}</small>`;
+        button.addEventListener("click", () => {
+          wordInput.value = info.normalizedWord;
+          phraseInput.value = example.sentence;
+          selectedSuggestion = undefined;
+          setStatus(`Phrase selected. Veo video will use normalized word: ${info.normalizedWord}`);
+        });
+        wordInfoNode.appendChild(button);
+      });
+    }
+
+    function renderWordVariants(info) {
+      wordVariantsNode.replaceChildren();
+      if (!info.normalizedWord) {
+        return;
+      }
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "variant";
+      button.innerHTML = `${escapeHtml(info.normalizedWord)}<small>Normalized word from word info</small>`;
+      button.addEventListener("click", () => {
+        wordInput.value = info.normalizedWord;
+        currentWordInfoId = info.id;
+        selectedSuggestion = undefined;
+        setStatus(`Using normalized word for Veo video: ${info.normalizedWord}`);
+      });
+      wordVariantsNode.appendChild(button);
+    }
+
+    async function createVeoAsset() {
+      if (!currentWordInfoId) {
+        throw new Error("Search word info before generating video.");
+      }
+
+      const response = await fetch("/api/v1/media/pronunciations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          wordInfoId: currentWordInfoId,
+          word: wordInput.value,
+          phrase: phraseInput.value,
+          language: "de",
+          renderMode: "veo-video"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    }
+
+    async function pollAsset(id) {
+      for (let attempt = 0; attempt < 180; attempt += 1) {
+        const response = await fetch(`/api/v1/media/pronunciations/${id}`);
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        const asset = await response.json();
+        setStatus(`id=${asset.id}\nstatus=${asset.status}\nrenderMode=${asset.renderMode ?? "unknown"}\nwaiting=${attempt * 2}s`);
+        if (asset.status === "completed" || asset.status === "failed") {
+          return asset;
+        }
+        await sleep(2000);
+      }
+      throw new Error("Timed out waiting for Veo video generation.");
+    }
+
+    async function playVideo(asset) {
+      if (!asset.videoUrl) {
+        throw new Error("Generation completed without videoUrl.");
+      }
+      placeholderNode.hidden = true;
+      videoNode.src = asset.videoUrl;
+      setStatus(`Playing Veo video.\nid=${asset.id}\nvideoUrl=${asset.videoUrl}`);
+      await videoNode.play();
+    }
+
+    wordInput.addEventListener("input", () => {
+      currentWordInfoId = undefined;
+      clearTimeout(suggestionTimer);
+      suggestionTimer = setTimeout(() => {
+        searchSuggestions().catch((error) => setStatus(error.message));
+      }, 250);
+    });
+
+    phraseInput.addEventListener("input", () => {
+      selectedSuggestion = undefined;
+    });
+
+    searchWordButton.addEventListener("click", loadWordInfo);
+
+    generateButton.addEventListener("click", async () => {
+      generateButton.disabled = true;
+      try {
+        if (selectedSuggestion?.renderMode === "veo-video" && selectedSuggestion.videoUrl
+            && selectedSuggestion.word === wordInput.value.trim() && selectedSuggestion.phrase === phraseInput.value.trim()) {
+          await playVideo({ id: selectedSuggestion.pronunciationId, videoUrl: selectedSuggestion.videoUrl });
+          return;
+        }
+
+        setStatus("Queueing Veo video generation...");
+        const queued = await createVeoAsset();
+        const completed = await pollAsset(queued.id);
+        if (completed.status === "failed") {
+          throw new Error(`${completed.errorCode}: ${completed.errorMessage}`);
+        }
+        await playVideo(completed);
+      }
+      catch (error) {
+        setStatus(error.message);
+      }
+      finally {
+        generateButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

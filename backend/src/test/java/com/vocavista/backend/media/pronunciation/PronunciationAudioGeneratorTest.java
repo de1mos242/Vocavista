@@ -28,7 +28,7 @@ class PronunciationAudioGeneratorTest {
 
 		GeneratedAudio audio = generator.generate(new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.",
 				"de", "Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
-				"default-clear-german"));
+				"default-clear-german", "adult German speaker"));
 
 		ArgumentCaptor<TextToSpeechPrompt> prompt = ArgumentCaptor.forClass(TextToSpeechPrompt.class);
 		verify(speechModel).call(prompt.capture());
@@ -78,7 +78,7 @@ class PronunciationAudioGeneratorTest {
 	private static PronunciationScript script() {
 		return new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de",
 				"Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v2",
-				"default-clear-german");
+				"default-clear-german", "adult German speaker");
 	}
 
 }

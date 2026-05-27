@@ -8,7 +8,7 @@ paths:
       tags:
         - Media
       operationId: createPronunciation
-      summary: Queue or reuse pronunciation audio generation for TalkingHead playback
+      summary: Queue or reuse pronunciation media generation
       requestBody:
         required: true
         content:
@@ -17,7 +17,7 @@ paths:
               $ref: '#/components/schemas/PronunciationRequest'
       responses:
         '202':
-          description: Pronunciation audio generation was queued or reused.
+          description: Pronunciation media generation was queued or reused.
           content:
             application/json:
               schema:
@@ -33,7 +33,7 @@ paths:
       tags:
         - Media
       operationId: getPronunciation
-      summary: Get pronunciation audio generation status
+      summary: Get pronunciation media generation status
       parameters:
         - name: id
           in: path
@@ -44,7 +44,7 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Pronunciation audio generation status.
+          description: Pronunciation media generation status.
           content:
             application/json:
               schema:
@@ -148,6 +148,10 @@ components:
           type: string
           enum:
             - de
+        renderMode:
+          type: string
+          description: Optional media render mode. Supported values are veo-video and talking-head. Defaults to veo-video.
+          nullable: true
     PronunciationResponse:
       type: object
       required:
@@ -164,6 +168,10 @@ components:
         status:
           $ref: '#/components/schemas/PronunciationStatus'
         audioUrl:
+          type: string
+          format: uri
+          nullable: true
+        videoUrl:
           type: string
           format: uri
           nullable: true
@@ -276,6 +284,13 @@ components:
         audioUrl:
           type: string
           format: uri
+          nullable: true
+        videoUrl:
+          type: string
+          format: uri
+          nullable: true
+        renderMode:
+          type: string
           nullable: true
     CompoundPart:
       type: object

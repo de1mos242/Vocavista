@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vocavista TalkingHead Preview</title>
+  <title>Vocavista Pronunciation Media Preview</title>
   <style>
     :root {
       color-scheme: dark;
@@ -157,9 +157,14 @@
       color: #dfe5f4;
     }
 
-    audio {
+    audio, video {
       width: 100%;
       margin-top: 1rem;
+    }
+
+    video {
+      border-radius: 0.9rem;
+      background: #07090d;
     }
 
     @media (max-width: 860px) {
@@ -187,8 +192,8 @@
 <body>
   <main>
     <section class="panel">
-      <h1>TalkingHead pronunciation preview</h1>
-      <p>Generates TTS audio on the backend, then animates a browser avatar locally with TalkingHead.</p>
+      <h1>Pronunciation media preview</h1>
+      <p>Generates direct Veo lip-sync video by default. Use the dedicated <a href="/veo-video.html">Veo video page</a> for the new flow, or keep using TalkingHead here as an audio-backed option.</p>
 
       <label>
         Word
@@ -209,11 +214,20 @@
       </label>
 
       <label>
+        Render mode
+        <select id="render-mode">
+          <option value="veo-video">Veo video</option>
+          <option value="talking-head">TalkingHead audio</option>
+        </select>
+      </label>
+
+      <label>
         Avatar
         <select id="avatar-choice"></select>
       </label>
 
-      <button id="generate">Generate and speak</button>
+      <button id="generate">Generate media</button>
+      <video id="video" controls playsinline></video>
       <audio id="audio" controls></audio>
       <div id="status" class="status">Loading TalkingHead modules...</div>
     </section>
@@ -230,10 +244,12 @@
     const avatarNode = document.querySelector("#avatar");
     const statusNode = document.querySelector("#status");
     const audioNode = document.querySelector("#audio");
+    const videoNode = document.querySelector("#video");
     const generateButton = document.querySelector("#generate");
     const searchWordButton = document.querySelector("#search-word");
     const wordInput = document.querySelector("#word");
     const phraseInput = document.querySelector("#phrase");
+    const renderModeChoice = document.querySelector("#render-mode");
     const avatarChoice = document.querySelector("#avatar-choice");
     const suggestionsNode = document.querySelector("#suggestions");
     const wordVariantsNode = document.querySelector("#word-variants");
@@ -298,7 +314,7 @@
         };
         head.opt.update = headAudio.update.bind(headAudio);
         headAudioReady = true;
-        setStatus("Ready. Submit a word and phrase to generate audio.");
+        setStatus("Ready. Submit a word and phrase to generate media.");
       }
       catch (error) {
         setStatus(`Avatar loaded, but audio-driven lip sync did not initialize. Audio playback will still work.\n${error.message}`);
@@ -320,7 +336,7 @@
 
     avatarChoice.addEventListener("change", () => {
       loadSelectedAvatar()
-        .then(() => setStatus("Avatar loaded. Submit a word and phrase to generate audio."))
+        .then(() => setStatus("Avatar loaded. Submit a word and phrase to generate media."))
         .catch((error) => setStatus(`Could not load avatar.\n${error.message}`));
     });
 
@@ -334,7 +350,7 @@
 
     function describeSuggestion(item) {
       if (item.source === "pronunciation") {
-        return `${item.phrase ?? "No phrase"}${item.status ? ` · ${item.status}` : ""}`;
+        return `${item.phrase ?? "No phrase"}${item.status ? ` · ${item.status}` : ""}${item.renderMode ? ` · ${item.renderMode}` : ""}`;
       }
       return "Cached word info";
     }
@@ -372,8 +388,8 @@
         phraseInput.value = item.phrase;
       }
       suggestionsNode.replaceChildren();
-      setStatus(item.audioUrl
-        ? "Selected existing completed pronunciation. Generate and speak will reuse it."
+      setStatus(item.audioUrl || item.videoUrl
+        ? "Selected existing completed pronunciation. Generate media will reuse it when render mode matches."
         : "Selected existing entry. Search word or generate pronunciation when ready.");
     }
 
@@ -439,7 +455,7 @@
           wordInput.value = info.normalizedWord;
           phraseInput.value = example.sentence;
           selectedSuggestion = undefined;
-          setStatus(`Phrase selected. Audio will use normalized word: ${info.normalizedWord}`);
+          setStatus(`Phrase selected. Media will use normalized word: ${info.normalizedWord}`);
         });
         wordInfoNode.appendChild(button);
       });
@@ -459,7 +475,7 @@
         wordInput.value = info.normalizedWord;
         currentWordInfoId = info.id;
         selectedSuggestion = undefined;
-        setStatus(`Using normalized word for audio: ${info.normalizedWord}`);
+        setStatus(`Using normalized word for media: ${info.normalizedWord}`);
       });
       wordVariantsNode.appendChild(button);
     }
@@ -480,7 +496,7 @@
 
     async function createAsset() {
       if (!currentWordInfoId) {
-        throw new Error("Search word info before generating audio.");
+        throw new Error("Search word info before generating media.");
       }
 
       const response = await fetch("/api/v1/media/pronunciations", {
@@ -490,7 +506,8 @@
           wordInfoId: currentWordInfoId,
           word: wordInput.value,
           phrase: phraseInput.value,
-          language: "de"
+          language: "de",
+          renderMode: renderModeChoice.value
         })
       });
 
@@ -518,6 +535,7 @@
     }
 
     async function playThroughTalkingHead(audioUrl) {
+      videoNode.removeAttribute("src");
       audioNode.src = audioUrl;
 
       if (!head || !headAudioReady) {
@@ -536,13 +554,38 @@
       head.speakAudio({ audio: audioBuffer }, { isRaw: true });
     }
 
+    async function playGeneratedMedia(asset) {
+      if (asset.renderMode === "veo-video") {
+        if (!asset.videoUrl) {
+          throw new Error("Generation completed without videoUrl.");
+        }
+        audioNode.removeAttribute("src");
+        videoNode.src = asset.videoUrl;
+        setStatus(`Playing generated video.\nid=${asset.id}\nrenderMode=${asset.renderMode}\nvideoUrl=${asset.videoUrl}`);
+        await videoNode.play();
+        return;
+      }
+
+      if (!asset.audioUrl) {
+        throw new Error("Generation completed without audioUrl.");
+      }
+      setStatus(`Playing generated audio.\nid=${asset.id}\nrenderMode=${asset.renderMode ?? "unknown"}\naudioUrl=${asset.audioUrl}`);
+      await playThroughTalkingHead(asset.audioUrl);
+    }
+
     generateButton.addEventListener("click", async () => {
       generateButton.disabled = true;
       try {
-        if (selectedSuggestion?.audioUrl && selectedSuggestion.word === wordInput.value.trim()
-            && selectedSuggestion.phrase === phraseInput.value.trim()) {
-          setStatus(`Playing existing generated audio.\nid=${selectedSuggestion.pronunciationId}\naudioUrl=${selectedSuggestion.audioUrl}`);
-          await playThroughTalkingHead(selectedSuggestion.audioUrl);
+        const selectedUrl = renderModeChoice.value === "veo-video" ? selectedSuggestion?.videoUrl : selectedSuggestion?.audioUrl;
+        if (selectedUrl && selectedSuggestion?.renderMode === renderModeChoice.value
+            && selectedSuggestion.word === wordInput.value.trim() && selectedSuggestion.phrase === phraseInput.value.trim()) {
+          setStatus(`Playing existing generated media.\nid=${selectedSuggestion.pronunciationId}\nurl=${selectedUrl}`);
+          await playGeneratedMedia({
+            id: selectedSuggestion.pronunciationId,
+            renderMode: selectedSuggestion.renderMode,
+            audioUrl: selectedSuggestion.audioUrl,
+            videoUrl: selectedSuggestion.videoUrl
+          });
           return;
         }
 
@@ -552,11 +595,7 @@
         if (completed.status === "failed") {
           throw new Error(`${completed.errorCode}: ${completed.errorMessage}`);
         }
-        if (!completed.audioUrl) {
-          throw new Error("Generation completed without audioUrl.");
-        }
-        setStatus(`Playing generated audio.\nid=${completed.id}\nrenderMode=${completed.renderMode ?? "unknown"}\naudioUrl=${completed.audioUrl}`);
-        await playThroughTalkingHead(completed.audioUrl);
+        await playGeneratedMedia(completed);
       }
       catch (error) {
         setStatus(error.message);

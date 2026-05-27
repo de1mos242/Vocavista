@@ -48,3 +48,14 @@ info:
     name: Vocavista Backend
     description: Backend service for Vocavista
     version: @project.version@
+
+vocavista:
+  media:
+    render-mode: veo-video
+    veo:
+      api-key: ${GOOGLE_AI_API_KEY:__missing__}
+      model: veo-3.1-fast-generate-preview
+      aspect-ratio: "9:16"
+      duration-seconds: 6
+      poll-interval: 5s
+      timeout: 8m
