@@ -6,11 +6,22 @@ The current application is a Spring Boot 4 backend on Java 25.
 
 Implemented API areas:
 
+- `GET /api/v1/auth/me` for the authenticated application user.
 - `GET /api/v1/words/info` for AI-generated German vocabulary metadata.
 - `GET /api/v1/words/suggestions` for simple autocomplete over cached word info and pronunciation assets.
 - `POST /api/v1/media/pronunciations` for reusable generated pronunciation media.
 - `GET /api/v1/media/pronunciations/{id}` for generation status.
 - `GET /api/v1/media/pronunciations/{id}/video` for same-origin generated video playback.
+
+## Authorization
+
+The backend uses Spring Security with Google OAuth2/OpenID Connect login. The login entrypoint is `/oauth2/authorization/google` and the default callback is `/login/oauth2/code/google`.
+
+Google is requested with the minimal identity scopes `openid`, `email`, and `profile`. On successful login the backend creates or updates a `user_accounts` row keyed by provider and provider subject, storing the user's email and display name.
+
+Existing `/api/v1/**` endpoints require an authenticated session. Actuator health/info, OAuth login/callback paths, `/`, and the static Veo preview page remain publicly reachable.
+
+The static Veo preview page calls `/api/v1/auth/me` on load to decide whether to show a Google sign-in link or the current application user. API action buttons stay disabled until the current user request succeeds. Signed-in users can call `/logout` from the page; the logout handler returns `204 No Content` so the page can render signed-out state without following a redirect.
 
 ## API Contract
 
@@ -24,6 +35,7 @@ PostgreSQL stores structured application state.
 
 Current persisted data:
 
+- Application users authenticated through Google OAuth.
 - Pronunciation generation inputs.
 - Cached generated word-info responses.
 - Normalized pronunciation cache keys.

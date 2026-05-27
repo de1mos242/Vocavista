@@ -7,10 +7,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vocavista.backend.auth.GoogleOidcUserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,7 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@WebMvcTest(WordInfoController.class)
+@WebMvcTest(value = WordInfoController.class, excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class)
 @Import({ WordInfoService.class, WordSuggestionService.class, ProviderWordInfoValidator.class, WordInfoMapperImpl.class,
 		WordInfoErrorHandler.class })
 class WordInfoControllerTest {
@@ -37,12 +40,16 @@ class WordInfoControllerTest {
 	@MockitoBean
 	private PronunciationRepository pronunciationRepository;
 
+	@MockitoBean
+	private GoogleOidcUserService googleOidcUserService;
+
 	@BeforeEach
 	void setUp() {
 		when(wordInfoRepository.findByNormalizedQuery(anyString())).thenReturn(Optional.empty());
 	}
 
 	@Test
+	@WithMockUser
 	void returnsWordInfoForValidRequest() throws Exception {
 		when(aiWordInfoProvider.generate(anyString())).thenReturn(new AiWordInfoResult(SampleWordInfos.nounInfo(), "{}"));
 
@@ -57,6 +64,7 @@ class WordInfoControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void returnsWordSuggestionsForValidQuery() throws Exception {
 		UUID wordInfoId = UUID.randomUUID();
 		WordInfoRecord record = WordInfoRecord.create(wordInfoId, "hausaufgabe", "Hausaufgabe", "de", "{}",
@@ -74,6 +82,7 @@ class WordInfoControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void rejectsMissingWord() throws Exception {
 		mockMvc.perform(get("/api/v1/words/info"))
 				.andExpect(status().isBadRequest())
@@ -81,6 +90,7 @@ class WordInfoControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void rejectsBlankWordAfterTrimming() throws Exception {
 		mockMvc.perform(get("/api/v1/words/info").param("word", "   "))
 				.andExpect(status().isBadRequest())
@@ -88,6 +98,7 @@ class WordInfoControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void rejectsTooLongWord() throws Exception {
 		mockMvc.perform(get("/api/v1/words/info").param("word", "a".repeat(81)))
 				.andExpect(status().isBadRequest())
@@ -95,6 +106,7 @@ class WordInfoControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void mapsProviderBadGatewayError() throws Exception {
 		when(aiWordInfoProvider.generate(anyString())).thenThrow(new AiProviderBadGatewayException("bad"));
 
@@ -104,6 +116,7 @@ class WordInfoControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void mapsProviderUnavailableError() throws Exception {
 		when(aiWordInfoProvider.generate(anyString())).thenThrow(new AiProviderUnavailableException("unavailable"));
 

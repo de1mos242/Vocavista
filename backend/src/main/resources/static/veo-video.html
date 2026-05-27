@@ -99,7 +99,7 @@
       resize: vertical;
     }
 
-    button {
+    button, .login-button {
       width: 100%;
       margin-top: 1rem;
       border: 0;
@@ -108,6 +108,8 @@
       padding: 0.92rem 1rem;
       font-weight: 900;
       cursor: pointer;
+      text-align: center;
+      text-decoration: none;
     }
 
     button.secondary {
@@ -117,8 +119,59 @@
     }
 
     button:disabled {
-      cursor: wait;
+      cursor: not-allowed;
       opacity: 0.62;
+    }
+
+    .auth-card {
+      display: grid;
+      gap: 0.45rem;
+      margin: 1rem 0;
+      border: 1px solid rgba(255, 181, 143, 0.28);
+      border-radius: 1rem;
+      background: rgba(255, 181, 143, 0.09);
+      padding: 0.95rem;
+    }
+
+    .auth-card strong {
+      color: #fff9f1;
+    }
+
+    .auth-card p {
+      margin: 0;
+    }
+
+    .auth-card small {
+      margin: 0;
+    }
+
+    .login-button {
+      display: inline-block;
+      box-sizing: border-box;
+    }
+
+    .auth-actions {
+      display: grid;
+      gap: 0.55rem;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+    }
+
+    .auth-actions button {
+      width: auto;
+      min-width: 7rem;
+      margin: 0;
+      padding: 0.72rem 0.9rem;
+    }
+
+    @media (max-width: 520px) {
+      .auth-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .auth-actions button {
+        width: 100%;
+      }
     }
 
     .status, .word-card {
@@ -200,6 +253,10 @@
       <h1>Generate lip-sync video directly.</h1>
       <p>This page generates direct Veo pronunciation video, stores the MP4, and plays the same-origin result.</p>
 
+      <div id="auth" class="auth-card">
+        <p>Checking sign-in status...</p>
+      </div>
+
       <label>
         Word
         <input id="word" value="Hausaufgabe" autocomplete="off">
@@ -233,6 +290,7 @@
     const suggestionsNode = document.querySelector("#suggestions");
     const wordVariantsNode = document.querySelector("#word-variants");
     const wordInfoNode = document.querySelector("#word-info");
+    const authNode = document.querySelector("#auth");
     const statusNode = document.querySelector("#status");
     const videoNode = document.querySelector("#video");
     const placeholderNode = document.querySelector("#placeholder");
@@ -242,6 +300,11 @@
     let selectedSuggestion;
     let suggestionTimer;
     let currentWordInfoId;
+    let currentUser;
+    let searchBusy = false;
+    let generateBusy = false;
+
+    updateActionButtons();
 
     function setStatus(message) {
       statusNode.textContent = message;
@@ -262,7 +325,103 @@
       return "Cached word info";
     }
 
+    function updateActionButtons() {
+      searchWordButton.disabled = !currentUser || searchBusy;
+      generateButton.disabled = !currentUser || generateBusy;
+      document.querySelectorAll(".suggestion, .variant, .example")
+        .forEach((button) => {
+          button.disabled = !currentUser;
+        });
+    }
+
+    function renderSignedOut() {
+      currentUser = undefined;
+      authNode.innerHTML = `
+        <p><strong>Sign in required</strong></p>
+        <small>Use Google to search words and generate Veo pronunciation video.</small>
+        <a class="login-button" href="/oauth2/authorization/google">Sign in with Google</a>
+      `;
+      suggestionsNode.replaceChildren();
+      updateActionButtons();
+      setStatus("Sign in with Google to use this page.");
+    }
+
+    function renderSignedIn(user) {
+      currentUser = user;
+      authNode.innerHTML = `
+        <div class="auth-actions">
+          <div>
+            <p><strong>${escapeHtml(user.displayName)}</strong></p>
+            <small>${escapeHtml(user.email)} · ${escapeHtml(user.provider)}</small>
+          </div>
+          <button id="logout" type="button" class="secondary">Logout</button>
+        </div>
+      `;
+      document.querySelector("#logout").addEventListener("click", logoutCurrentUser);
+      updateActionButtons();
+      setStatus("Search a word first, choose an example phrase, then generate video.");
+    }
+
+    async function logoutCurrentUser() {
+      const logoutButton = document.querySelector("#logout");
+      if (logoutButton) {
+        logoutButton.disabled = true;
+      }
+
+      try {
+        const response = await fetch("/logout", { method: "POST" });
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        renderSignedOut();
+      }
+      catch (error) {
+        setStatus(`Could not log out. ${error.message}`);
+        if (logoutButton) {
+          logoutButton.disabled = false;
+        }
+      }
+    }
+
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch("/api/v1/auth/me");
+        if (response.status === 401) {
+          renderSignedOut();
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        renderSignedIn(await response.json());
+      }
+      catch (error) {
+        renderSignedOut();
+        setStatus(`Could not check sign-in status. ${error.message}`);
+      }
+    }
+
+    function requireCurrentUser() {
+      if (!currentUser) {
+        renderSignedOut();
+        throw new Error("Sign in with Google before using this action.");
+      }
+    }
+
+    async function apiFetch(url, options) {
+      const response = await fetch(url, options);
+      if (response.status === 401) {
+        renderSignedOut();
+      }
+      return response;
+    }
+
     async function searchSuggestions() {
+      if (!currentUser) {
+        suggestionsNode.replaceChildren();
+        return;
+      }
+
       const query = wordInput.value.trim();
       selectedSuggestion = undefined;
       if (query.length < 2) {
@@ -270,7 +429,7 @@
         return;
       }
 
-      const response = await fetch(`/api/v1/words/suggestions?query=${encodeURIComponent(query)}`);
+      const response = await apiFetch(`/api/v1/words/suggestions?query=${encodeURIComponent(query)}`);
       if (!response.ok) {
         throw new Error(await response.text());
       }
@@ -303,18 +462,21 @@
     }
 
     async function loadWordInfo() {
+      requireCurrentUser();
+
       const word = wordInput.value.trim();
       if (!word) {
         setStatus("Enter a word first.");
         return;
       }
 
-      searchWordButton.disabled = true;
+      searchBusy = true;
+      updateActionButtons();
       wordVariantsNode.replaceChildren();
       wordInfoNode.replaceChildren();
       try {
         setStatus("Loading word info...");
-        const response = await fetch(`/api/v1/words/info?word=${encodeURIComponent(word)}`);
+        const response = await apiFetch(`/api/v1/words/info?word=${encodeURIComponent(word)}`);
         if (!response.ok) {
           throw new Error(await response.text());
         }
@@ -325,7 +487,8 @@
         setStatus(error.message);
       }
       finally {
-        searchWordButton.disabled = false;
+        searchBusy = false;
+        updateActionButtons();
       }
     }
 
@@ -391,11 +554,13 @@
     }
 
     async function createVeoAsset() {
+      requireCurrentUser();
+
       if (!currentWordInfoId) {
         throw new Error("Search word info before generating video.");
       }
 
-      const response = await fetch("/api/v1/media/pronunciations", {
+      const response = await apiFetch("/api/v1/media/pronunciations", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -415,7 +580,7 @@
 
     async function pollAsset(id) {
       for (let attempt = 0; attempt < 180; attempt += 1) {
-        const response = await fetch(`/api/v1/media/pronunciations/${id}`);
+        const response = await apiFetch(`/api/v1/media/pronunciations/${id}`);
         if (!response.ok) {
           throw new Error(await response.text());
         }
@@ -451,11 +616,15 @@
       selectedSuggestion = undefined;
     });
 
-    searchWordButton.addEventListener("click", loadWordInfo);
+    searchWordButton.addEventListener("click", () => {
+      loadWordInfo().catch((error) => setStatus(error.message));
+    });
 
     generateButton.addEventListener("click", async () => {
-      generateButton.disabled = true;
+      generateBusy = true;
+      updateActionButtons();
       try {
+        requireCurrentUser();
         if (selectedSuggestion?.videoUrl
             && selectedSuggestion.word === wordInput.value.trim() && selectedSuggestion.phrase === phraseInput.value.trim()) {
           await playVideo({ id: selectedSuggestion.pronunciationId, videoUrl: selectedSuggestion.videoUrl });
@@ -474,9 +643,12 @@
         setStatus(error.message);
       }
       finally {
-        generateButton.disabled = false;
+        generateBusy = false;
+        updateActionButtons();
       }
     });
+
+    loadCurrentUser();
   </script>
 </body>
 </html>
