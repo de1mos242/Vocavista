@@ -44,7 +44,7 @@ Generation behavior:
 - For nouns with a known German article, the second repetition includes the article, for example `Zugabe ... die Zugabe ... ich möchte meine Zugabe machen`.
 - The contextual phrase is spoken after the repeated word.
 - Veo generates a direct vertical lip-sync MP4.
-- For nouns with known gender, the Veo speaker follows the word gender: masculine uses a male speaker, feminine uses a female speaker, and neuter uses a gender-neutral speaker.
+- For nouns with known gender, the Veo speaker follows the word gender: masculine uses a male speaker, feminine uses a female speaker, and neuter uses a young adult woman. Non-nouns also use a young adult woman.
 - S3-compatible storage keeps the generated video object.
 - The API returns `videoUrl` for same-origin browser playback when default video generation completes.
 - The dedicated Veo preview page lets the user search for a word, choose one of the generated example phrases, generate Veo video, and play the returned `videoUrl`.

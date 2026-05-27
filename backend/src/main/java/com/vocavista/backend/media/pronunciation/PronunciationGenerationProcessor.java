@@ -103,8 +103,8 @@ class PronunciationGenerationProcessor {
 		return switch (gender) {
 			case MASCULINE -> "male adult speaker";
 			case FEMININE -> "female adult speaker";
-			case NEUTER -> "gender-neutral adult speaker";
-			case null -> "adult German speaker";
+			case NEUTER -> "young adult woman";
+			case null -> "young adult woman";
 		};
 	}
 
@@ -124,7 +124,7 @@ class PronunciationGenerationProcessor {
 	private record WordInfoMetadata(String article, String speakerDescription) {
 
 		static WordInfoMetadata defaultMetadata() {
-			return new WordInfoMetadata(null, "adult German speaker");
+			return new WordInfoMetadata(null, "young adult woman");
 		}
 
 	}

@@ -27,11 +27,12 @@ class PronunciationVideoGeneratorTest {
 		server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning"))
 				.andExpect(header("x-goog-api-key", "test-key"))
 				.andExpect(content().string(containsString("\"aspectRatio\":\"9:16\"")))
+				.andExpect(content().string(containsString("\"durationSeconds\":6")))
 				.andExpect(content().string(not(containsString("personGeneration"))))
 				.andExpect(content().string(containsString("female adult speaker")))
-				.andExpect(content().string(containsString("Start with 0.5 seconds of silence")))
-				.andExpect(content().string(containsString("mouth closed")))
-				.andExpect(content().string(containsString("Do not add subtitles, captions, logos, or any spoken words before or after the quoted script")))
+				.andExpect(content().string(containsString("Start with 0.5 seconds of absolute silence")))
+				.andExpect(content().string(containsString("The first audible speech must be the first word of the quoted German script")))
+				.andExpect(content().string(containsString("do not add any greeting, intro, explanation, filler, English, Russian, or invented words")))
 				.andRespond(withSuccess("""
 						{"name":"models/veo-3.1-lite-generate-preview/operations/abc"}
 						""", MediaType.APPLICATION_JSON));
@@ -49,7 +50,7 @@ class PronunciationVideoGeneratorTest {
 		assertThat(video.bytes()).isEqualTo("video".getBytes());
 		assertThat(video.contentType()).isEqualTo("video/mp4");
 		assertThat(generator.providerName()).isEqualTo("google-veo");
-		assertThat(generator.modelName()).contains("veo-3.1-lite-generate-preview", "9:16", "8s", "prompt-v3");
+		assertThat(generator.modelName()).contains("veo-3.1-lite-generate-preview", "9:16", "6s", "prompt-v4");
 		server.verify();
 	}
 

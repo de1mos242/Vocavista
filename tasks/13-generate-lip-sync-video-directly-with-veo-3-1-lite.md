@@ -26,9 +26,10 @@ Generate pronunciation lip-sync video directly with Veo 3.1 Lite instead of maki
 - 2026-05-26: Added `GOOGLE_AI_API_KEY` configuration, updated docs, and added Flyway columns for video metadata.
 - 2026-05-27: Added a dedicated `/veo-video.html` page for the new flow. It searches word info, lets the user choose an example phrase, queues pronunciation video generation, polls for the longer video generation window, and plays the returned `videoUrl`.
 - 2026-05-27: Removed the default `personGeneration: allow_adult` setting because it is not currently supported by the selected Veo API/model. `personGeneration` is now omitted by default and only sent when explicitly configured.
-- 2026-05-27: Changed Veo output to vertical `9:16`. Pronunciation scripts now read linked word-info metadata so noun second repetitions include the article, for example `Zugabe ... die Zugabe ...`, and the Veo prompt asks for male/female/gender-neutral speaker presentation based on noun gender.
+- 2026-05-27: Changed Veo output to vertical `9:16`. Pronunciation scripts now read linked word-info metadata so noun second repetitions include the article, for example `Zugabe ... die Zugabe ...`, and the Veo prompt asks for speaker presentation based on noun gender.
 - 2026-05-27: Tightened the Veo prompt to require 0.5 seconds of silence with a closed mouth before speech and 0.5 seconds of silence with a closed mouth after the final word. Also explicitly forbids any spoken words before or after the quoted German script.
 - 2026-05-27: Cleaned up the implementation to remove the old OpenAI TTS plus TalkingHead path. The API no longer accepts `renderMode`, responses and suggestions no longer expose `audioUrl` or `renderMode`, `/talking-head.html` and `/audio` serving were removed, and the database migration now drops obsolete audio metadata columns while adding video metadata.
+- 2026-05-27: Changed speaker selection so neuter nouns and non-nouns use a young adult woman instead of a gender-neutral speaker.
 
 ## Verification
 

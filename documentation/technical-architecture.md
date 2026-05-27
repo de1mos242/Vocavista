@@ -47,7 +47,7 @@ OpenAI is used for word information generation through Spring AI.
 
 Google Veo is used for default direct pronunciation video generation. The configurable default model is `veo-3.1-lite-generate-preview`. Veo requests default to `9:16` vertical output.
 
-Pronunciation generation reads the linked word-info JSON for noun metadata. If the word is a noun and has an article, the second spoken repetition includes the article. If noun gender is available, the Veo prompt asks for a corresponding male, female, or gender-neutral adult speaker.
+Pronunciation generation reads the linked word-info JSON for noun metadata. If the word is a noun and has an article, the second spoken repetition includes the article. If noun gender is available, the Veo prompt asks for a corresponding male or female speaker; neuter nouns and non-nouns use a young adult woman.
 
 Provider failures are mapped to controlled backend errors rather than exposing raw provider responses.
 

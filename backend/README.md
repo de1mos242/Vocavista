@@ -68,7 +68,7 @@ Run the browser Veo video preview after starting the app:
 http://localhost:8080/veo-video.html
 ```
 
-The Veo page calls `POST /api/v1/media/pronunciations`, polls the returned id, and plays the completed `videoUrl`. Veo requests default to vertical `9:16` output, and the prompt asks for a male, female, or gender-neutral speaker based on the word-info noun gender when available.
+The Veo page calls `POST /api/v1/media/pronunciations`, polls the returned id, and plays the completed `videoUrl`. Veo requests default to vertical `9:16` output. The prompt asks for a male speaker for masculine nouns, a female speaker for feminine nouns, and a young adult woman for neuter nouns and non-nouns.
 
 `backend/.env.example` lists optional local secret variables without real values. Other overrides should use full Spring property names, for example `VOCAVISTA_MEDIA_S3_ENDPOINT`.
 

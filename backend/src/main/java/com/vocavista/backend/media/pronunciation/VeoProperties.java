@@ -14,7 +14,7 @@ public class VeoProperties {
 	private String aspectRatio = "9:16";
 	private String personGeneration;
 	private int sampleCount = 1;
-	private int durationSeconds = 8;
+	private int durationSeconds = 6;
 	private Duration pollInterval = Duration.ofSeconds(5);
 	private Duration timeout = Duration.ofMinutes(8);
 

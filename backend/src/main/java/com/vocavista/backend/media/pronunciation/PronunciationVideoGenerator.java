@@ -60,7 +60,7 @@ class PronunciationVideoGenerator {
 
 	String modelName() {
 		return "%s:%s:%ss:%s".formatted(properties.getModel(), properties.getAspectRatio(),
-				properties.getDurationSeconds(), "prompt-v3");
+				properties.getDurationSeconds(), "prompt-v4");
 	}
 
 	private JsonNode startOperation(PronunciationScript script) {
@@ -172,10 +172,17 @@ class PronunciationVideoGenerator {
 
 	private static String promptFor(PronunciationScript script) {
 		String spokenText = script.text().replaceAll("\\s+", " ").trim();
-		return "Create a vertical educational close-up lip-sync video of one " + script.speakerDescription()
-				+ " saying exactly this German script with natural pauses: \""
-				+ spokenText
-				+ "\". Start with 0.5 seconds of silence before speech, with the speaker facing the camera and mouth closed. After the final word, stop speaking immediately and hold 0.5 seconds of silence with a neutral expression and mouth closed. The speaker should articulate clearly for language learners and match mouth movements to the spoken words. Use a simple neutral background. Do not add subtitles, captions, logos, or any spoken words before or after the quoted script.";
+		return """
+				Create a vertical close-up lip-sync video of one %s.
+				The complete audio transcript must be exactly this German script and nothing else: "%s".
+				Start with 0.5 seconds of absolute silence: the speaker faces the camera, mouth closed, no voice, no whisper, no breath sound, no background speech.
+				The first audible speech must be the first word of the quoted German script.
+				Speak only German from the quoted script; do not add any greeting, intro, explanation, filler, English, Russian, or invented words.
+				After the final quoted word, stop speaking immediately and hold 0.5 seconds of silence with a neutral expression and mouth closed.
+				Match mouth movements to the quoted German words.
+				Use a simple neutral background.
+				Do not add subtitles, captions, or logos.
+				""".formatted(script.speakerDescription(), spokenText).replaceAll("\\s+", " ").trim();
 	}
 
 	private static String text(JsonNode node, String fieldName) {
