@@ -24,7 +24,7 @@ class PronunciationVideoGeneratorTest {
 		VeoProperties properties = properties();
 		PronunciationVideoGenerator generator = new PronunciationVideoGenerator(restClientBuilder, properties);
 
-		server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning"))
+		server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning"))
 				.andExpect(header("x-goog-api-key", "test-key"))
 				.andExpect(content().string(containsString("\"aspectRatio\":\"9:16\"")))
 				.andExpect(content().string(not(containsString("personGeneration"))))
@@ -33,9 +33,9 @@ class PronunciationVideoGeneratorTest {
 				.andExpect(content().string(containsString("mouth closed")))
 				.andExpect(content().string(containsString("Do not add subtitles, captions, logos, or any spoken words before or after the quoted script")))
 				.andRespond(withSuccess("""
-						{"name":"models/veo-3.1-fast-generate-preview/operations/abc"}
+						{"name":"models/veo-3.1-lite-generate-preview/operations/abc"}
 						""", MediaType.APPLICATION_JSON));
-		server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-fast-generate-preview/operations/abc"))
+		server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-lite-generate-preview/operations/abc"))
 				.andExpect(header("x-goog-api-key", "test-key"))
 				.andRespond(withSuccess("""
 						{"done":true,"response":{"generateVideoResponse":{"generatedSamples":[{"video":{"uri":"https://files.example/video.mp4","mimeType":"video/mp4"}}]}}}
@@ -49,7 +49,7 @@ class PronunciationVideoGeneratorTest {
 		assertThat(video.bytes()).isEqualTo("video".getBytes());
 		assertThat(video.contentType()).isEqualTo("video/mp4");
 		assertThat(generator.providerName()).isEqualTo("google-veo");
-		assertThat(generator.modelName()).contains("veo-3.1-fast-generate-preview", "9:16", "8s", "prompt-v3");
+		assertThat(generator.modelName()).contains("veo-3.1-lite-generate-preview", "9:16", "8s", "prompt-v3");
 		server.verify();
 	}
 
@@ -74,8 +74,7 @@ class PronunciationVideoGeneratorTest {
 
 	private static PronunciationScript script() {
 		return new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de",
-				"Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v6", "default-clear-german",
-				"female adult speaker");
+				"Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v6", "female adult speaker");
 	}
 
 }

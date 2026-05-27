@@ -5,18 +5,8 @@ spring:
   ai:
     openai:
       api-key: __missing__
-      audio:
-        speech:
-          # Used only when pronunciation renderMode is talking-head.
-          voice: coral
 
 vocavista:
   media:
-    render-mode: veo-video
     veo:
       api-key: __missing__
-      # Veo 3.1 Lite/Fast model used by the direct video path.
-      model: veo-3.1-fast-generate-preview
-      aspect-ratio: "9:16"
-      # Optional. Leave unset unless the selected Veo model/API currently supports it.
-      # person-generation:

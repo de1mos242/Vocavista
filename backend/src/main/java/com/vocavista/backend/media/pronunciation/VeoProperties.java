@@ -10,7 +10,7 @@ public class VeoProperties {
 
 	private String apiKey = "__missing__";
 	private String baseUrl = "https://generativelanguage.googleapis.com";
-	private String model = "veo-3.1-fast-generate-preview";
+	private String model = "veo-3.1-lite-generate-preview";
 	private String aspectRatio = "9:16";
 	private String personGeneration;
 	private int sampleCount = 1;

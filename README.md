@@ -9,16 +9,14 @@ Vocavista is a language-learning application focused on German vocabulary practi
 - `GET /api/v1/words/suggestions` searches cached word info and generated pronunciations for autocomplete.
 - `POST /api/v1/media/pronunciations` queues or reuses generated pronunciation media for a German word and phrase.
 - Generated pronunciation video is stored in S3-compatible storage and served back through a same-origin `videoUrl` for browser playback.
-- The OpenAI TTS plus TalkingHead flow remains available through `renderMode: "talking-head"` and returns `audioUrl`.
 - `backend/src/main/resources/static/veo-video.html` is the current manual UI for searching words, selecting phrases, generating Veo video, and playing the result.
-- `backend/src/main/resources/static/talking-head.html` remains available for comparing or using the OpenAI TTS plus TalkingHead audio playback path.
 
 ## Current Stack
 
 - Backend: Spring Boot 4 on Java 25.
 - Database: PostgreSQL with Flyway migrations.
 - Storage: S3-compatible object storage, using RustFS locally.
-- AI providers: OpenAI for word metadata and optional TalkingHead audio, Google Veo for direct pronunciation video.
+- AI providers: OpenAI for word metadata, Google Veo for direct pronunciation video.
 
 ## Documentation
 

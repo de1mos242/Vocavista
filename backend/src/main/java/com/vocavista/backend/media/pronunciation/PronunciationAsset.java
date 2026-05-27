@@ -49,18 +49,6 @@ public class PronunciationAsset {
 	@Column(nullable = false)
 	private PronunciationAssetStatus status;
 
-	@Column(name = "render_mode", nullable = false)
-	private String renderMode;
-
-	@Column(name = "audio_object_key")
-	private String audioObjectKey;
-
-	@Column(name = "audio_provider")
-	private String audioProvider;
-
-	@Column(name = "audio_model")
-	private String audioModel;
-
 	@Column(name = "video_object_key")
 	private String videoObjectKey;
 
@@ -95,7 +83,6 @@ public class PronunciationAsset {
 			String normalizedWord,
 			String normalizedPhrase,
 			String language,
-			String renderMode,
 			String contentHash,
 			OffsetDateTime now) {
 		PronunciationAsset asset = new PronunciationAsset();
@@ -106,7 +93,6 @@ public class PronunciationAsset {
 		asset.normalizedWord = normalizedWord;
 		asset.normalizedPhrase = normalizedPhrase;
 		asset.language = language;
-		asset.renderMode = renderMode;
 		asset.contentHash = contentHash;
 		asset.status = PronunciationAssetStatus.QUEUED;
 		asset.createdAt = now;

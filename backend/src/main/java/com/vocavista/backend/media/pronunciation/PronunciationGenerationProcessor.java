@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 class PronunciationGenerationProcessor {
 
 	private final PronunciationRepository pronunciationRepository;
-	private final PronunciationAudioGenerator pronunciationAudioGenerator;
 	private final PronunciationVideoGenerator pronunciationVideoGenerator;
 	private final MediaStorageService mediaStorageService;
 	private final ObjectMapper objectMapper = new ObjectMapper();
@@ -29,9 +28,6 @@ class PronunciationGenerationProcessor {
 
 	@Value("${vocavista.media.script-template-version:v6}")
 	private String scriptTemplateVersion = "v6";
-
-	@Value("${vocavista.media.voice-config:default-clear-german}")
-	private String voiceConfig = "default-clear-german";
 
 	@Async
 	@Transactional
@@ -44,13 +40,7 @@ class PronunciationGenerationProcessor {
 			asset.setUpdatedAt(now);
 
 			PronunciationScript script = scriptFor(asset);
-			PronunciationRenderMode renderMode = PronunciationRenderMode.fromApiValue(asset.getRenderMode());
-			if (renderMode == PronunciationRenderMode.VEO_VIDEO) {
-				generateVideo(asset, script);
-			}
-			else {
-				generateAudio(asset, script);
-			}
+			generateVideo(asset, script);
 			asset.setStatus(PronunciationAssetStatus.COMPLETED);
 			asset.setUpdatedAt(OffsetDateTime.now(clock));
 			asset.setCompletedAt(asset.getUpdatedAt());
@@ -72,16 +62,6 @@ class PronunciationGenerationProcessor {
 		asset.setVideoModel(pronunciationVideoGenerator.modelName());
 	}
 
-	private void generateAudio(PronunciationAsset asset, PronunciationScript script) {
-		GeneratedAudio audio = pronunciationAudioGenerator.generate(script);
-		String audioObjectKey = "pronunciations/" + asset.getId() + "/audio."
-				+ extensionFor(audio.contentType());
-		mediaStorageService.store(audioObjectKey, audio.contentType(), audio.bytes());
-		asset.setAudioObjectKey(audioObjectKey);
-		asset.setAudioProvider(pronunciationAudioGenerator.providerName());
-		asset.setAudioModel(pronunciationAudioGenerator.modelName());
-	}
-
 	private void markFailed(PronunciationAsset asset, String code, String message, RuntimeException ex) {
 		log.warn("Pronunciation media generation failed for {}", asset.getId(), ex);
 		asset.setStatus(PronunciationAssetStatus.FAILED);
@@ -98,7 +78,7 @@ class PronunciationGenerationProcessor {
 		String text = "%s...\n\n%s!\n\n%s".formatted(asset.getNormalizedWord(), repeatedWord,
 				punctuated(asset.getNormalizedPhrase()));
 		return new PronunciationScript(asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage(), text,
-				scriptTemplateVersion, voiceConfig, metadata.speakerDescription());
+				scriptTemplateVersion, metadata.speakerDescription());
 	}
 
 	private WordInfoMetadata wordInfoMetadata(PronunciationAsset asset) {
@@ -134,16 +114,9 @@ class PronunciationGenerationProcessor {
 
 	private static String extensionFor(String contentType) {
 		return switch (contentType) {
-			case "audio/aac" -> "aac";
-			case "audio/flac" -> "flac";
-			case "audio/mpeg" -> "mp3";
-			case "audio/opus" -> "opus";
-			case "audio/pcm" -> "pcm";
-			case "audio/wav" -> "wav";
 			case "video/mp4" -> "mp4";
 			case "video/mpeg" -> "mpeg";
 			case "video/quicktime" -> "mov";
-			case "text/plain" -> "txt";
 			default -> "bin";
 		};
 	}

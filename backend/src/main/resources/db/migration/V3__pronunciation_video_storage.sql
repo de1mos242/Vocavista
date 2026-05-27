@@ -1,5 +1,11 @@
 alter table pronunciation_assets
-    add column render_mode text not null default 'talking-head';
+    drop column audio_object_key;
+
+alter table pronunciation_assets
+    drop column audio_provider;
+
+alter table pronunciation_assets
+    drop column audio_model;
 
 alter table pronunciation_assets
     add column video_object_key text;

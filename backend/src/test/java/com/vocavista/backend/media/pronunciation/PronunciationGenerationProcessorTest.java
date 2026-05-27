@@ -23,23 +23,20 @@ class PronunciationGenerationProcessorTest {
 	private PronunciationRepository pronunciationRepository;
 
 	@Mock
-	private PronunciationAudioGenerator pronunciationAudioGenerator;
-
-	@Mock
 	private PronunciationVideoGenerator pronunciationVideoGenerator;
 
 	@Mock
 	private MediaStorageService mediaStorageService;
 
 	@Test
-	void completesGenerationWithVeoVideoRenderMode() {
-		PronunciationAsset asset = queuedAsset(PronunciationRenderMode.VEO_VIDEO, nounWordInfoJson("feminine", "die"));
+	void completesGenerationWithVeoVideo() {
+		PronunciationAsset asset = queuedAsset(nounWordInfoJson("feminine", "die"));
 		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
 		when(pronunciationVideoGenerator.generate(any())).thenReturn(new GeneratedVideo("video".getBytes(), "video/mp4"));
 		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
 		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
-				pronunciationAudioGenerator, pronunciationVideoGenerator, mediaStorageService);
+				pronunciationVideoGenerator, mediaStorageService);
 
 		processor.process(asset.getId());
 
@@ -55,51 +52,31 @@ class PronunciationGenerationProcessorTest {
 	}
 
 	@Test
-	void completesGenerationWithTalkingHeadAudioRenderMode() {
-		PronunciationAsset asset = queuedAsset(PronunciationRenderMode.TALKING_HEAD);
-		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
-		when(pronunciationAudioGenerator.generate(any())).thenReturn(new GeneratedAudio("audio".getBytes(), "audio/mpeg"));
-		when(pronunciationAudioGenerator.providerName()).thenReturn("openai");
-		when(pronunciationAudioGenerator.modelName()).thenReturn("model");
-		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
-				pronunciationAudioGenerator, pronunciationVideoGenerator, mediaStorageService);
-
-		processor.process(asset.getId());
-
-		assertThat(asset.getStatus()).isEqualTo(PronunciationAssetStatus.COMPLETED);
-		assertThat(asset.getAudioObjectKey()).endsWith("/audio.mp3");
-		assertThat(asset.getAudioProvider()).isEqualTo("openai");
-		assertThat(asset.getCompletedAt()).isNotNull();
-		verify(mediaStorageService).store(eq(asset.getAudioObjectKey()), eq("audio/mpeg"), any(byte[].class));
-	}
-
-	@Test
 	void marksAssetFailedWhenProviderFails() {
-		PronunciationAsset asset = queuedAsset(PronunciationRenderMode.TALKING_HEAD);
+		PronunciationAsset asset = queuedAsset();
 		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
-		when(pronunciationAudioGenerator.generate(any()))
-				.thenThrow(new MediaGenerationException("tts_error", "TTS failed"));
+		when(pronunciationVideoGenerator.generate(any()))
+				.thenThrow(new MediaGenerationException("video_provider_error", "Veo failed"));
 		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
-				pronunciationAudioGenerator, pronunciationVideoGenerator, mediaStorageService);
+				pronunciationVideoGenerator, mediaStorageService);
 
 		processor.process(asset.getId());
 
 		assertThat(asset.getStatus()).isEqualTo(PronunciationAssetStatus.FAILED);
-		assertThat(asset.getErrorCode()).isEqualTo("tts_error");
-		assertThat(asset.getErrorMessage()).isEqualTo("TTS failed");
+		assertThat(asset.getErrorCode()).isEqualTo("video_provider_error");
+		assertThat(asset.getErrorMessage()).isEqualTo("Veo failed");
 	}
 
-	private static PronunciationAsset queuedAsset(PronunciationRenderMode renderMode) {
-		return queuedAsset(renderMode, "{}");
+	private static PronunciationAsset queuedAsset() {
+		return queuedAsset("{}");
 	}
 
-	private static PronunciationAsset queuedAsset(PronunciationRenderMode renderMode, String responseJson) {
+	private static PronunciationAsset queuedAsset(String responseJson) {
 		WordInfoRecord wordInfoRecord = new WordInfoRecord();
 		wordInfoRecord.setId(UUID.randomUUID());
 		wordInfoRecord.setResponseJson(responseJson);
 		return PronunciationAsset.queued(wordInfoRecord, "Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.",
-				"Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.", "de", renderMode.apiValue(), "hash",
-				OffsetDateTime.now());
+				"Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
 	}
 
 	private static String nounWordInfoJson(String gender, String article) {

@@ -198,7 +198,7 @@
     <section class="panel">
       <p class="eyebrow">Veo 3.1 Lite pronunciation</p>
       <h1>Generate lip-sync video directly.</h1>
-      <p>This page uses the new Veo video path. The older <a href="/talking-head.html">TalkingHead audio flow</a> is still available nearby.</p>
+      <p>This page generates direct Veo pronunciation video, stores the MP4, and plays the same-origin result.</p>
 
       <label>
         Word
@@ -257,7 +257,7 @@
 
     function describeSuggestion(item) {
       if (item.source === "pronunciation") {
-        return `${item.phrase ?? "No phrase"}${item.status ? ` · ${item.status}` : ""}${item.renderMode ? ` · ${item.renderMode}` : ""}`;
+        return `${item.phrase ?? "No phrase"}${item.status ? ` · ${item.status}` : ""}`;
       }
       return "Cached word info";
     }
@@ -295,7 +295,7 @@
         phraseInput.value = item.phrase;
       }
       suggestionsNode.replaceChildren();
-      if (item.renderMode === "veo-video" && item.videoUrl) {
+      if (item.videoUrl) {
         setStatus("Selected an existing Veo video pronunciation. Generate will reuse it.");
         return;
       }
@@ -402,8 +402,7 @@
           wordInfoId: currentWordInfoId,
           word: wordInput.value,
           phrase: phraseInput.value,
-          language: "de",
-          renderMode: "veo-video"
+          language: "de"
         })
       });
 
@@ -421,7 +420,7 @@
           throw new Error(await response.text());
         }
         const asset = await response.json();
-        setStatus(`id=${asset.id}\nstatus=${asset.status}\nrenderMode=${asset.renderMode ?? "unknown"}\nwaiting=${attempt * 2}s`);
+        setStatus(`id=${asset.id}\nstatus=${asset.status}\nwaiting=${attempt * 2}s`);
         if (asset.status === "completed" || asset.status === "failed") {
           return asset;
         }
@@ -457,7 +456,7 @@
     generateButton.addEventListener("click", async () => {
       generateButton.disabled = true;
       try {
-        if (selectedSuggestion?.renderMode === "veo-video" && selectedSuggestion.videoUrl
+        if (selectedSuggestion?.videoUrl
             && selectedSuggestion.word === wordInput.value.trim() && selectedSuggestion.phrase === phraseInput.value.trim()) {
           await playVideo({ id: selectedSuggestion.pronunciationId, videoUrl: selectedSuggestion.videoUrl });
           return;

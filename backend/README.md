@@ -7,7 +7,7 @@ Spring Boot 4 backend service for Vocavista.
 - Amazon Corretto JDK 25 source target.
 - Spring Boot 4.0.6.
 - Spring Web MVC for REST APIs.
-- Spring AI for outbound OpenAI word-info and optional TalkingHead audio provider calls.
+- Spring AI for outbound OpenAI word-info provider calls.
 - Spring Data JPA with PostgreSQL.
 - Flyway for database migrations.
 - RustFS local S3-compatible object storage via Docker Compose.
@@ -54,13 +54,13 @@ Local runtime defaults use direct Veo video generation, local RustFS storage, an
 export GOOGLE_AI_API_KEY=...
 ```
 
-OpenAI remains required for word-info generation and for the optional `talking-head` pronunciation render mode:
+OpenAI remains required for word-info generation:
 
 ```bash
 export SPRING_AI_OPENAI_API_KEY=...
 ```
 
-The backend stores generated video and returns `videoUrl` for the default `veo-video` mode. If a request explicitly uses `renderMode: "talking-head"`, the backend stores generated OpenAI audio and returns `audioUrl`; the browser preview animates a TalkingHead avatar locally. Automated tests mock provider and storage boundaries where they exercise generation behavior, so they do not call external services.
+The backend stores generated video and returns `videoUrl`. Automated tests mock provider and storage boundaries where they exercise generation behavior, so they do not call external services.
 
 Run the browser Veo video preview after starting the app:
 
@@ -68,13 +68,7 @@ Run the browser Veo video preview after starting the app:
 http://localhost:8080/veo-video.html
 ```
 
-The older TalkingHead preview remains available at:
-
-```text
-http://localhost:8080/talking-head.html
-```
-
-The Veo page calls `POST /api/v1/media/pronunciations` with `renderMode: "veo-video"`, polls the returned id, and plays the completed `videoUrl`. Veo requests default to vertical `9:16` output, and the prompt asks for a male, female, or gender-neutral speaker based on the word-info noun gender when available. The TalkingHead page keeps a render-mode selector for comparing the old path; that path loads TalkingHead/HeadAudio modules from public CDNs and plays the same-origin `/api/v1/media/pronunciations/{id}/audio` URL so browser WebAudio decoding does not depend on RustFS CORS settings.
+The Veo page calls `POST /api/v1/media/pronunciations`, polls the returned id, and plays the completed `videoUrl`. Veo requests default to vertical `9:16` output, and the prompt asks for a male, female, or gender-neutral speaker based on the word-info noun gender when available.
 
 `backend/.env.example` lists optional local secret variables without real values. Other overrides should use full Spring property names, for example `VOCAVISTA_MEDIA_S3_ENDPOINT`.
 
