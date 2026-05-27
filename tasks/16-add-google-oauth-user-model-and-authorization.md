@@ -35,6 +35,7 @@ Add the first Vocavista authorization foundation using Google OAuth. The backend
 - Existing word and pronunciation API endpoints are secured by the Spring Security filter chain through the `/api/v1/**` path.
 - The static Veo preview page now checks `/api/v1/auth/me`, shows either a Google sign-in link or the current user, and disables action buttons while signed out.
 - The static Veo preview page provides a logout button; `/logout` returns `204 No Content` so the page can update signed-out state without a redirect.
+- The static Veo preview page starts Google sign-in through `/login/google?redirect=...`; the backend stores only safe local return paths and redirects back there after successful OAuth login.
 
 ## Progress
 
@@ -42,9 +43,11 @@ Add the first Vocavista authorization foundation using Google OAuth. The backend
 - 2026-05-27: Implemented Google OAuth session login, user account persistence, current-user API, API endpoint security, documentation, and tests.
 - 2026-05-27: Adopted the static Veo preview page to the auth flow with current-user display and signed-out action gating.
 - 2026-05-27: Added fetch-friendly logout support to Spring Security and the static Veo preview page.
+- 2026-05-27: Fixed successful Google login redirect to return users to the page where sign-in started.
 
 ## Verification
 
 - 2026-05-27: `./mvnw test` passed in `backend` with 36 tests.
 - 2026-05-27: `./mvnw test` passed again after the Veo preview page auth update.
 - 2026-05-27: `./mvnw test` passed after logout support with 37 tests.
+- 2026-05-27: `./mvnw test` passed after login redirect fix with 39 tests.

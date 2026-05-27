@@ -336,10 +336,11 @@
 
     function renderSignedOut() {
       currentUser = undefined;
+      const loginUrl = `/login/google?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`;
       authNode.innerHTML = `
         <p><strong>Sign in required</strong></p>
         <small>Use Google to search words and generate Veo pronunciation video.</small>
-        <a class="login-button" href="/oauth2/authorization/google">Sign in with Google</a>
+        <a class="login-button" href="${escapeHtml(loginUrl)}">Sign in with Google</a>
       `;
       suggestionsNode.replaceChildren();
       updateActionButtons();

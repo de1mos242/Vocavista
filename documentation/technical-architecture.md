@@ -15,13 +15,13 @@ Implemented API areas:
 
 ## Authorization
 
-The backend uses Spring Security with Google OAuth2/OpenID Connect login. The login entrypoint is `/oauth2/authorization/google` and the default callback is `/login/oauth2/code/google`.
+The backend uses Spring Security with Google OAuth2/OpenID Connect login. The local login starter is `/login/google`, the underlying OAuth authorization entrypoint is `/oauth2/authorization/google`, and the default callback is `/login/oauth2/code/google`.
 
 Google is requested with the minimal identity scopes `openid`, `email`, and `profile`. On successful login the backend creates or updates a `user_accounts` row keyed by provider and provider subject, storing the user's email and display name.
 
 Existing `/api/v1/**` endpoints require an authenticated session. Actuator health/info, OAuth login/callback paths, `/`, and the static Veo preview page remain publicly reachable.
 
-The static Veo preview page calls `/api/v1/auth/me` on load to decide whether to show a Google sign-in link or the current application user. API action buttons stay disabled until the current user request succeeds. Signed-in users can call `/logout` from the page; the logout handler returns `204 No Content` so the page can render signed-out state without following a redirect.
+The static Veo preview page calls `/api/v1/auth/me` on load to decide whether to show a Google sign-in link or the current application user. API action buttons stay disabled until the current user request succeeds. The sign-in link points to `/login/google?redirect=...`, which stores a sanitized local return path in the session so successful OAuth login returns to the originating page instead of `/`. Signed-in users can call `/logout` from the page; the logout handler returns `204 No Content` so the page can render signed-out state without following a redirect.
 
 ## API Contract
 

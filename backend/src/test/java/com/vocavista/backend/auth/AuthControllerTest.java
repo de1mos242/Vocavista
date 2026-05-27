@@ -4,6 +4,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.vocavista.backend.TestcontainersConfiguration;
@@ -57,10 +59,26 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    @Test
-    void logsOutWithNoContentResponse() throws Exception {
-        mockMvc.perform(post("/logout").with(oidcLogin()))
-                .andExpect(status().isNoContent());
-    }
+	@Test
+	void logsOutWithNoContentResponse() throws Exception {
+		mockMvc.perform(post("/logout").with(oidcLogin()))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	void startsGoogleLoginWithReturnPage() throws Exception {
+		mockMvc.perform(get("/login/google").param("redirect", "/veo-video.html"))
+				.andExpect(status().isFound())
+				.andExpect(redirectedUrl("/oauth2/authorization/google"))
+				.andExpect(request().sessionAttribute(OAuthLoginRedirects.SESSION_ATTRIBUTE, "/veo-video.html"));
+	}
+
+	@Test
+	void rejectsExternalLoginReturnUrl() throws Exception {
+		mockMvc.perform(get("/login/google").param("redirect", "//evil.example"))
+				.andExpect(status().isFound())
+				.andExpect(redirectedUrl("/oauth2/authorization/google"))
+				.andExpect(request().sessionAttribute(OAuthLoginRedirects.SESSION_ATTRIBUTE, "/"));
+	}
 
 }
