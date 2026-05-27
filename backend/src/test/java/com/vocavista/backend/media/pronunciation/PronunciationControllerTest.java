@@ -11,17 +11,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
+import com.vocavista.backend.auth.GoogleOidcUserService;
 import java.net.URI;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(PronunciationController.class)
+@WebMvcTest(value = PronunciationController.class, excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class)
 @Import(MediaErrorHandler.class)
 class PronunciationControllerTest {
 
@@ -31,7 +34,11 @@ class PronunciationControllerTest {
 	@MockitoBean
 	private PronunciationService pronunciationService;
 
+	@MockitoBean
+	private GoogleOidcUserService googleOidcUserService;
+
 	@Test
+	@WithMockUser
 	void queuesPronunciationForValidRequest() throws Exception {
 		UUID id = UUID.randomUUID();
 		UUID wordInfoId = UUID.randomUUID();
@@ -57,6 +64,7 @@ class PronunciationControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void returnsCompletedPronunciationStatus() throws Exception {
 		UUID id = UUID.randomUUID();
 		UUID wordInfoId = UUID.randomUUID();
@@ -73,6 +81,7 @@ class PronunciationControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void returnsGeneratedVideoBytes() throws Exception {
 		UUID id = UUID.randomUUID();
 		when(pronunciationService.getVideo(id)).thenReturn(new StoredMedia("video/mp4", "video".getBytes()));
@@ -84,6 +93,7 @@ class PronunciationControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void rejectsInvalidRequestBody() throws Exception {
 		mockMvc.perform(post("/api/v1/media/pronunciations")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -98,6 +108,7 @@ class PronunciationControllerTest {
 	}
 
 	@Test
+	@WithMockUser
 	void mapsMissingAssetToNotFound() throws Exception {
 		UUID id = UUID.randomUUID();
 		when(pronunciationService.get(id))

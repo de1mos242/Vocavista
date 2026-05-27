@@ -5,6 +5,13 @@ spring:
   ai:
     openai:
       api-key: __missing__
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: __missing__
+            client-secret: __missing__
 
 vocavista:
   media:

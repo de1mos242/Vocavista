@@ -6,11 +6,22 @@ Vocavista teaches German vocabulary through compact AI-generated word metadata a
 
 The current backend supports:
 
+- Google OAuth sign-in with application user creation.
 - German word information for learners who know English and Russian.
 - Cached word autocomplete across generated word info and pronunciation records.
 - Pronunciation media generation for a target word and contextual German phrase.
 - Direct Veo video playback for pronunciation media.
 - Central media reuse by caching generated pronunciation media metadata in PostgreSQL and storing media bytes in S3-compatible object storage.
+
+## Authorization
+
+Users sign in with Google. The backend asks Google only for OpenID identity, email, and profile name information, then creates or updates the Vocavista user record.
+
+`GET /api/v1/auth/me` returns the authenticated application user.
+
+The Veo preview page checks the current user endpoint on load, shows a Google sign-in action for anonymous users, shows a logout action for signed-in users, and disables its word search and generation actions until the user is signed in. Google sign-in returns the user to the page where sign-in started.
+
+Existing `/api/v1/**` endpoints require authentication. Public unauthenticated paths are limited to OAuth login/callback routes, actuator health/info, and static pages needed to start the browser flow.
 
 ## Word Information
 
@@ -52,6 +63,7 @@ Generation behavior:
 ## Current Technical Shape
 
 - Backend: Java 25 with Spring Boot 4.
+- Authorization: Spring Security OAuth2/OpenID Connect with Google.
 - API contract: OpenAPI-generated Spring MVC interfaces and DTOs.
 - Database: PostgreSQL with Flyway.
 - Storage: S3-compatible media storage, RustFS locally.

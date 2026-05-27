@@ -2,3 +2,11 @@ spring:
   ai:
     openai:
       api-key: test-key
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-google-client-id
+            client-secret: test-google-client-secret
+            scope: openid,email,profile
