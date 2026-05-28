@@ -74,6 +74,18 @@ class AuthControllerTest {
 	}
 
 	@Test
+	void servesReviewPageWithoutAuthentication() throws Exception {
+		mockMvc.perform(get("/review.html"))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void servesHomePageWithoutAuthentication() throws Exception {
+		mockMvc.perform(get("/"))
+				.andExpect(status().isOk());
+	}
+
+	@Test
 	void rejectsExternalLoginReturnUrl() throws Exception {
 		mockMvc.perform(get("/login/google").param("redirect", "//evil.example"))
 				.andExpect(status().isFound())

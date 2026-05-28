@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vocavista Review</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #090b0f;
+      color: #f7f1e8;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255, 119, 86, 0.34), transparent 24rem),
+        radial-gradient(circle at 82% 18%, rgba(126, 87, 255, 0.28), transparent 26rem),
+        linear-gradient(135deg, #090b0f 0%, #151017 48%, #07090d 100%);
+    }
+
+    nav {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 1rem 2rem 0;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 999px;
+      background: rgba(12, 14, 20, 0.82);
+      color: #ffc48c;
+      padding: 0.65rem 0.9rem;
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-auth {
+      margin-left: auto;
+      display: flex;
+      gap: 0.7rem;
+      align-items: center;
+      color: #d7ccbf;
+      font-size: 0.9rem;
+    }
+
+    .nav-auth strong {
+      color: #fff9f1;
+    }
+
+    .nav-auth small {
+      color: #bdb0a2;
+    }
+
+    .nav-auth .login-button, .nav-auth button {
+      width: auto;
+      margin: 0;
+      border-radius: 999px;
+      padding: 0.65rem 0.9rem;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(17rem, 26rem) minmax(20rem, 1fr);
+      gap: 1.25rem;
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    section {
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 1.4rem;
+      background: rgba(12, 14, 20, 0.82);
+      box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.36);
+      overflow: hidden;
+    }
+
+    .panel, .review-card {
+      padding: 1.25rem;
+    }
+
+    .eyebrow {
+      margin: 0 0 0.75rem;
+      color: #ffb58f;
+      font-size: 0.78rem;
+      font-weight: 850;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 6vw, 4.8rem);
+      line-height: 0.92;
+      letter-spacing: -0.07em;
+    }
+
+    p {
+      color: #d7ccbf;
+      line-height: 1.55;
+    }
+
+    a {
+      color: #ffc48c;
+      font-weight: 800;
+    }
+
+    button, input, .login-button {
+      font: inherit;
+      border-radius: 0.85rem;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff9f1;
+      padding: 0.9rem 1rem;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(255, 181, 143, 0.78);
+      box-shadow: 0 0 0 0.2rem rgba(255, 181, 143, 0.12);
+    }
+
+    button, .login-button {
+      width: 100%;
+      margin-top: 0.8rem;
+      border: 0;
+      background: linear-gradient(135deg, #ff9c6a 0%, #ffd36d 100%);
+      color: #1e130b;
+      padding: 0.9rem 1rem;
+      font-weight: 900;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #f7f1e8;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    button.danger {
+      background: linear-gradient(135deg, #c2553f 0%, #ff9c6a 100%);
+      color: #fff9f1;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.62;
+    }
+
+    .auth-card, .status, .prompt, .result {
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, 0.07);
+      padding: 0.95rem;
+    }
+
+    .auth-card {
+      display: grid;
+      gap: 0.45rem;
+      margin: 1rem 0;
+      border: 1px solid rgba(255, 181, 143, 0.28);
+    }
+
+    .auth-card p, .auth-card small {
+      margin: 0;
+    }
+
+    .auth-actions {
+      display: grid;
+      gap: 0.55rem;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+    }
+
+    .auth-actions button {
+      width: auto;
+      min-width: 7rem;
+      margin: 0;
+      padding: 0.72rem 0.9rem;
+    }
+
+    .stage {
+      display: grid;
+      align-content: center;
+      min-height: min(70vh, 42rem);
+      background:
+        radial-gradient(circle at center 18%, rgba(255, 211, 109, 0.13), transparent 24rem),
+        linear-gradient(155deg, #050608 0%, #10131a 100%);
+    }
+
+    .prompt {
+      display: grid;
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .translation {
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .translation strong {
+      color: #fff9f1;
+    }
+
+    .translation small, .meta {
+      color: #bdb0a2;
+      font-weight: 650;
+    }
+
+    .result {
+      margin-top: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+    }
+
+    .result.correct {
+      border-color: rgba(47, 111, 115, 0.35);
+      background: rgba(47, 111, 115, 0.1);
+    }
+
+    .result.incorrect {
+      border-color: rgba(194, 85, 63, 0.35);
+      background: rgba(194, 85, 63, 0.1);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 840px) {
+      nav {
+        padding: 1rem 1rem 0;
+      }
+
+      .nav-auth {
+        width: 100%;
+        margin-left: 0;
+        justify-content: space-between;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
+
+      .auth-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .auth-actions button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/veo-video.html">Add new word</a>
+      <a href="/review.html">Review</a>
+    </div>
+    <div id="auth" class="nav-auth">Checking sign-in...</div>
+  </nav>
+
+  <main>
+    <section class="panel">
+      <p class="eyebrow">Dictionary review</p>
+      <h1>Recall the German word.</h1>
+      <p>Use the English and Russian prompts, type the German answer, and include the article for nouns.</p>
+
+      <button id="load-due">Load due words</button>
+      <button id="practice-more" class="secondary">Practice more</button>
+      <div id="status" class="status">Sign in to start reviewing.</div>
+    </section>
+
+    <section class="stage">
+      <div class="review-card">
+        <p id="progress" class="meta"></p>
+        <div id="content"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    const authNode = document.querySelector("#auth");
+    const statusNode = document.querySelector("#status");
+    const progressNode = document.querySelector("#progress");
+    const contentNode = document.querySelector("#content");
+    const loadDueButton = document.querySelector("#load-due");
+    const practiceMoreButton = document.querySelector("#practice-more");
+
+    let currentUser;
+    let items = [];
+    let index = 0;
+    let answered = false;
+    let currentIncludeUpcoming = false;
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function setStatus(message) {
+      statusNode.textContent = message;
+    }
+
+    function updateButtons() {
+      loadDueButton.disabled = !currentUser;
+      practiceMoreButton.disabled = !currentUser;
+    }
+
+    function renderSignedOut() {
+      currentUser = undefined;
+      const loginUrl = `/login/google?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`;
+      authNode.innerHTML = `
+        <a class="login-button" href="${escapeHtml(loginUrl)}">Sign in with Google</a>
+      `;
+      contentNode.innerHTML = "";
+      progressNode.textContent = "";
+      updateButtons();
+      setStatus("Sign in with Google to review words.");
+    }
+
+    function renderSignedIn(user) {
+      currentUser = user;
+      authNode.innerHTML = `
+        <div><strong>${escapeHtml(user.displayName)}</strong><br><small>${escapeHtml(user.email)}</small></div>
+        <button id="logout" type="button" class="secondary">Logout</button>
+      `;
+      document.querySelector("#logout").addEventListener("click", logoutCurrentUser);
+      updateButtons();
+      loadBatch(false).catch((error) => setStatus(error.message));
+    }
+
+    async function logoutCurrentUser() {
+      const response = await fetch("/logout", { method: "POST" });
+      if (response.ok) {
+        renderSignedOut();
+      }
+    }
+
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch("/api/v1/auth/me");
+        if (response.status === 401) {
+          renderSignedOut();
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        renderSignedIn(await response.json());
+      }
+      catch (error) {
+        renderSignedOut();
+        setStatus(`Could not check sign-in status. ${error.message}`);
+      }
+    }
+
+    async function apiFetch(url, options) {
+      const response = await fetch(url, options);
+      if (response.status === 401) {
+        renderSignedOut();
+      }
+      return response;
+    }
+
+    async function loadBatch(includeUpcoming) {
+      if (!currentUser) {
+        renderSignedOut();
+        return;
+      }
+
+      const url = includeUpcoming
+        ? "/api/v1/dictionary/review?limit=10&includeUpcoming=true"
+        : "/api/v1/dictionary/review?limit=10";
+      const response = await apiFetch(url);
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      items = data.items ?? [];
+      index = 0;
+      answered = false;
+      currentIncludeUpcoming = includeUpcoming;
+      if (items.length === 0) {
+        renderDone();
+        return;
+      }
+      setStatus(includeUpcoming ? "Practicing the next words by due date." : "Review due words.");
+      renderItem();
+    }
+
+    function renderDone() {
+      progressNode.textContent = "";
+      contentNode.innerHTML = `
+        <h2>You are done, congrats!</h2>
+        <p>No words are currently due. You can practice more to review the next words by due date.</p>
+      `;
+      setStatus("No due words right now.");
+    }
+
+    function renderItem() {
+      const item = items[index];
+      const en = (item.translations?.en ?? []).join(" · ");
+      const ru = (item.translations?.ru ?? []).join(" · ");
+      progressNode.textContent = `Item ${index + 1} of ${items.length} · ${item.partOfSpeech}${item.article ? ` · ${item.article}` : ""}`;
+      contentNode.innerHTML = `
+        <div class="prompt">
+          <div class="translation">
+            <small>English</small>
+            <strong>${escapeHtml(en || "No English translation")}</strong>
+          </div>
+          <div class="translation">
+            <small>Russian</small>
+            <strong>${escapeHtml(ru || "No Russian translation")}</strong>
+          </div>
+        </div>
+        <label>
+          German answer
+          <input id="answer" autocomplete="off" autofocus>
+        </label>
+        <button id="forgot" class="danger">I do not remember</button>
+        <div id="result" class="result hidden"></div>
+      `;
+      answered = false;
+      document.querySelector("#forgot").addEventListener("click", () => {
+        recordResult(false).catch((error) => setStatus(error.message));
+      });
+      document.querySelector("#answer").addEventListener("input", checkAnswer);
+      document.querySelector("#answer").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          checkAnswer();
+        }
+      });
+      document.querySelector("#answer").focus();
+    }
+
+    function normalizeAnswer(value) {
+      return String(value ?? "")
+        .toLowerCase()
+        .replaceAll("ä", "ae")
+        .replaceAll("ö", "oe")
+        .replaceAll("ü", "ue")
+        .replaceAll("ß", "ss")
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .trim()
+        .replace(/\s+/g, " ");
+    }
+
+    function checkAnswer() {
+      const item = items[index];
+      const answer = document.querySelector("#answer").value;
+      const correct = normalizeAnswer(answer) === normalizeAnswer(item.expectedAnswer);
+      if (correct) {
+        recordResult(true).catch((error) => setStatus(error.message));
+      }
+    }
+
+    async function recordResult(correct) {
+      if (answered) {
+        return;
+      }
+      answered = true;
+      const item = items[index];
+      const response = await apiFetch(`/api/v1/dictionary/review/${encodeURIComponent(item.entryId)}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ correct })
+      });
+      if (!response.ok) {
+        answered = false;
+        throw new Error(await response.text());
+      }
+      const result = await response.json();
+      revealResult(result);
+    }
+
+    function revealResult(result) {
+      const resultNode = document.querySelector("#result");
+      resultNode.className = `result ${result.correct ? "correct" : "incorrect"}`;
+      resultNode.innerHTML = `
+        <p><strong>${result.correct ? "Correct" : "Not this time"}</strong></p>
+        <p>Answer: <strong>${escapeHtml(result.expectedAnswer)}</strong></p>
+        <small>Next due: ${escapeHtml(new Date(result.dueAt).toLocaleString())}</small>
+        <button id="next-item">${index + 1 < items.length ? "Next word" : "Finish batch"}</button>
+      `;
+      document.querySelector("#forgot").disabled = true;
+      document.querySelector("#answer").disabled = true;
+      document.querySelector("#next-item").addEventListener("click", nextItem);
+    }
+
+    function nextItem() {
+      index += 1;
+      if (index >= items.length) {
+        if (currentIncludeUpcoming) {
+          renderDone();
+          return;
+        }
+        loadBatch(false).catch((error) => setStatus(error.message));
+        return;
+      }
+      renderItem();
+    }
+
+    loadDueButton.addEventListener("click", () => loadBatch(false).catch((error) => setStatus(error.message)));
+    practiceMoreButton.addEventListener("click", () => loadBatch(true).catch((error) => setStatus(error.message)));
+
+    updateButtons();
+    loadCurrentUser();
+  </script>
+</body>
+</html>

@@ -21,6 +21,56 @@
         linear-gradient(135deg, #090b0f 0%, #151017 48%, #07090d 100%);
     }
 
+    nav {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      max-width: 78rem;
+      margin: 0 auto;
+      padding: 1rem 2rem 0;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 999px;
+      background: rgba(12, 14, 20, 0.82);
+      color: #ffc48c;
+      padding: 0.65rem 0.9rem;
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-auth {
+      margin-left: auto;
+      display: flex;
+      gap: 0.7rem;
+      align-items: center;
+      color: #d7ccbf;
+      font-size: 0.9rem;
+    }
+
+    .nav-auth strong {
+      color: #fff9f1;
+    }
+
+    .nav-auth small {
+      color: #bdb0a2;
+    }
+
+    .nav-auth .login-button, .nav-auth button {
+      width: auto;
+      margin: 0;
+      border-radius: 999px;
+      padding: 0.65rem 0.9rem;
+    }
+
     main {
       display: grid;
       grid-template-columns: minmax(19rem, 29rem) minmax(24rem, 1fr);
@@ -235,6 +285,16 @@
     }
 
     @media (max-width: 900px) {
+      nav {
+        padding: 1rem 1rem 0;
+      }
+
+      .nav-auth {
+        width: 100%;
+        margin-left: 0;
+        justify-content: space-between;
+      }
+
       main {
         grid-template-columns: 1fr;
         padding: 1rem;
@@ -247,15 +307,20 @@
   </style>
 </head>
 <body>
+  <nav>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/veo-video.html">Add new word</a>
+      <a href="/review.html">Review</a>
+    </div>
+    <div id="auth" class="nav-auth">Checking sign-in...</div>
+  </nav>
+
   <main>
     <section class="panel">
       <p class="eyebrow">Veo 3.1 Lite pronunciation</p>
       <h1>Generate lip-sync video directly.</h1>
       <p>This page generates direct Veo pronunciation video, stores the MP4, and plays the same-origin result.</p>
-
-      <div id="auth" class="auth-card">
-        <p>Checking sign-in status...</p>
-      </div>
 
       <label>
         Word
@@ -338,8 +403,6 @@
       currentUser = undefined;
       const loginUrl = `/login/google?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`;
       authNode.innerHTML = `
-        <p><strong>Sign in required</strong></p>
-        <small>Use Google to search words and generate Veo pronunciation video.</small>
         <a class="login-button" href="${escapeHtml(loginUrl)}">Sign in with Google</a>
       `;
       suggestionsNode.replaceChildren();
@@ -350,13 +413,8 @@
     function renderSignedIn(user) {
       currentUser = user;
       authNode.innerHTML = `
-        <div class="auth-actions">
-          <div>
-            <p><strong>${escapeHtml(user.displayName)}</strong></p>
-            <small>${escapeHtml(user.email)} · ${escapeHtml(user.provider)}</small>
-          </div>
-          <button id="logout" type="button" class="secondary">Logout</button>
-        </div>
+        <div><strong>${escapeHtml(user.displayName)}</strong><br><small>${escapeHtml(user.email)}</small></div>
+        <button id="logout" type="button" class="secondary">Logout</button>
       `;
       document.querySelector("#logout").addEventListener("click", logoutCurrentUser);
       updateActionButtons();
@@ -626,12 +684,6 @@
       updateActionButtons();
       try {
         requireCurrentUser();
-        if (selectedSuggestion?.videoUrl
-            && selectedSuggestion.word === wordInput.value.trim() && selectedSuggestion.phrase === phraseInput.value.trim()) {
-          await playVideo({ id: selectedSuggestion.pronunciationId, videoUrl: selectedSuggestion.videoUrl });
-          return;
-        }
-
         setStatus("Queueing Veo video generation...");
         const queued = await createVeoAsset();
         const completed = await pollAsset(queued.id);

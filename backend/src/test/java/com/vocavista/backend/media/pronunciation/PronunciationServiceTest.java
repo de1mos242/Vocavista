@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
+import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.time.OffsetDateTime;
@@ -39,6 +40,9 @@ class PronunciationServiceTest {
 	@Mock
 	private WordInfoRepository wordInfoRepository;
 
+	@Mock
+	private UserDictionaryService userDictionaryService;
+
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
 		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
@@ -54,6 +58,7 @@ class PronunciationServiceTest {
 
 		assertThat(response.getId()).isNotNull();
 		assertThat(response.getStatus()).isEqualTo(PronunciationStatus.QUEUED);
+		verify(userDictionaryService).ensureEntryForCurrentUser(any());
 		verify(generationProcessor).process(response.getId());
 	}
 
@@ -74,6 +79,7 @@ class PronunciationServiceTest {
 		assertThat(response.getStatus()).isEqualTo(PronunciationStatus.COMPLETED);
 		assertThat(response.getVideoUrl())
 				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/video");
+		verify(userDictionaryService).ensureEntryForCurrentUser(any());
 		verify(pronunciationRepository, never()).save(any());
 		verify(generationProcessor, never()).process(any());
 	}
@@ -113,7 +119,7 @@ class PronunciationServiceTest {
 
 	private PronunciationService service() {
 		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationVideoGenerator,
-				mediaStorageService, wordInfoRepository);
+				mediaStorageService, wordInfoRepository, userDictionaryService);
 	}
 
 	private static PronunciationRequest request(String word, String phrase) {
