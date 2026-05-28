@@ -12,21 +12,26 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-class CurrentUserService {
+public class CurrentUserService {
 
 	private final UserAccountRepository userAccountRepository;
 
 	@Transactional(readOnly = true)
-	CurrentUserResponse getCurrentUser() {
+	public CurrentUserResponse getCurrentUser() {
+		UserAccount account = getCurrentUserAccount();
+		return new CurrentUserResponse(account.getId(), account.getEmail(), account.getDisplayName(), OAuthProvider.GOOGLE);
+	}
+
+	@Transactional(readOnly = true)
+	public UserAccount getCurrentUserAccount() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication == null || !(authentication.getPrincipal() instanceof OidcUser oidcUser)) {
 			throw new AccessDeniedException("Current user is not an OIDC user");
 		}
 
-		UserAccount account = userAccountRepository
+		return userAccountRepository
 				.findByProviderAndProviderSubject(AuthenticationProvider.GOOGLE, oidcUser.getSubject())
 				.orElseThrow(() -> new AccessDeniedException("Current user account was not found"));
-		return new CurrentUserResponse(account.getId(), account.getEmail(), account.getDisplayName(), OAuthProvider.GOOGLE);
 	}
 
 }

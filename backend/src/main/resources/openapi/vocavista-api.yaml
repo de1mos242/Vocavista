@@ -20,6 +20,81 @@ paths:
                 $ref: '#/components/schemas/CurrentUserResponse'
         '401':
           description: Authentication is required.
+  /api/v1/dictionary/review:
+    get:
+      tags:
+        - Dictionary
+      operationId: getDictionaryReview
+      summary: Get dictionary review items
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to return. Values above 10 are capped.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 10
+        - name: includeUpcoming
+          in: query
+          required: false
+          description: Include upcoming entries instead of only currently due entries.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Dictionary review items.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryReviewResponse'
+        '401':
+          description: Authentication is required.
+  /api/v1/dictionary/review/{entryId}:
+    post:
+      tags:
+        - Dictionary
+      operationId: submitDictionaryReview
+      summary: Submit a dictionary review result
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          description: Dictionary entry identifier.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryReviewSubmitRequest'
+      responses:
+        '200':
+          description: Review result was recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryReviewSubmitResponse'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Dictionary entry was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/media/pronunciations:
     post:
       tags:
@@ -184,6 +259,90 @@ components:
       type: string
       enum:
         - google
+    DictionaryReviewResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryReviewItem'
+    DictionaryReviewItem:
+      type: object
+      required:
+        - entryId
+        - wordInfoId
+        - normalizedWord
+        - expectedAnswer
+        - translations
+        - partOfSpeech
+        - dueAt
+      properties:
+        entryId:
+          type: string
+          format: uuid
+        wordInfoId:
+          type: string
+          format: uuid
+        normalizedWord:
+          type: string
+          minLength: 1
+        expectedAnswer:
+          type: string
+          minLength: 1
+        translations:
+          $ref: '#/components/schemas/LanguageTextMap'
+        partOfSpeech:
+          $ref: '#/components/schemas/PartOfSpeech'
+        article:
+          nullable: true
+          $ref: '#/components/schemas/GermanArticle'
+        dueAt:
+          type: string
+          format: date-time
+    DictionaryReviewSubmitRequest:
+      type: object
+      required:
+        - correct
+      properties:
+        correct:
+          type: boolean
+    DictionaryReviewSubmitResponse:
+      type: object
+      required:
+        - entryId
+        - correct
+        - expectedAnswer
+        - dueAt
+        - intervalDays
+        - correctStreak
+        - repetitionCount
+        - lapseCount
+      properties:
+        entryId:
+          type: string
+          format: uuid
+        correct:
+          type: boolean
+        expectedAnswer:
+          type: string
+          minLength: 1
+        dueAt:
+          type: string
+          format: date-time
+        intervalDays:
+          type: integer
+          minimum: 0
+        correctStreak:
+          type: integer
+          minimum: 0
+        repetitionCount:
+          type: integer
+          minimum: 0
+        lapseCount:
+          type: integer
+          minimum: 0
     PronunciationRequest:
       type: object
       required:

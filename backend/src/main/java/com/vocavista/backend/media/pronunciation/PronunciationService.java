@@ -3,6 +3,7 @@ package com.vocavista.backend.media.pronunciation;
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
+import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.net.URI;
@@ -32,6 +33,7 @@ class PronunciationService {
 	private final PronunciationVideoGenerator pronunciationVideoGenerator;
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
+	private final UserDictionaryService userDictionaryService;
 	private final Clock clock = Clock.systemUTC();
 
 	@Value("${vocavista.media.script-template-version:v6}")
@@ -39,6 +41,7 @@ class PronunciationService {
 
 	PronunciationResponse create(PronunciationRequest request) {
 		NormalizedInput input = normalize(request);
+		userDictionaryService.ensureEntryForCurrentUser(input.wordInfoRecord());
 		String contentHash = contentHash(input);
 
 		return pronunciationRepository
