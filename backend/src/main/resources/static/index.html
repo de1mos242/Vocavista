@@ -3,7 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vocavista</title>
+  <title>Vocavista - Build Your German Dictionary</title>
+  <meta name="application-name" content="Vocavista">
+  <meta name="apple-mobile-web-app-title" content="Vocavista">
+  <meta name="theme-color" content="#090b0f">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/site.webmanifest">
   <style>
     :root {
       color-scheme: dark;
@@ -74,6 +79,18 @@
       font-weight: 900;
       cursor: pointer;
       text-decoration: none;
+    }
+
+    .login-button {
+      display: inline-flex;
+      gap: 0.45rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-button img {
+      width: 1.05rem;
+      height: 1.05rem;
     }
 
     .nav-auth button.secondary {
@@ -189,7 +206,7 @@
 
     function renderSignedOut() {
       const loginUrl = `/login/google?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`;
-      authNode.innerHTML = `<a class="login-button" href="${escapeHtml(loginUrl)}">Sign in with Google</a>`;
+      authNode.innerHTML = `<a class="login-button" href="${escapeHtml(loginUrl)}"><img src="/google-g.svg" alt="" aria-hidden="true">Sign in with Google</a>`;
     }
 
     function renderSignedIn(user) {

@@ -1,0 +1,17 @@
+{
+  "name": "Vocavista",
+  "short_name": "Vocavista",
+  "description": "Build your German dictionary with pronunciation media and spaced repetition.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090b0f",
+  "theme_color": "#ff9c6a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
