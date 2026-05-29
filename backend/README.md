@@ -109,3 +109,7 @@ When the app is running, health is available at:
 ```text
 GET /actuator/health
 ```
+
+## Fly.io Deployment
+
+The low-cost Fly.io deployment path is documented in [`../documentation/fly-deployment.md`](../documentation/fly-deployment.md). It covers the Docker image, Fly app configuration, required secrets, Neon Postgres, Cloudflare R2, Google OAuth callback setup, and optional GitHub Actions deploys.
