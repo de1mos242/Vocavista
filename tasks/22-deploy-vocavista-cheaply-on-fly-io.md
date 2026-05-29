@@ -3,6 +3,7 @@
 ## Issue
 
 - GitHub issue: https://github.com/de1mos242/Vocavista/issues/22
+- Pull request: https://github.com/de1mos242/Vocavista/pull/24
 - Branch: `22-deploy-vocavista-cheaply-on-fly-io`
 
 ## Goal
@@ -44,6 +45,7 @@ Publish Vocavista on a low-cost Fly.io deployment path for a pet-project environ
 - Added deployment documentation for Fly, Neon, Cloudflare R2, secrets, OAuth callback setup, manual verification, and optional GitHub Actions.
 - Added optional `.github/workflows/fly-deploy.yml` using `flyctl deploy --remote-only`.
 - Added GitHub issue status comment: https://github.com/de1mos242/Vocavista/issues/22#issuecomment-4580145746
+- Opened pull request: https://github.com/de1mos242/Vocavista/pull/24
 
 ## Verification
 
