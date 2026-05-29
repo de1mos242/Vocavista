@@ -2,7 +2,7 @@ spring:
   application:
     name: vocavista-backend
   profiles:
-    active: local
+    active: ${SPRING_PROFILES_ACTIVE:local}
   ai:
     openai:
       api-key: __missing__
@@ -31,7 +31,8 @@ spring:
       enabled: true
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:framework}
 
 management:
   endpoints:

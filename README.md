@@ -22,3 +22,4 @@ Vocavista is a language-learning application focused on German vocabulary practi
 
 - [`documentation/app-specification.md`](documentation/app-specification.md)
 - [`documentation/technical-architecture.md`](documentation/technical-architecture.md)
+- [`documentation/fly-deployment.md`](documentation/fly-deployment.md)
