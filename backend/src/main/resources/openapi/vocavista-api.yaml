@@ -298,9 +298,9 @@ components:
         article:
           nullable: true
           $ref: '#/components/schemas/GermanArticle'
-        pronunciationVideoUrl:
+        pronunciationAssetId:
           type: string
-          format: uri
+          format: uuid
           nullable: true
         dueAt:
           type: string

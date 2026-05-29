@@ -13,7 +13,6 @@ import com.vocavista.backend.auth.UserAccount;
 import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
 import com.vocavista.backend.media.pronunciation.PronunciationRepository;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
-import java.net.URI;
 import java.time.Clock;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -126,8 +125,7 @@ public class UserDictionaryService {
 		pronunciationRepository
 				.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(entry.getWordInfoRecord().getId(),
 						PronunciationAssetStatus.COMPLETED)
-				.ifPresent(asset -> item.setPronunciationVideoUrl(
-						URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video")));
+				.ifPresent(asset -> item.setPronunciationAssetId(asset.getId()));
 		return item;
 	}
 

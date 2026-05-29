@@ -477,6 +477,10 @@
       }
     }
 
+    function pronunciationVideoUrl(assetId) {
+      return `/api/v1/media/pronunciations/${encodeURIComponent(assetId)}/video`;
+    }
+
     function normalizeAnswer(value) {
       return String(value ?? "")
         .toLowerCase()
@@ -520,8 +524,8 @@
     function revealResult(result) {
       const resultNode = document.querySelector("#result");
       const item = items[index];
-      const videoHtml = item.pronunciationVideoUrl
-        ? `<video id="result-video" class="review-video" src="${escapeHtml(item.pronunciationVideoUrl)}" controls playsinline></video>`
+      const videoHtml = item.pronunciationAssetId
+        ? `<video id="result-video" class="review-video" src="${escapeHtml(pronunciationVideoUrl(item.pronunciationAssetId))}" controls playsinline></video>`
         : "";
       resultNode.className = `result ${result.correct ? "correct" : "incorrect"}`;
       resultNode.innerHTML = `

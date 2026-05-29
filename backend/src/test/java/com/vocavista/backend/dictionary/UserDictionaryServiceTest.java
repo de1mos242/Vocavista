@@ -91,7 +91,7 @@ class UserDictionaryServiceTest {
 	}
 
 	@Test
-	void reviewItemsIncludeCompletedPronunciationVideoUrl() {
+	void reviewItemsIncludeCompletedPronunciationAssetId() {
 		UserAccount userAccount = userAccount();
 		WordInfoRecord wordInfoRecord = wordInfoRecord("Hausaufgabe");
 		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord, OffsetDateTime.now());
@@ -104,8 +104,7 @@ class UserDictionaryServiceTest {
 
 		var response = service().getReviewItems(10, false);
 
-		assertThat(response.getItems().getFirst().getPronunciationVideoUrl())
-				.hasToString("/api/v1/media/pronunciations/" + asset.getId() + "/video");
+		assertThat(response.getItems().getFirst().getPronunciationAssetId()).isEqualTo(asset.getId());
 	}
 
 	@Test

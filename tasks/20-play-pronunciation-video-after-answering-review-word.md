@@ -6,7 +6,7 @@ In the dictionary review flow, reveal the correct German answer and automaticall
 
 ## Scope
 
-- Add the completed pronunciation video URL to review items when one exists for the reviewed word.
+- Add the completed pronunciation asset ID to review items when one exists for the reviewed word.
 - Keep the existing client-side answer matching and review result submission behavior unchanged.
 - Update the static `review.html` page to render and autoplay the video only after the result is revealed.
 
@@ -19,14 +19,15 @@ In the dictionary review flow, reveal the correct German answer and automaticall
 
 - Use the latest completed pronunciation asset for the review item's word info record.
 - If no completed video exists, the review result should still reveal normally without playback.
-- `DictionaryReviewItem` now exposes optional `pronunciationVideoUrl`.
-- `UserDictionaryService` resolves that URL through `PronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc`.
+- `DictionaryReviewItem` now exposes optional `pronunciationAssetId`.
+- `UserDictionaryService` resolves that ID through `PronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc`.
+- `review.html` builds the `/api/v1/media/pronunciations/{id}/video` endpoint from the asset ID instead of receiving a server-built URL.
 - `review.html` renders a hidden-until-result video element and calls `play()` after answer reveal, with a status fallback if browser autoplay is blocked.
 
 ## Progress
 
 - Implementation complete.
-- Review items include the latest completed pronunciation video URL when available.
+- Review items include the latest completed pronunciation asset ID when available.
 - Answer reveal disables the existing controls as before and starts video playback without changing SRS result submission or batch progression.
 
 ## Verification
