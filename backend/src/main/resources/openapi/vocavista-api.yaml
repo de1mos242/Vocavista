@@ -298,6 +298,10 @@ components:
         article:
           nullable: true
           $ref: '#/components/schemas/GermanArticle'
+        pronunciationVideoUrl:
+          type: string
+          format: uri
+          nullable: true
         dueAt:
           type: string
           format: date-time

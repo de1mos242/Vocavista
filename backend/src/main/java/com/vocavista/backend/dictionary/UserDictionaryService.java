@@ -10,7 +10,10 @@ import com.vocavista.backend.api.model.PartOfSpeech;
 import com.vocavista.backend.api.model.WordInfoResponse;
 import com.vocavista.backend.auth.CurrentUserService;
 import com.vocavista.backend.auth.UserAccount;
+import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
+import com.vocavista.backend.media.pronunciation.PronunciationRepository;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
+import java.net.URI;
 import java.time.Clock;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -34,6 +37,7 @@ public class UserDictionaryService {
 
 	private final UserDictionaryEntryRepository entryRepository;
 	private final CurrentUserService currentUserService;
+	private final PronunciationRepository pronunciationRepository;
 	private final ObjectMapper objectMapper = new ObjectMapper();
 	private final Clock clock = Clock.systemUTC();
 
@@ -119,6 +123,11 @@ public class UserDictionaryService {
 				entry.getNormalizedWord(), expectedAnswer(wordInfo), wordInfo.getTranslations(), wordInfo.getPartOfSpeech(),
 				entry.getDueAt());
 		item.setArticle(wordInfo.getArticle());
+		pronunciationRepository
+				.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(entry.getWordInfoRecord().getId(),
+						PronunciationAssetStatus.COMPLETED)
+				.ifPresent(asset -> item.setPronunciationVideoUrl(
+						URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video")));
 		return item;
 	}
 
