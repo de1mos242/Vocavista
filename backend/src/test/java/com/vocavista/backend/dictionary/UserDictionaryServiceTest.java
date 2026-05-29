@@ -9,9 +9,13 @@ import static org.mockito.Mockito.when;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitRequest;
 import com.vocavista.backend.auth.CurrentUserService;
 import com.vocavista.backend.auth.UserAccount;
+import com.vocavista.backend.media.pronunciation.PronunciationAsset;
+import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
+import com.vocavista.backend.media.pronunciation.PronunciationRepository;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -28,6 +32,9 @@ class UserDictionaryServiceTest {
 
 	@Mock
 	private CurrentUserService currentUserService;
+
+	@Mock
+	private PronunciationRepository pronunciationRepository;
 
 	@Test
 	void createsEntryForCurrentUserWhenMissing() {
@@ -84,6 +91,23 @@ class UserDictionaryServiceTest {
 	}
 
 	@Test
+	void reviewItemsIncludeCompletedPronunciationAssetId() {
+		UserAccount userAccount = userAccount();
+		WordInfoRecord wordInfoRecord = wordInfoRecord("Hausaufgabe");
+		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord, OffsetDateTime.now());
+		PronunciationAsset asset = pronunciationAsset(wordInfoRecord);
+		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
+		when(entryRepository.findByUserAccountIdAndDueAtLessThanEqualOrderByDueAtAsc(
+				any(UUID.class), any(OffsetDateTime.class), any(Pageable.class))).thenReturn(List.of(entry));
+		when(pronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(
+				wordInfoRecord.getId(), PronunciationAssetStatus.COMPLETED)).thenReturn(Optional.of(asset));
+
+		var response = service().getReviewItems(10, false);
+
+		assertThat(response.getItems().getFirst().getPronunciationAssetId()).isEqualTo(asset.getId());
+	}
+
+	@Test
 	void correctReviewUpdatesSrsStateAndReturnsExpectedAnswer() {
 		UserAccount userAccount = userAccount();
 		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord("Hausaufgabe"), OffsetDateTime.now());
@@ -121,7 +145,25 @@ class UserDictionaryServiceTest {
 	}
 
 	private UserDictionaryService service() {
-		return new UserDictionaryService(entryRepository, currentUserService);
+		return new UserDictionaryService(entryRepository, currentUserService, pronunciationRepository);
+	}
+
+	private static PronunciationAsset pronunciationAsset(WordInfoRecord wordInfoRecord) {
+		PronunciationAsset asset = new PronunciationAsset();
+		asset.setId(UUID.randomUUID());
+		asset.setWordInfoRecord(wordInfoRecord);
+		asset.setNormalizedWord(wordInfoRecord.getNormalizedWord());
+		asset.setNormalizedPhrase("Ich mache meine Hausaufgabe.");
+		asset.setInputWord(wordInfoRecord.getNormalizedWord());
+		asset.setInputPhrase("Ich mache meine Hausaufgabe.");
+		asset.setLanguage("de");
+		asset.setStatus(PronunciationAssetStatus.COMPLETED);
+		asset.setVideoObjectKey("pronunciations/%s/video.mp4".formatted(asset.getId()));
+		asset.setContentHash("hash");
+		asset.setCreatedAt(OffsetDateTime.now());
+		asset.setUpdatedAt(OffsetDateTime.now());
+		asset.setCompletedAt(OffsetDateTime.now());
+		return asset;
 	}
 
 	private static UserAccount userAccount() {

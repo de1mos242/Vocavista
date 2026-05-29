@@ -10,6 +10,9 @@ public interface PronunciationRepository extends JpaRepository<PronunciationAsse
 	Optional<PronunciationAsset> findFirstByLanguageAndContentHashOrderByCreatedAtAsc(String language,
 			String contentHash);
 
+	Optional<PronunciationAsset> findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(UUID wordInfoRecordId,
+			PronunciationAssetStatus status);
+
 	List<PronunciationAsset> findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc(String query);
 
 }
