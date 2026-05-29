@@ -15,6 +15,7 @@ This guide deploys the Vocavista Spring Boot backend to Fly.io with low idle cos
 
 - `fly.toml` starts with one shared-CPU 1 GB Machine.
 - `auto_stop_machines = "stop"`, `auto_start_machines = true`, and `min_machines_running = 0` reduce idle compute cost.
+- Use `fly deploy --ha=false` for this pet-project setup so Fly does not create an extra spare Machine on the first deploy.
 - If Google OAuth redirects fail after idle periods, or wake-up latency is not acceptable, set `min_machines_running = 1` and redeploy.
 - Neon is the recommended first database choice for low idle cost. Use Fly Managed Postgres only if simpler Fly-native operations are worth the extra cost.
 - Cloudflare R2 is the recommended first media store for low idle cost. AWS S3 also works with equivalent S3 settings.
@@ -128,7 +129,7 @@ Do not put real values in `fly.toml`, `.env.example`, or documentation.
 Run this from the repository root:
 
 ```bash
-fly deploy
+fly deploy --ha=false
 ```
 
 Watch logs during startup:
@@ -166,7 +167,7 @@ Storage checks:
 
 ## Optional GitHub Actions Deploy
 
-The workflow in `.github/workflows/fly-deploy.yml` can deploy after manual setup is verified.
+The workflow in `.github/workflows/fly-deploy.yml` can deploy after manual setup is verified. It uses `flyctl deploy --remote-only --ha=false` to keep the app on the single-Machine low-cost path.
 
 Manual setup for Actions:
 

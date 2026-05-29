@@ -46,14 +46,20 @@ Publish Vocavista on a low-cost Fly.io deployment path for a pet-project environ
 - Added optional `.github/workflows/fly-deploy.yml` using `flyctl deploy --remote-only`.
 - Added GitHub issue status comment: https://github.com/de1mos242/Vocavista/issues/22#issuecomment-4580145746
 - Opened pull request: https://github.com/de1mos242/Vocavista/pull/24
+- Deployed to Fly app `vocavista`; health endpoint is `UP` at `https://vocavista.fly.dev/actuator/health`.
+- Scaled down from Fly's first-deploy two-Machine HA default to one Machine for the low-cost setup.
+- Updated manual deploy docs and GitHub Actions deploy command to use `--ha=false`.
 
 ## Verification
 
 - Passed: `./mvnw test` from `backend`.
 - Passed: `docker build -t vocavista-backend:fly -f backend/Dockerfile .` from the repository root.
 - Passed: `git diff --check`.
-- Not run: `flyctl` validation or deploy because `flyctl` is not installed locally.
-- Pending manual verification: Fly deploy, health check, Flyway migrations, media read/write, and Google OAuth callback.
+- Passed: `fly deploy -a vocavista` created the first deployment.
+- Passed: `curl -fsS https://vocavista.fly.dev/actuator/health` returned `UP`.
+- Passed: Fly status reports one running Machine with the health check passing after scale-down.
+- Passed: Fly logs show the app started with the `prod` profile and Flyway migrated/validated schema version 5.
+- Pending manual verification: Google OAuth callback and media write/read.
 
 ## Manual Follow-Up
 
