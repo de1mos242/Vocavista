@@ -20,10 +20,19 @@ This guide deploys the Vocavista Spring Boot backend to Fly.io with low idle cos
 - Neon is the recommended first database choice for low idle cost. Use Fly Managed Postgres only if simpler Fly-native operations are worth the extra cost.
 - Cloudflare R2 is the recommended first media store for low idle cost. AWS S3 also works with equivalent S3 settings.
 
+## Cold Starts
+
+- The Docker image builds a Java 25 AOT cache for the Spring Boot application and starts the JVM with `-XX:AOTCache=/app/app.aot`.
+- The cache is generated during the Docker build with the `aotcache` Spring profile, which disables Flyway schema work and avoids opening a real database connection.
+- Runtime on Fly still uses the normal `prod` profile from `fly.toml`; the build-only `aotcache` profile is not a replacement for production configuration.
+- This reduces JVM and Spring startup work after a Fly Machine starts. It does not remove Fly Machine wake-up latency, Neon connection latency, or Flyway migration time.
+- If near-instant responses after idle periods are required, keep at least one Machine running by setting `min_machines_running = 1`.
+
 ## Files
 
 - `fly.toml`: Fly app, VM, service, and health-check configuration.
 - `backend/Dockerfile`: multi-stage Java 25 image build.
+- `backend/src/main/resources/application-aotcache.yaml`: build-time profile used only for generating the AOT cache without production services.
 - `.dockerignore`: keeps local build outputs, secrets, docs, and task notes out of the Docker build context.
 - `.github/workflows/fly-deploy.yml`: optional GitHub Actions deployment workflow.
 
@@ -139,6 +148,8 @@ fly logs
 ```
 
 Flyway migrations should run during application startup. The app should then pass the Fly health check at `/actuator/health`.
+
+The Docker build output should show `AOTCache creation is complete`, confirming the warmed cache was baked into the deployed image.
 
 ## Verify Deployment
 
