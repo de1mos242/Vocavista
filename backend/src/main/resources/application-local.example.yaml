@@ -10,6 +10,7 @@ spring:
       client:
         registration:
           google:
+            client-name: Vocavista
             client-id: __missing__
             client-secret: __missing__
 

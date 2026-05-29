@@ -17,6 +17,7 @@ spring:
       client:
         registration:
           google:
+            client-name: Vocavista
             client-id: ${GOOGLE_OAUTH_CLIENT_ID:__missing__}
             client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:__missing__}
             scope: openid,email,profile
@@ -49,7 +50,7 @@ management:
 
 info:
   app:
-    name: Vocavista Backend
+    name: Vocavista
     description: Backend service for Vocavista
     version: @project.version@
 

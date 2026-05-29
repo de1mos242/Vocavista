@@ -91,6 +91,13 @@ VOCAVISTA_MEDIA_S3_PATH_STYLE_ACCESS=true
 
 ### 5. Configure Google OAuth
 
+In Google Cloud Console, configure the OAuth consent screen branding before testing sign-in:
+
+- App name: `Vocavista`
+- User support email: the project support account
+- App logo: use `backend/src/main/resources/static/favicon.svg` as the source artwork and upload a Google-accepted raster export if the console requires PNG/JPEG
+- Authorized domain: the deployed app domain, for example `vocavista.fly.dev` or the attached custom domain
+
 In Google Cloud Console, add this authorized redirect URI to the OAuth client:
 
 ```text

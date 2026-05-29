@@ -62,6 +62,8 @@ export SPRING_AI_OPENAI_API_KEY=...
 
 The backend stores generated video and returns `videoUrl`. Automated tests mock provider and storage boundaries where they exercise generation behavior, so they do not call external services.
 
+Google OAuth uses `Vocavista` as the Spring client display name. The name and icon shown on Google's consent screen still come from the OAuth consent screen branding in Google Cloud Console; use `src/main/resources/static/favicon.svg` as the source app icon when configuring that screen.
+
 Run the browser Veo video preview after starting the app:
 
 ```text
