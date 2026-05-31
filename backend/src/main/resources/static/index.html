@@ -17,6 +17,10 @@
       color: #f7f1e8;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -148,6 +152,15 @@
       line-height: 1.45;
     }
 
+    .account-notice {
+      border: 1px solid rgba(255, 181, 143, 0.32);
+      border-radius: 1rem;
+      background: rgba(255, 181, 143, 0.1);
+      padding: 0.95rem;
+      color: #ffe4c8;
+      font-weight: 750;
+    }
+
     @media (max-width: 640px) {
       nav {
         padding: 1rem 1rem 0;
@@ -175,6 +188,7 @@
       <a href="/">Home</a>
       <a href="/veo-video.html">Add new word</a>
       <a href="/review.html">Review</a>
+      <a id="admin-link" href="/admin.html" hidden>Admin</a>
     </div>
     <div id="auth" class="nav-auth">Checking sign-in...</div>
   </nav>
@@ -182,6 +196,7 @@
   <main>
     <h1>Build your German dictionary.</h1>
     <p>Add words through the pronunciation video flow, then review them with spaced repetition.</p>
+    <div id="account-notice" class="account-notice" hidden></div>
     <div class="actions">
       <a class="card" href="/veo-video.html">
         <strong>Add new word</strong>
@@ -195,6 +210,8 @@
   </main>
   <script type="module">
     const authNode = document.querySelector("#auth");
+    const adminLink = document.querySelector("#admin-link");
+    const accountNoticeNode = document.querySelector("#account-notice");
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -207,14 +224,28 @@
     function renderSignedOut() {
       const loginUrl = `/login/google?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`;
       authNode.innerHTML = `<a class="login-button" href="${escapeHtml(loginUrl)}"><img src="/google-g.svg" alt="" aria-hidden="true">Sign in with Google</a>`;
+      adminLink.hidden = true;
+      accountNoticeNode.hidden = true;
     }
 
     function renderSignedIn(user) {
       authNode.innerHTML = `
-        <div><strong>${escapeHtml(user.displayName)}</strong><br><small>${escapeHtml(user.email)}</small></div>
+        <div><strong>${escapeHtml(user.displayName)}</strong><br><small>${escapeHtml(user.email)} · ${escapeHtml(user.status)}</small></div>
         <button id="logout" type="button" class="secondary">Logout</button>
       `;
+      adminLink.hidden = !user.admin;
+      renderAccountNotice(user);
       document.querySelector("#logout").addEventListener("click", logoutCurrentUser);
+    }
+
+    function renderAccountNotice(user) {
+      const messages = {
+        pending: "Your account is pending admin approval. App features are disabled for now.",
+        deactivated: "Your account has been deactivated. App features are disabled."
+      };
+      const message = messages[user.status];
+      accountNoticeNode.textContent = message ?? "";
+      accountNoticeNode.hidden = !message;
     }
 
     async function logoutCurrentUser() {

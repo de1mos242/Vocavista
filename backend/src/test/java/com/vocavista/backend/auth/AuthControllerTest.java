@@ -37,14 +37,17 @@ class AuthControllerTest {
 	@Test
 	void returnsCurrentUser() throws Exception {
 		UserAccount account = userAccountRepository.save(UserAccount.google("google-sub", "learner@example.com", "German Learner",
-				OffsetDateTime.now()));
+				UserAccountStatus.ACTIVE, OffsetDateTime.now()));
 
 		mockMvc.perform(get("/api/v1/auth/me").with(oidcLogin().idToken(token -> token.subject("google-sub"))))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(account.getId().toString()))
 				.andExpect(jsonPath("$.email").value("learner@example.com"))
 				.andExpect(jsonPath("$.displayName").value("German Learner"))
-				.andExpect(jsonPath("$.provider").value("google"));
+				.andExpect(jsonPath("$.provider").value("google"))
+				.andExpect(jsonPath("$.status").value("active"))
+				.andExpect(jsonPath("$.admin").value(false))
+				.andExpect(jsonPath("$.functionalAccessAllowed").value(true));
 	}
 
 	@Test

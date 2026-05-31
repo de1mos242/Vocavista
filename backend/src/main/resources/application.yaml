@@ -55,6 +55,8 @@ info:
     version: @project.version@
 
 vocavista:
+  admin:
+    emails: ${VOCAVISTA_ADMIN_EMAILS:de1m0s242@gmail.com}
   media:
     veo:
       api-key: ${GOOGLE_AI_API_KEY:__missing__}

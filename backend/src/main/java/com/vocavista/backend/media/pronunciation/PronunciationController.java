@@ -3,6 +3,7 @@ package com.vocavista.backend.media.pronunciation;
 import com.vocavista.backend.api.MediaApi;
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
+import com.vocavista.backend.auth.RequireFunctionalAccess;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+@RequireFunctionalAccess
 class PronunciationController implements MediaApi {
 
 	private final PronunciationService pronunciationService;
