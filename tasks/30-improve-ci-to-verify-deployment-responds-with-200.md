@@ -3,7 +3,9 @@
 ## Issue
 
 - GitHub issue: https://github.com/de1mos242/Vocavista/issues/30
+- Pull request: https://github.com/de1mos242/Vocavista/pull/31
 - Status comment: https://github.com/de1mos242/Vocavista/issues/30#issuecomment-4588002994
+- PR comment: https://github.com/de1mos242/Vocavista/issues/30#issuecomment-4588014994
 - Branch: `30-improve-ci-to-verify-deployment-responds-with-200`
 
 ## Goal
@@ -36,6 +38,7 @@ Make the Fly.io deployment workflow prove that the newly deployed app is serving
 - Added a post-deploy GitHub Actions step that derives `https://<app>.fly.dev/` from `fly.toml`, waits up to 5 minutes, and fails unless `/` returns HTTP 200.
 - Updated Fly deployment documentation with the new CI verification behavior.
 - Added GitHub issue implementation status comment.
+- Opened pull request: https://github.com/de1mos242/Vocavista/pull/31
 
 ## Verification
 
