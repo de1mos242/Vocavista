@@ -15,19 +15,23 @@ RUN mkdir /app \
     && java -Djarmode=tools -jar target/backend-0.0.1-SNAPSHOT.jar extract --destination /app \
     && mv /app/backend-0.0.1-SNAPSHOT.jar /app/app.jar
 
+FROM eclipse-temurin:25-jre AS runtime
+
 WORKDIR /app
+RUN addgroup --system vocavista && adduser --system --ingroup vocavista vocavista
+
+FROM runtime AS aot
+
+COPY --from=build /app/ ./
 RUN java \
     -XX:AOTCacheOutput=/app/app.aot \
     -Dspring.context.exit=onRefresh \
     -Dspring.profiles.active=aotcache \
     -jar /app/app.jar
 
-FROM eclipse-temurin:25-jre
+FROM runtime
 
-WORKDIR /app
-RUN addgroup --system vocavista && adduser --system --ingroup vocavista vocavista
-
-COPY --from=build /app/ ./
+COPY --from=aot /app/ ./
 
 USER vocavista
 EXPOSE 8080
