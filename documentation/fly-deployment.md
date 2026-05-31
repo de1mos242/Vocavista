@@ -187,6 +187,8 @@ Storage checks:
 
 The workflow in `.github/workflows/fly-deploy.yml` can deploy after manual setup is verified. It uses `flyctl deploy --remote-only --ha=false` to keep the app on the single-Machine low-cost path.
 
+After deployment, the workflow derives the app name from `fly.toml` and waits up to 5 minutes for `https://<app>.fly.dev/` to return HTTP 200. This catches deployments that complete but do not successfully serve the new application version from the root page.
+
 Manual setup for Actions:
 
 ```bash

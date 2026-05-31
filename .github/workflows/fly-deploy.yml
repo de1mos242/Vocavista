@@ -29,3 +29,39 @@ jobs:
         run: flyctl deploy --remote-only --ha=false
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Verify deployed root page
+        run: |
+          app_name=$(awk -F '"' '/^app = / { print $2; exit }' fly.toml)
+          if [ -z "$app_name" ]; then
+            echo "Could not read Fly app name from fly.toml" >&2
+            exit 1
+          fi
+
+          app_url="https://${app_name}.fly.dev/"
+          deadline=$((SECONDS + 300))
+          attempt=1
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            status=$(curl --silent --show-error --connect-timeout 5 --max-time 10 --output /dev/null --write-out "%{http_code}" "$app_url" || true)
+            if [ "$status" = "200" ]; then
+              echo "Deployment verified: ${app_url} returned HTTP 200."
+              exit 0
+            fi
+
+            echo "Attempt ${attempt}: ${app_url} returned HTTP ${status}; waiting for app startup."
+            attempt=$((attempt + 1))
+
+            remaining=$((deadline - SECONDS))
+            if [ "$remaining" -le 0 ]; then
+              break
+            fi
+
+            sleep_duration=10
+            if [ "$remaining" -lt "$sleep_duration" ]; then
+              sleep_duration=$remaining
+            fi
+            sleep "$sleep_duration"
+          done
+
+          echo "Deployment verification failed: ${app_url} did not return HTTP 200 within 5 minutes." >&2
+          exit 1
