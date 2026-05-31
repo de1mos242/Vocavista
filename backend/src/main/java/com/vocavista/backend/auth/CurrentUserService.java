@@ -2,6 +2,7 @@ package com.vocavista.backend.auth;
 
 import com.vocavista.backend.api.model.CurrentUserResponse;
 import com.vocavista.backend.api.model.OAuthProvider;
+import com.vocavista.backend.api.model.UserStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -15,11 +16,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class CurrentUserService {
 
 	private final UserAccountRepository userAccountRepository;
+	private final UserAccessService userAccessService;
 
 	@Transactional(readOnly = true)
 	public CurrentUserResponse getCurrentUser() {
 		UserAccount account = getCurrentUserAccount();
-		return new CurrentUserResponse(account.getId(), account.getEmail(), account.getDisplayName(), OAuthProvider.GOOGLE);
+		return new CurrentUserResponse(account.getId(), account.getEmail(), account.getDisplayName(), OAuthProvider.GOOGLE,
+				toApiStatus(account.getStatus()), userAccessService.isAdminListUser(account),
+				userAccessService.canUseFunctionalFeatures(account));
+	}
+
+	private static UserStatus toApiStatus(UserAccountStatus status) {
+		return UserStatus.fromValue(status.value());
 	}
 
 	@Transactional(readOnly = true)

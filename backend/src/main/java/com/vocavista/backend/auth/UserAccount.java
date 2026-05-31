@@ -32,6 +32,9 @@ public class UserAccount {
 	@Column(nullable = false)
 	private String email;
 
+	@Column(nullable = false)
+	private UserAccountStatus status;
+
 	@Column(name = "display_name", nullable = false)
 	private String displayName;
 
@@ -44,12 +47,13 @@ public class UserAccount {
 	@Column(name = "last_login_at", nullable = false)
 	private OffsetDateTime lastLoginAt;
 
-	static UserAccount google(String subject, String email, String displayName, OffsetDateTime now) {
+	static UserAccount google(String subject, String email, String displayName, UserAccountStatus status, OffsetDateTime now) {
 		UserAccount account = new UserAccount();
 		account.id = UUID.randomUUID();
 		account.provider = AuthenticationProvider.GOOGLE;
 		account.providerSubject = subject;
 		account.email = email;
+		account.status = status;
 		account.displayName = displayName;
 		account.createdAt = now;
 		account.updatedAt = now;

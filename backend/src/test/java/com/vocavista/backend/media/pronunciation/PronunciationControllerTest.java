@@ -1,6 +1,7 @@
 package com.vocavista.backend.media.pronunciation;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -11,7 +12,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
+import com.vocavista.backend.auth.AuthErrorHandler;
+import com.vocavista.backend.auth.CurrentUserService;
+import com.vocavista.backend.auth.FunctionalAccessInterceptor;
+import com.vocavista.backend.auth.FunctionalAccessWebConfig;
 import com.vocavista.backend.auth.GoogleOidcUserService;
+import com.vocavista.backend.auth.UserAccessService;
 import java.net.URI;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -20,12 +26,13 @@ import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAu
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(value = PronunciationController.class, excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class)
-@Import(MediaErrorHandler.class)
+@Import({ MediaErrorHandler.class, AuthErrorHandler.class, FunctionalAccessInterceptor.class, FunctionalAccessWebConfig.class })
 class PronunciationControllerTest {
 
 	@Autowired
@@ -36,6 +43,12 @@ class PronunciationControllerTest {
 
 	@MockitoBean
 	private GoogleOidcUserService googleOidcUserService;
+
+	@MockitoBean
+	private CurrentUserService currentUserService;
+
+	@MockitoBean
+	private UserAccessService userAccessService;
 
 	@Test
 	@WithMockUser
@@ -61,6 +74,27 @@ class PronunciationControllerTest {
 				.andExpect(jsonPath("$.status").value("queued"));
 
 		verify(pronunciationService).create(any());
+	}
+
+	@Test
+	@WithMockUser
+	void rejectsPronunciationGenerationWhenUserCannotUseFunctionalFeatures() throws Exception {
+		UUID wordInfoId = UUID.randomUUID();
+		doThrow(new AccessDeniedException("Account is not approved to use app features"))
+				.when(userAccessService).requireFunctionalAccess(any());
+
+		mockMvc.perform(post("/api/v1/media/pronunciations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "wordInfoId": "%s",
+						  "word": "Hausaufgabe",
+						  "phrase": "Ich mache meine Hausaufgabe nach dem Abendessen.",
+						  "language": "de"
+						}
+						""".formatted(wordInfoId)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.code").value("access_denied"));
 	}
 
 	@Test

@@ -19,7 +19,7 @@ public class SecurityConfig {
 		http.authorizeHttpRequests(authorize -> authorize
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/error").permitAll()
 				.requestMatchers("/oauth2/**", "/login/oauth2/**", "/login/google").permitAll()
-				.requestMatchers("/veo-video.html", "/review.html", "/index.html", "/").permitAll()
+				.requestMatchers("/veo-video.html", "/review.html", "/admin.html", "/index.html", "/").permitAll()
 				.anyRequest().authenticated())
 				.csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/logout"))
 				.exceptionHandling(exceptions -> exceptions.authenticationEntryPoint((request, response, authException) -> {

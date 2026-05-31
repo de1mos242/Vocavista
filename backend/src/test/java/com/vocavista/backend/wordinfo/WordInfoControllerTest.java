@@ -1,13 +1,20 @@
 package com.vocavista.backend.wordinfo;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vocavista.backend.auth.AuthErrorHandler;
+import com.vocavista.backend.auth.CurrentUserService;
+import com.vocavista.backend.auth.FunctionalAccessInterceptor;
+import com.vocavista.backend.auth.FunctionalAccessWebConfig;
 import com.vocavista.backend.auth.GoogleOidcUserService;
+import com.vocavista.backend.auth.UserAccessService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +22,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import com.vocavista.backend.media.pronunciation.PronunciationRepository;
@@ -25,7 +33,7 @@ import java.util.UUID;
 
 @WebMvcTest(value = WordInfoController.class, excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class)
 @Import({ WordInfoService.class, WordSuggestionService.class, ProviderWordInfoValidator.class, WordInfoMapperImpl.class,
-		WordInfoErrorHandler.class })
+		WordInfoErrorHandler.class, AuthErrorHandler.class, FunctionalAccessInterceptor.class, FunctionalAccessWebConfig.class })
 class WordInfoControllerTest {
 
 	@Autowired
@@ -42,6 +50,12 @@ class WordInfoControllerTest {
 
 	@MockitoBean
 	private GoogleOidcUserService googleOidcUserService;
+
+	@MockitoBean
+	private CurrentUserService currentUserService;
+
+	@MockitoBean
+	private UserAccessService userAccessService;
 
 	@BeforeEach
 	void setUp() {
@@ -61,6 +75,17 @@ class WordInfoControllerTest {
 				.andExpect(jsonPath("$.examples.length()").value(3));
 
 		verify(aiWordInfoProvider).generate("Hausaufgabe");
+	}
+
+	@Test
+	@WithMockUser
+	void rejectsWordInfoWhenUserCannotUseFunctionalFeatures() throws Exception {
+		doThrow(new AccessDeniedException("Account is not approved to use app features"))
+				.when(userAccessService).requireFunctionalAccess(any());
+
+		mockMvc.perform(get("/api/v1/words/info").param("word", "Hausaufgabe"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.code").value("access_denied"));
 	}
 
 	@Test

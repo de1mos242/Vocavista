@@ -3,12 +3,14 @@ package com.vocavista.backend.wordinfo;
 import com.vocavista.backend.api.WordsApi;
 import com.vocavista.backend.api.model.WordInfoResponse;
 import com.vocavista.backend.api.model.WordSuggestionsResponse;
+import com.vocavista.backend.auth.RequireFunctionalAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+@RequireFunctionalAccess
 class WordInfoController implements WordsApi {
 
 	private final WordInfoService wordInfoService;

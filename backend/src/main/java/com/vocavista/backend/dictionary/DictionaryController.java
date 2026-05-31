@@ -4,6 +4,7 @@ import com.vocavista.backend.api.DictionaryApi;
 import com.vocavista.backend.api.model.DictionaryReviewResponse;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitRequest;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitResponse;
+import com.vocavista.backend.auth.RequireFunctionalAccess;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+@RequireFunctionalAccess
 class DictionaryController implements DictionaryApi {
 
 	private final UserDictionaryService userDictionaryService;

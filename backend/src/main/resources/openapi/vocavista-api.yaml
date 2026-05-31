@@ -3,6 +3,74 @@ info:
   title: Vocavista API
   version: 0.0.1
 paths:
+  /api/v1/admin/users:
+    get:
+      tags:
+        - Admin
+      operationId: listAdminUsers
+      summary: List users for admin management
+      security:
+        - GoogleOAuth: []
+      responses:
+        '200':
+          description: Users available for admin management.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUsersResponse'
+        '403':
+          description: Admin access is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/users/{id}/status:
+    put:
+      tags:
+        - Admin
+      operationId: updateAdminUserStatus
+      summary: Update a non-admin user's status
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User account identifier.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserStatusUpdateRequest'
+      responses:
+        '200':
+          description: User status was updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserResponse'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin access is required or target user is protected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User account was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/auth/me:
     get:
       tags:
@@ -20,6 +88,12 @@ paths:
                 $ref: '#/components/schemas/CurrentUserResponse'
         '401':
           description: Authentication is required.
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/dictionary/review:
     get:
       tags:
@@ -89,6 +163,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Dictionary entry was not found.
           content:
@@ -122,6 +202,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/media/pronunciations/{id}:
     get:
       tags:
@@ -147,6 +233,12 @@ paths:
                 $ref: '#/components/schemas/PronunciationResponse'
         '404':
           description: Pronunciation asset was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account is not approved to use app features.
           content:
             application/json:
               schema:
@@ -177,6 +269,12 @@ paths:
                 $ref: '#/components/schemas/WordInfoResponse'
         '400':
           description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account is not approved to use app features.
           content:
             application/json:
               schema:
@@ -223,6 +321,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     GoogleOAuth:
@@ -243,6 +347,9 @@ components:
         - email
         - displayName
         - provider
+        - status
+        - admin
+        - functionalAccessAllowed
       properties:
         id:
           type: string
@@ -255,10 +362,60 @@ components:
           minLength: 1
         provider:
           $ref: '#/components/schemas/OAuthProvider'
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        admin:
+          type: boolean
+        functionalAccessAllowed:
+          type: boolean
     OAuthProvider:
       type: string
       enum:
         - google
+    UserStatus:
+      type: string
+      enum:
+        - pending
+        - active
+        - deactivated
+    AdminUsersResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUserResponse'
+    AdminUserResponse:
+      type: object
+      required:
+        - id
+        - email
+        - displayName
+        - status
+        - adminListUser
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+          minLength: 1
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        adminListUser:
+          type: boolean
+    AdminUserStatusUpdateRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/UserStatus'
     DictionaryReviewResponse:
       type: object
       required:

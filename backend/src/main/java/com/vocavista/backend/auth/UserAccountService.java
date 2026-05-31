@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 class UserAccountService {
 
 	private final UserAccountRepository userAccountRepository;
+	private final AdminProperties adminProperties;
 	private final Clock clock = Clock.systemUTC();
 
 	@Transactional
@@ -18,7 +19,11 @@ class UserAccountService {
 		OffsetDateTime now = OffsetDateTime.now(clock);
 		return userAccountRepository.findByProviderAndProviderSubject(AuthenticationProvider.GOOGLE, subject)
 				.map(account -> update(account, email, displayName, now))
-				.orElseGet(() -> userAccountRepository.save(UserAccount.google(subject, email, displayName, now)));
+				.orElseGet(() -> userAccountRepository.save(UserAccount.google(subject, email, displayName, initialStatus(email), now)));
+	}
+
+	private UserAccountStatus initialStatus(String email) {
+		return adminProperties.isAdminEmail(email) ? UserAccountStatus.ACTIVE : UserAccountStatus.PENDING;
 	}
 
 	private UserAccount update(UserAccount account, String email, String displayName, OffsetDateTime now) {

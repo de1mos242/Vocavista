@@ -17,6 +17,10 @@
       color: #f7f1e8;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -302,6 +306,7 @@
       <a href="/">Home</a>
       <a href="/veo-video.html">Add new word</a>
       <a href="/review.html">Review</a>
+      <a id="admin-link" href="/admin.html" hidden>Admin</a>
     </div>
     <div id="auth" class="nav-auth">Checking sign-in...</div>
   </nav>
@@ -311,6 +316,7 @@
       <p class="eyebrow">Dictionary review</p>
       <h1>Recall the German word.</h1>
       <p>Use the English and Russian prompts, type the German answer, and include the article for nouns.</p>
+      <div id="account-notice" class="auth-card" hidden></div>
 
       <button id="load-due">Load due words</button>
       <button id="practice-more" class="secondary">Practice more</button>
@@ -327,6 +333,8 @@
 
   <script type="module">
     const authNode = document.querySelector("#auth");
+    const adminLink = document.querySelector("#admin-link");
+    const accountNoticeNode = document.querySelector("#account-notice");
     const statusNode = document.querySelector("#status");
     const progressNode = document.querySelector("#progress");
     const contentNode = document.querySelector("#content");
@@ -352,8 +360,9 @@
     }
 
     function updateButtons() {
-      loadDueButton.disabled = !currentUser;
-      practiceMoreButton.disabled = !currentUser;
+      const canUseFeatures = Boolean(currentUser?.functionalAccessAllowed);
+      loadDueButton.disabled = !canUseFeatures;
+      practiceMoreButton.disabled = !canUseFeatures;
     }
 
     function renderSignedOut() {
@@ -362,6 +371,8 @@
       authNode.innerHTML = `
         <a class="login-button" href="${escapeHtml(loginUrl)}"><img src="/google-g.svg" alt="" aria-hidden="true">Sign in with Google</a>
       `;
+      adminLink.hidden = true;
+      accountNoticeNode.hidden = true;
       contentNode.innerHTML = "";
       progressNode.textContent = "";
       updateButtons();
@@ -371,12 +382,38 @@
     function renderSignedIn(user) {
       currentUser = user;
       authNode.innerHTML = `
-        <div><strong>${escapeHtml(user.displayName)}</strong><br><small>${escapeHtml(user.email)}</small></div>
+        <div><strong>${escapeHtml(user.displayName)}</strong><br><small>${escapeHtml(user.email)} · ${escapeHtml(user.status)}</small></div>
         <button id="logout" type="button" class="secondary">Logout</button>
       `;
+      adminLink.hidden = !user.admin;
+      renderAccountNotice(user);
       document.querySelector("#logout").addEventListener("click", logoutCurrentUser);
       updateButtons();
+      if (!user.functionalAccessAllowed) {
+        setStatus(accountRestrictionMessage(user));
+        return;
+      }
       loadBatch(false).catch((error) => setStatus(error.message));
+    }
+
+    function accountRestrictionMessage(user) {
+      if (user.status === "pending") {
+        return "Your account is pending admin approval.";
+      }
+      if (user.status === "deactivated") {
+        return "Your account has been deactivated.";
+      }
+      return "Your account is not approved to use app features.";
+    }
+
+    function renderAccountNotice(user) {
+      const messages = {
+        pending: "Your account is pending admin approval. Review is disabled until an admin activates your account.",
+        deactivated: "Your account has been deactivated. Review is disabled."
+      };
+      const message = messages[user.status];
+      accountNoticeNode.textContent = message ?? "";
+      accountNoticeNode.hidden = !message;
     }
 
     async function logoutCurrentUser() {

@@ -17,6 +17,10 @@
       color: #f7f1e8;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -325,6 +329,7 @@
       <a href="/">Home</a>
       <a href="/veo-video.html">Add new word</a>
       <a href="/review.html">Review</a>
+      <a id="admin-link" href="/admin.html" hidden>Admin</a>
     </div>
     <div id="auth" class="nav-auth">Checking sign-in...</div>
   </nav>
@@ -334,6 +339,7 @@
       <p class="eyebrow">Veo 3.1 Lite pronunciation</p>
       <h1>Generate lip-sync video directly.</h1>
       <p>This page generates direct Veo pronunciation video, stores the MP4, and plays the same-origin result.</p>
+      <div id="account-notice" class="auth-card" hidden></div>
 
       <label>
         Word
@@ -369,6 +375,8 @@
     const wordVariantsNode = document.querySelector("#word-variants");
     const wordInfoNode = document.querySelector("#word-info");
     const authNode = document.querySelector("#auth");
+    const adminLink = document.querySelector("#admin-link");
+    const accountNoticeNode = document.querySelector("#account-notice");
     const statusNode = document.querySelector("#status");
     const videoNode = document.querySelector("#video");
     const placeholderNode = document.querySelector("#placeholder");
@@ -404,11 +412,12 @@
     }
 
     function updateActionButtons() {
-      searchWordButton.disabled = !currentUser || searchBusy;
-      generateButton.disabled = !currentUser || generateBusy;
+      const canUseFeatures = Boolean(currentUser?.functionalAccessAllowed);
+      searchWordButton.disabled = !canUseFeatures || searchBusy;
+      generateButton.disabled = !canUseFeatures || generateBusy;
       document.querySelectorAll(".suggestion, .variant, .example")
         .forEach((button) => {
-          button.disabled = !currentUser;
+          button.disabled = !canUseFeatures;
         });
     }
 
@@ -418,6 +427,8 @@
       authNode.innerHTML = `
         <a class="login-button" href="${escapeHtml(loginUrl)}"><img src="/google-g.svg" alt="" aria-hidden="true">Sign in with Google</a>
       `;
+      adminLink.hidden = true;
+      accountNoticeNode.hidden = true;
       suggestionsNode.replaceChildren();
       updateActionButtons();
       setStatus("Sign in with Google to use this page.");
@@ -426,12 +437,32 @@
     function renderSignedIn(user) {
       currentUser = user;
       authNode.innerHTML = `
-        <div><strong>${escapeHtml(user.displayName)}</strong><br><small>${escapeHtml(user.email)}</small></div>
+        <div><strong>${escapeHtml(user.displayName)}</strong><br><small>${escapeHtml(user.email)} · ${escapeHtml(user.status)}</small></div>
         <button id="logout" type="button" class="secondary">Logout</button>
       `;
+      adminLink.hidden = !user.admin;
+      renderAccountNotice(user);
       document.querySelector("#logout").addEventListener("click", logoutCurrentUser);
       updateActionButtons();
-      setStatus("Search a word first, choose an example phrase, then generate video.");
+      setStatus(user.functionalAccessAllowed
+        ? "Search a word first, choose an example phrase, then generate video."
+        : accountRestrictionMessage(user));
+    }
+
+    function accountRestrictionMessage(user) {
+      if (user.status === "pending") {
+        return "Your account is pending admin approval.";
+      }
+      if (user.status === "deactivated") {
+        return "Your account has been deactivated.";
+      }
+      return "Your account is not approved to use app features.";
+    }
+
+    function renderAccountNotice(user) {
+      const message = user.functionalAccessAllowed ? "" : `${accountRestrictionMessage(user)} App features are disabled.`;
+      accountNoticeNode.textContent = message;
+      accountNoticeNode.hidden = !message;
     }
 
     async function logoutCurrentUser() {
@@ -477,6 +508,13 @@
       if (!currentUser) {
         renderSignedOut();
         throw new Error("Sign in with Google before using this action.");
+      }
+    }
+
+    function requireAiAccess() {
+      requireCurrentUser();
+      if (!currentUser.functionalAccessAllowed) {
+        throw new Error(accountRestrictionMessage(currentUser));
       }
     }
 
@@ -534,7 +572,7 @@
     }
 
     async function loadWordInfo() {
-      requireCurrentUser();
+      requireAiAccess();
 
       const word = wordInput.value.trim();
       if (!word) {
@@ -626,7 +664,7 @@
     }
 
     async function createVeoAsset() {
-      requireCurrentUser();
+      requireAiAccess();
 
       if (!currentWordInfoId) {
         throw new Error("Search word info before generating video.");
@@ -696,7 +734,7 @@
       generateBusy = true;
       updateActionButtons();
       try {
-        requireCurrentUser();
+        requireAiAccess();
         setStatus("Queueing Veo video generation...");
         const queued = await createVeoAsset();
         const completed = await pollAsset(queued.id);
