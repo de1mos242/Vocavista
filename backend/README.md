@@ -62,15 +62,15 @@ export SPRING_AI_OPENAI_API_KEY=...
 
 The backend stores generated video and returns `videoUrl`. Automated tests mock provider and storage boundaries where they exercise generation behavior, so they do not call external services.
 
-Google OAuth uses `Vocavista` as the Spring client display name. The name and icon shown on Google's consent screen still come from the OAuth consent screen branding in Google Cloud Console; use `src/main/resources/static/favicon.svg` as the source app icon when configuring that screen.
+Google OAuth uses `Vocavista` as the Spring client display name. The name and icon shown on Google's consent screen still come from the OAuth consent screen branding in Google Cloud Console; use `../frontend/public/favicon.svg` as the source app icon when configuring that screen.
 
-Run the browser Veo video preview after starting the app:
+Run the mobile-first PWA after starting the app:
 
 ```text
-http://localhost:8080/veo-video.html
+http://localhost:8080/
 ```
 
-The Veo page calls `POST /api/v1/media/pronunciations`, polls the returned id, and plays the completed `videoUrl`. Veo requests default to vertical `9:16` output. The prompt asks for a male speaker for masculine nouns, a female speaker for feminine nouns, and a young adult woman for neuter nouns and non-nouns.
+The add-word route calls `POST /api/v1/media/pronunciations`, polls the returned id, and plays the completed `videoUrl`. Veo requests default to vertical `9:16` output. The prompt asks for a male speaker for masculine nouns, a female speaker for feminine nouns, and a young adult woman for neuter nouns and non-nouns.
 
 `backend/.env.example` lists optional local secret variables without real values. Other overrides should use full Spring property names, for example `VOCAVISTA_MEDIA_S3_ENDPOINT`.
 

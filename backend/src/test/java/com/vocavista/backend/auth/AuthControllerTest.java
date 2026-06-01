@@ -70,15 +70,15 @@ class AuthControllerTest {
 
 	@Test
 	void startsGoogleLoginWithReturnPage() throws Exception {
-		mockMvc.perform(get("/login/google").param("redirect", "/veo-video.html"))
+		mockMvc.perform(get("/login/google").param("redirect", "/add"))
 				.andExpect(status().isFound())
 				.andExpect(redirectedUrl("/oauth2/authorization/google"))
-				.andExpect(request().sessionAttribute(OAuthLoginRedirects.SESSION_ATTRIBUTE, "/veo-video.html"));
+				.andExpect(request().sessionAttribute(OAuthLoginRedirects.SESSION_ATTRIBUTE, "/add"));
 	}
 
 	@Test
-	void servesReviewPageWithoutAuthentication() throws Exception {
-		mockMvc.perform(get("/review.html"))
+	void servesReviewRouteWithoutAuthentication() throws Exception {
+		mockMvc.perform(get("/review"))
 				.andExpect(status().isOk());
 	}
 

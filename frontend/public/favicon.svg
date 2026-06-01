@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vocavista">
+  <defs>
+    <linearGradient id="sky" x1="8" y1="7" x2="56" y2="57" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff9c6a"/>
+      <stop offset="0.55" stop-color="#ffd36d"/>
+      <stop offset="1" stop-color="#7e57ff"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="15" y1="14" x2="49" y2="53" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#21130b"/>
+      <stop offset="1" stop-color="#090b0f"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="#090b0f"/>
+  <path fill="url(#sky)" d="M10 25.5C10 16.94 16.94 10 25.5 10h13C47.06 10 54 16.94 54 25.5v4.2C54 42.62 43.52 53.1 30.6 53.1H14.9a3.2 3.2 0 0 1-2.25-5.47l5.04-5.04A15.45 15.45 0 0 1 10 29.7v-4.2Z"/>
+  <path fill="url(#ink)" d="m20.78 19 8.1 25.15h6.24L43.22 19h-6.3l-4.93 17.2L27.08 19h-6.3Z"/>
+  <path fill="#fff9f1" d="M24.75 20.95 31.1 40.6h1.8l6.35-19.65h-2.68L32 36.7l-4.57-15.75h-2.68Z" opacity="0.92"/>
+</svg>
