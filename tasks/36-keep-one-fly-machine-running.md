@@ -1,4 +1,4 @@
-# Keep One Fly Machine Running
+# Try Fly Machine Suspend
 
 ## Issue
 
@@ -8,28 +8,31 @@
 
 ## Goal
 
-Keep one Fly.io app Machine running so Vocavista avoids Fly app Machine cold-start latency.
+Try Fly.io Machine suspend mode as a lower-cost alternative to keeping one app Machine always running.
 
 ## Scope
 
-- Update `fly.toml` to keep one app Machine running.
-- Update Fly deployment documentation with the cost and latency tradeoff.
+- Update `fly.toml` to suspend the app Machine when idle instead of fully stopping it.
+- Keep `min_machines_running = 0` so the app does not accrue always-on app Machine cost.
+- Update Fly deployment documentation with the suspend latency/cost tradeoff and database connection caveat.
 - Do not change database provider settings, secrets, or production infrastructure directly.
 
 ## Constraints
 
 - This PR should remain separate from startup analysis and native-image experiment work.
-- This change removes Fly app Machine cold starts only; Neon database compute can still suspend unless configured separately.
+- This change reduces Fly app Machine wake cost without guaranteeing always-warm latency.
+- Existing database connections may be stale after resume; Neon database compute can still suspend unless configured separately.
 - Do not deploy from this task unless explicitly requested.
 
 ## Progress
 
 - Created issue `#36`, task checkout, and branch `36-keep-one-fly-machine-running`.
-- Updated `fly.toml` to keep one app Machine running with `min_machines_running = 1`.
-- Updated `documentation/fly-deployment.md` to document the warm-machine cost/latency tradeoff and the separate Neon cold-start caveat.
+- Initially opened PR `#37` to keep one app Machine running with `min_machines_running = 1`.
+- Revised the PR to try suspend mode first: `auto_stop_machines = "suspend"` and `min_machines_running = 0`.
+- Updated `documentation/fly-deployment.md` to document the suspend cost/latency tradeoff and the separate Neon cold-start/database-connection caveat.
 - Opened PR `#37`.
 
 ## Verification
 
-- Passed: `fly config validate`.
-- Passed: `git diff --check`.
+- Passed after the suspend revision: `fly config validate`.
+- Passed after the suspend revision: `git diff --check`.
