@@ -27,7 +27,7 @@ This guide deploys the Vocavista Spring Boot backend to Fly.io with low idle cos
 - The cache is generated during the Docker build with the `aotcache` Spring profile, which disables Flyway schema work and avoids opening a real database connection.
 - Runtime on Fly still uses the normal `prod` profile from `fly.toml`; the build-only `aotcache` profile is not a replacement for production configuration.
 - This reduces JVM and Spring startup work if a Fly Machine starts. With `auto_stop_machines = "suspend"`, idle Machines resume instead of fully starting when Fly supports suspension for the Machine state.
-- Resumed applications should assume existing database connections may be stale. Hikari should replace broken connections, but the first database operation after resume can still pay reconnect or Neon compute wake-up latency.
+- Resumed applications should assume existing database connections may be stale. Runtime Hikari settings let idle pools drain, keep connection lifetimes short, and use shorter validation/connection timeouts so stale sockets are replaced quickly after resume. The first database operation after resume can still pay reconnect or Neon compute wake-up latency.
 
 ## Files
 
