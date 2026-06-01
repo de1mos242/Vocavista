@@ -14,9 +14,10 @@ This guide deploys the Vocavista Spring Boot backend to Fly.io with low idle cos
 ## Cost Defaults
 
 - `fly.toml` starts with one shared-CPU 1 GB Machine.
-- `auto_stop_machines = "stop"`, `auto_start_machines = true`, and `min_machines_running = 0` reduce idle compute cost.
+- `auto_stop_machines = "suspend"`, `auto_start_machines = true`, and `min_machines_running = 0` allow the app Machine to suspend when idle and resume on demand.
+- Suspending should be cheaper than keeping the Machine always running and should resume faster than a full stop/start, but it is not as consistently fast as `min_machines_running = 1`.
 - Use `fly deploy --ha=false` for this pet-project setup so Fly does not create an extra spare Machine on the first deploy.
-- If Google OAuth redirects fail after idle periods, or wake-up latency is not acceptable, set `min_machines_running = 1` and redeploy.
+- Neon can still scale to zero separately. Suspending the Fly app Machine does not make the database always-on or remove Neon cold-connection latency.
 - Neon is the recommended first database choice for low idle cost. Use Fly Managed Postgres only if simpler Fly-native operations are worth the extra cost.
 - Cloudflare R2 is the recommended first media store for low idle cost. AWS S3 also works with equivalent S3 settings.
 
@@ -25,8 +26,8 @@ This guide deploys the Vocavista Spring Boot backend to Fly.io with low idle cos
 - The Docker image builds a Java 25 AOT cache for the Spring Boot application and starts the JVM with `-XX:AOTCache=/app/app.aot`.
 - The cache is generated during the Docker build with the `aotcache` Spring profile, which disables Flyway schema work and avoids opening a real database connection.
 - Runtime on Fly still uses the normal `prod` profile from `fly.toml`; the build-only `aotcache` profile is not a replacement for production configuration.
-- This reduces JVM and Spring startup work after a Fly Machine starts. It does not remove Fly Machine wake-up latency, Neon connection latency, or Flyway migration time.
-- If near-instant responses after idle periods are required, keep at least one Machine running by setting `min_machines_running = 1`.
+- This reduces JVM and Spring startup work if a Fly Machine starts. With `auto_stop_machines = "suspend"`, idle Machines resume instead of fully starting when Fly supports suspension for the Machine state.
+- Resumed applications should assume existing database connections may be stale. Hikari should replace broken connections, but the first database operation after resume can still pay reconnect or Neon compute wake-up latency.
 
 ## Files
 
@@ -204,5 +205,5 @@ The workflow supports manual runs with `workflow_dispatch`. It also deploys on p
 - Use `fly secrets list` to confirm secret names, not values.
 - Use `fly ssh console` only for runtime inspection; the container filesystem is not durable storage.
 - Keep media in R2/S3 and state in Postgres.
-- If the app is slow after idle time, either accept the cold start for cost savings or set `min_machines_running = 1`.
+- If the app is still slow after idle time, compare Fly suspend latency with Neon database cold starts separately. If suspend is still too slow, the next tradeoff is `min_machines_running = 1`.
 - If OAuth callback URLs are generated with `http` instead of `https`, confirm `SERVER_FORWARD_HEADERS_STRATEGY=framework` is set in Fly env or secrets and redeploy.
