@@ -3,6 +3,7 @@
 ## Issue
 
 - GitHub issue: https://github.com/de1mos242/Vocavista/issues/38
+- Pull request: https://github.com/de1mos242/Vocavista/pull/39
 - Branch: `38-increase-fly-health-check-grace-period`
 
 ## Goal
@@ -27,6 +28,7 @@ Increase the Fly.io HTTP health check grace period to the maximum effective valu
 - Created issue `#38`, task checkout, and branch `38-increase-fly-health-check-grace-period`.
 - Tried `grace_period = "5m"`, but `fly config validate` warned it would be lowered to `1m`.
 - Set `grace_period = "1m"`, the maximum effective value for this Fly service check.
+- Opened PR `#39`.
 
 ## Verification
 
