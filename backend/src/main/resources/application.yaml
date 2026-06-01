@@ -12,6 +12,13 @@ spring:
     url: jdbc:postgresql://localhost:5432/vocavista
     username: vocavista
     password: vocavista
+    hikari:
+      minimum-idle: 0
+      idle-timeout: 30000
+      max-lifetime: 300000
+      keepalive-time: 60000
+      validation-timeout: 3000
+      connection-timeout: 10000
   security:
     oauth2:
       client:
