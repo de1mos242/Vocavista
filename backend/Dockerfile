@@ -9,6 +9,7 @@ COPY backend/mvnw backend/pom.xml ./
 RUN chmod +x ./mvnw && ./mvnw -B -DskipTests dependency:go-offline
 
 COPY backend/src src
+COPY frontend /workspace/frontend
 RUN ./mvnw -B -DskipTests package
 
 RUN mkdir /app \
