@@ -19,15 +19,17 @@ The backend uses Spring Security with Google OAuth2/OpenID Connect login. The lo
 
 Google is requested with the minimal identity scopes `openid`, `email`, and `profile`. On successful login the backend creates or updates a `user_accounts` row keyed by provider and provider subject, storing the user's email and display name.
 
-Existing `/api/v1/**` endpoints require an authenticated session. Actuator health/info, OAuth login/callback paths, `/`, and the static Veo preview page remain publicly reachable.
+Existing `/api/v1/**` endpoints require an authenticated session. Actuator health/info, OAuth login/callback paths, static frontend assets, and the SPA routes `/`, `/add`, `/review`, and `/admin` remain publicly reachable so the browser can start the sign-in flow.
 
-The static Veo preview page calls `/api/v1/auth/me` on load to decide whether to show a Google sign-in link or the current application user. API action buttons stay disabled until the current user request succeeds. The sign-in link points to `/login/google?redirect=...`, which stores a sanitized local return path in the session so successful OAuth login returns to the originating page instead of `/`. Signed-in users can call `/logout` from the page; the logout handler returns `204 No Content` so the page can render signed-out state without following a redirect.
+The React PWA calls `/api/v1/auth/me` on load to decide whether to show a Google sign-in link or the current application user. API action buttons stay disabled until the current user has functional access. The sign-in link points to `/login/google?redirect=...`, which stores a sanitized local return path in the session so successful OAuth login returns to the originating page instead of `/`. Signed-in users can call `/logout` from the app; the logout handler returns `204 No Content` so the PWA can render signed-out state without following a redirect.
 
 ## API Contract
 
 The backend keeps the public REST contract in `backend/src/main/resources/openapi/vocavista-api.yaml`.
 
 The Maven build generates Spring MVC interfaces and API DTOs from that contract. Controllers implement generated interfaces instead of duplicating request and response shapes by hand.
+
+The frontend uses the same OpenAPI contract to generate a TypeScript fetch SDK under `frontend/src/api/generated` before each production build.
 
 ## Database
 
@@ -49,9 +51,11 @@ Generated media bytes are not stored in PostgreSQL. They are stored in S3-compat
 
 The backend uses S3-compatible storage through `S3MediaStorageService`.
 
-Local development uses RustFS from `backend/compose.yaml` with the `vocavista-media` bucket.
+Local development uses RustFS from `backend/compose.yaml` with the `vocavista-media` bucket. The PWA service worker caches the frontend app shell and generated pronunciation video responses for repeat mobile playback.
 
-The static manual preview page is served by Spring MVC from `backend/src/main/resources/static/veo-video.html`.
+## Frontend
+
+The mobile-first React PWA lives in `frontend/` and is built with Vite. The backend Maven build installs Node, runs `npm ci`, runs the frontend build, and copies the generated app into Spring Boot static resources. Spring MVC forwards `/`, `/add`, `/review`, and `/admin` to the generated `index.html`.
 
 ## AI Providers
 

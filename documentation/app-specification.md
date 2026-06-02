@@ -21,7 +21,7 @@ Users sign in with Google. The backend asks Google only for OpenID identity, ema
 
 The Veo preview page checks the current user endpoint on load, shows a Google sign-in action for anonymous users, shows a logout action for signed-in users, and disables its word search and generation actions until the user is signed in. Google sign-in returns the user to the page where sign-in started.
 
-Existing `/api/v1/**` endpoints require authentication. Public unauthenticated paths are limited to OAuth login/callback routes, actuator health/info, and static pages needed to start the browser flow.
+Existing `/api/v1/**` endpoints require authentication. Public unauthenticated paths are limited to OAuth login/callback routes, actuator health/info, and the React PWA routes/assets needed to start the browser flow.
 
 ## Word Information
 

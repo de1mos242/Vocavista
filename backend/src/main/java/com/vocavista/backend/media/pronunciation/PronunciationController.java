@@ -6,11 +6,11 @@ import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.auth.RequireFunctionalAccess;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -30,12 +30,13 @@ class PronunciationController implements MediaApi {
 		return ResponseEntity.ok(pronunciationService.get(id));
 	}
 
-	@GetMapping("/api/v1/media/pronunciations/{id}/video")
-	ResponseEntity<byte[]> getPronunciationVideo(@PathVariable UUID id) {
+	@Override
+	public ResponseEntity<Resource> getPronunciationVideo(UUID id) {
 		StoredMedia video = pronunciationService.getVideo(id);
 		return ResponseEntity.ok()
 				.contentType(MediaType.parseMediaType(video.contentType() == null ? "video/mp4" : video.contentType()))
-				.body(video.bytes());
+				.contentLength(video.bytes().length)
+				.body(new ByteArrayResource(video.bytes()));
 	}
 
 }

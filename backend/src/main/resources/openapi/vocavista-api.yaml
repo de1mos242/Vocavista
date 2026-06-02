@@ -243,6 +243,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/media/pronunciations/{id}/video:
+    get:
+      tags:
+        - Media
+      operationId: getPronunciationVideo
+      summary: Stream generated pronunciation video
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Pronunciation asset identifier.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Generated pronunciation video bytes.
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Pronunciation asset or generated video was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/words/info:
     get:
       tags:

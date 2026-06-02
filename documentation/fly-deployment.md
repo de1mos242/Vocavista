@@ -6,7 +6,7 @@ This guide deploys the Vocavista Spring Boot backend to Fly.io with low idle cos
 
 - Fly.io runs the backend Docker image built from `backend/Dockerfile`.
 - Fly proxy terminates public HTTPS and forwards requests to the app on port `8080`.
-- Spring Boot serves the static pages and API from the same origin.
+- Spring Boot serves the React PWA and API from the same origin.
 - PostgreSQL stays outside the container and is migrated by Flyway on application startup.
 - Generated media bytes stay in S3-compatible object storage, not in the container filesystem.
 - Secrets are stored with Fly secrets and are not committed to the repository.
