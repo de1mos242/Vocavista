@@ -42,10 +42,18 @@ Replace the current static HTML UI with a production-ready, mobile-first React P
 - Added `/api/v1/media/pronunciations/{id}/video` to OpenAPI so review video playback uses generated frontend and backend API contracts.
 - Updated documentation and auth route tests for the new PWA routes.
 - Fixed the desktop layout after review by reducing large-screen heading scale, adding safer desktop breakpoints, and preventing controls/video overflow.
+- Tightened the add-word suggestions effect so pending/deactivated signed-in users do not call protected feature APIs while action buttons are disabled.
+- Added `.nvmrc` with Node `22` so manual frontend commands use a Vite-compatible Node line matching Maven-packaged builds.
+- Improved desktop layout so the add/review controls behave like a bounded desktop card instead of an enlarged phone view: reduced desktop heading scale, prevented child overflow, and made the controls column scroll within the viewport.
+- Fixed Maven packaging hygiene by deleting `target/classes/static` before copying generated React assets, preventing stale hashed JS/CSS files from remaining in the Spring Boot jar after repeated `mvn package` runs.
 
 ## Verification
 
 - `npm run build` passed in `frontend/`.
 - `./mvnw test` passed in `backend/`.
 - `npm run build` passed again after the desktop layout fix.
-- Local shell Node is `20.10.0`, so Vite prints a warning; Maven installs Node `22.13.1` for packaged builds.
+- `npm run build` passed after the restricted-account suggestions fix.
+- `npm run build` passed under Node `22.22.3` after the desktop layout refinement.
+- `./mvnw package -DskipTests` passed in `backend/` and showed `npm ci`, `npm run build`, `clean-frontend-assets`, and `copy-frontend-assets` running.
+- Verified `backend/target/backend-0.0.1-SNAPSHOT.jar` contains the current React `index.html`, `index-_5Z_y0vP.css`, `index-Cr8envNv.js`, `sw.js`, and `manifest.webmanifest` only, without previous stale hashed assets.
+- `.nvmrc` selects Node `22` for manual frontend work, and Maven installs Node `22.13.1` for packaged builds.

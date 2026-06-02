@@ -173,7 +173,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   }, [authState, user]);
 
   useEffect(() => {
-    if (!user || word.trim().length < 2) {
+    if (!canUseFeatures || word.trim().length < 2) {
       setSuggestions([]);
       return;
     }
@@ -186,7 +186,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
         });
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [onAuthError, user, word]);
+  }, [canUseFeatures, onAuthError, word]);
 
   async function loadWordInfo() {
     if (!canUseFeatures) {
