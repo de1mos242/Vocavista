@@ -18,4 +18,6 @@ interface UserDictionaryEntryRepository extends JpaRepository<UserDictionaryEntr
 
 	List<UserDictionaryEntry> findByUserAccountIdOrderByDueAtAsc(UUID userAccountId, Pageable pageable);
 
+	List<UserDictionaryEntry> findByUserAccountIdOrderByNormalizedWordAsc(UUID userAccountId);
+
 }

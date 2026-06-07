@@ -65,6 +65,18 @@ export type DictionaryReviewSubmitResponse = {
     lapseCount: number;
 };
 
+export type DictionaryVideoManifestResponse = {
+    items: Array<DictionaryVideoManifestItem>;
+};
+
+export type DictionaryVideoManifestItem = {
+    pronunciationAssetId: string;
+    wordInfoId: string;
+    videoUrl: string;
+    fullVideoUrl: string;
+    updatedAt: string;
+};
+
 export type PronunciationRequest = {
     wordInfoId: string;
     word: string;
@@ -77,6 +89,7 @@ export type PronunciationResponse = {
     wordInfoId: string;
     status: PronunciationStatus;
     videoUrl?: string | null;
+    fullVideoUrl?: string | null;
     errorCode?: string | null;
     errorMessage?: string | null;
 };
@@ -115,6 +128,7 @@ export type WordSuggestion = {
     pronunciationId?: string | null;
     status?: PronunciationStatus;
     videoUrl?: string | null;
+    fullVideoUrl?: string | null;
 };
 
 export type CompoundPart = {
@@ -306,6 +320,35 @@ export type SubmitDictionaryReviewResponses = {
 
 export type SubmitDictionaryReviewResponse = SubmitDictionaryReviewResponses[keyof SubmitDictionaryReviewResponses];
 
+export type GetDictionaryVideosData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/dictionary/videos';
+};
+
+export type GetDictionaryVideosErrors = {
+    /**
+     * Authentication is required.
+     */
+    401: unknown;
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+};
+
+export type GetDictionaryVideosError = GetDictionaryVideosErrors[keyof GetDictionaryVideosErrors];
+
+export type GetDictionaryVideosResponses = {
+    /**
+     * Pronunciation videos currently used by the user's dictionary.
+     */
+    200: DictionaryVideoManifestResponse;
+};
+
+export type GetDictionaryVideosResponse = GetDictionaryVideosResponses[keyof GetDictionaryVideosResponses];
+
 export type CreatePronunciationData = {
     body: PronunciationRequest;
     path?: never;
@@ -402,6 +445,40 @@ export type GetPronunciationVideoResponses = {
 };
 
 export type GetPronunciationVideoResponse = GetPronunciationVideoResponses[keyof GetPronunciationVideoResponses];
+
+export type GetSmallPronunciationVideoData = {
+    body?: never;
+    path: {
+        /**
+         * Pronunciation asset identifier.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/media/pronunciations/{id}/video/small';
+};
+
+export type GetSmallPronunciationVideoErrors = {
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+    /**
+     * Pronunciation asset or generated video was not found.
+     */
+    404: ErrorResponse;
+};
+
+export type GetSmallPronunciationVideoError = GetSmallPronunciationVideoErrors[keyof GetSmallPronunciationVideoErrors];
+
+export type GetSmallPronunciationVideoResponses = {
+    /**
+     * Compressed pronunciation video bytes.
+     */
+    200: Blob | File;
+};
+
+export type GetSmallPronunciationVideoResponse = GetSmallPronunciationVideoResponses[keyof GetSmallPronunciationVideoResponses];
 
 export type GetWordInfoData = {
     body?: never;

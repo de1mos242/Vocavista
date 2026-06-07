@@ -108,6 +108,27 @@ class UserDictionaryServiceTest {
 	}
 
 	@Test
+	void videoManifestIncludesLatestCompletedDictionaryPronunciation() {
+		UserAccount userAccount = userAccount();
+		WordInfoRecord wordInfoRecord = wordInfoRecord("Hausaufgabe");
+		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord, OffsetDateTime.now());
+		PronunciationAsset asset = pronunciationAsset(wordInfoRecord);
+		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
+		when(entryRepository.findByUserAccountIdOrderByNormalizedWordAsc(userAccount.getId())).thenReturn(List.of(entry));
+		when(pronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(
+				wordInfoRecord.getId(), PronunciationAssetStatus.COMPLETED)).thenReturn(Optional.of(asset));
+
+		var response = service().getVideoManifest();
+
+		assertThat(response.getItems()).hasSize(1);
+		assertThat(response.getItems().getFirst().getPronunciationAssetId()).isEqualTo(asset.getId());
+		assertThat(response.getItems().getFirst().getVideoUrl())
+				.hasToString("/api/v1/media/pronunciations/" + asset.getId() + "/video/small");
+		assertThat(response.getItems().getFirst().getFullVideoUrl())
+				.hasToString("/api/v1/media/pronunciations/" + asset.getId() + "/video");
+	}
+
+	@Test
 	void correctReviewUpdatesSrsStateAndReturnsExpectedAnswer() {
 		UserAccount userAccount = userAccount();
 		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord("Hausaufgabe"), OffsetDateTime.now());

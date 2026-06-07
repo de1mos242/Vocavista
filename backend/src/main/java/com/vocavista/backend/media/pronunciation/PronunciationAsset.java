@@ -52,6 +52,9 @@ public class PronunciationAsset {
 	@Column(name = "video_object_key")
 	private String videoObjectKey;
 
+	@Column(name = "small_video_object_key")
+	private String smallVideoObjectKey;
+
 	@Column(name = "video_provider")
 	private String videoProvider;
 

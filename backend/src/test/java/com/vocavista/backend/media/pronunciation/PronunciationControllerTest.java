@@ -103,7 +103,8 @@ class PronunciationControllerTest {
 		UUID id = UUID.randomUUID();
 		UUID wordInfoId = UUID.randomUUID();
 		PronunciationResponse response = new PronunciationResponse(id, wordInfoId, PronunciationStatus.COMPLETED)
-				.videoUrl(URI.create("/api/v1/media/pronunciations/%s/video".formatted(id)));
+				.videoUrl(URI.create("/api/v1/media/pronunciations/%s/video/small".formatted(id)))
+				.fullVideoUrl(URI.create("/api/v1/media/pronunciations/%s/video".formatted(id)));
 		when(pronunciationService.get(id)).thenReturn(response);
 
 		mockMvc.perform(get("/api/v1/media/pronunciations/{id}", id))
@@ -111,7 +112,8 @@ class PronunciationControllerTest {
 				.andExpect(jsonPath("$.id").value(id.toString()))
 				.andExpect(jsonPath("$.wordInfoId").value(wordInfoId.toString()))
 				.andExpect(jsonPath("$.status").value("completed"))
-				.andExpect(jsonPath("$.videoUrl").exists());
+				.andExpect(jsonPath("$.videoUrl").exists())
+				.andExpect(jsonPath("$.fullVideoUrl").exists());
 	}
 
 	@Test
@@ -124,6 +126,18 @@ class PronunciationControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(content().contentType("video/mp4"))
 				.andExpect(content().bytes("video".getBytes()));
+	}
+
+	@Test
+	@WithMockUser
+	void returnsSmallGeneratedVideoBytes() throws Exception {
+		UUID id = UUID.randomUUID();
+		when(pronunciationService.getSmallVideo(id)).thenReturn(new StoredMedia("video/mp4", "small".getBytes()));
+
+		mockMvc.perform(get("/api/v1/media/pronunciations/{id}/video/small", id))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType("video/mp4"))
+				.andExpect(content().bytes("small".getBytes()));
 	}
 
 	@Test

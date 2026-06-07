@@ -31,6 +31,7 @@ class PronunciationService {
 	private final PronunciationRepository pronunciationRepository;
 	private final PronunciationGenerationProcessor generationProcessor;
 	private final PronunciationVideoGenerator pronunciationVideoGenerator;
+	private final PronunciationVideoCompressor pronunciationVideoCompressor;
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
 	private final UserDictionaryService userDictionaryService;
@@ -65,6 +66,32 @@ class PronunciationService {
 		return mediaStorageService.read(asset.getVideoObjectKey());
 	}
 
+	StoredMedia getSmallVideo(UUID id) {
+		PronunciationAsset asset = pronunciationRepository.findById(id)
+				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
+		if (asset.getStatus() != PronunciationAssetStatus.COMPLETED || !StringUtils.hasText(asset.getVideoObjectKey())) {
+			throw new PronunciationNotFoundException("Pronunciation video was not found");
+		}
+		if (StringUtils.hasText(asset.getSmallVideoObjectKey())) {
+			return mediaStorageService.read(asset.getSmallVideoObjectKey());
+		}
+
+		StoredMedia originalVideo = mediaStorageService.read(asset.getVideoObjectKey());
+		return pronunciationVideoCompressor
+				.compress(new GeneratedVideo(originalVideo.bytes(), originalVideo.contentType() == null ? "video/mp4" : originalVideo.contentType()))
+				.map(smallVideo -> storeSmallVideo(asset, smallVideo))
+				.orElse(originalVideo);
+	}
+
+	private StoredMedia storeSmallVideo(PronunciationAsset asset, GeneratedVideo smallVideo) {
+		String smallVideoObjectKey = "pronunciations/" + asset.getId() + "/video-small.mp4";
+		mediaStorageService.store(smallVideoObjectKey, smallVideo.contentType(), smallVideo.bytes());
+		asset.setSmallVideoObjectKey(smallVideoObjectKey);
+		asset.setUpdatedAt(OffsetDateTime.now(clock));
+		pronunciationRepository.save(asset);
+		return new StoredMedia(smallVideo.contentType(), smallVideo.bytes());
+	}
+
 	private PronunciationResponse createQueuedAsset(NormalizedInput input, String contentHash) {
 		PronunciationAsset asset = PronunciationAsset.queued(input.wordInfoRecord(), input.word(), input.phrase(), input.normalizedWord(),
 				input.normalizedPhrase(), input.language(), contentHash, OffsetDateTime.now(clock));
@@ -88,6 +115,7 @@ class PronunciationService {
 
 		asset.setStatus(PronunciationAssetStatus.QUEUED);
 		asset.setVideoObjectKey(null);
+		asset.setSmallVideoObjectKey(null);
 		asset.setVideoProvider(null);
 		asset.setVideoModel(null);
 		asset.setErrorCode(null);
@@ -103,7 +131,8 @@ class PronunciationService {
 		PronunciationResponse response = new PronunciationResponse(asset.getId(),
 				asset.getWordInfoRecord().getId(), PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
 		if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getVideoObjectKey())) {
-			response.setVideoUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video"));
+			response.setVideoUrl(smallVideoUri(asset));
+			response.setFullVideoUrl(fullVideoUri(asset));
 		}
 		if (asset.getStatus() == PronunciationAssetStatus.FAILED) {
 			response.setErrorCode(asset.getErrorCode());
@@ -163,6 +192,14 @@ class PronunciationService {
 
 	private record NormalizedInput(WordInfoRecord wordInfoRecord, String word, String phrase, String normalizedWord, String normalizedPhrase,
 			String language) {
+	}
+
+	static URI smallVideoUri(PronunciationAsset asset) {
+		return URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video/small");
+	}
+
+	static URI fullVideoUri(PronunciationAsset asset) {
+		return URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video");
 	}
 
 }
