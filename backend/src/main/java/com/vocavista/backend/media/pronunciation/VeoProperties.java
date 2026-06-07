@@ -15,7 +15,7 @@ public class VeoProperties {
 	private String resolution = "720p";
 	private String personGeneration;
 	private int sampleCount = 1;
-	private int durationSeconds = 5;
+	private int durationSeconds = 6;
 	private Duration pollInterval = Duration.ofSeconds(5);
 	private Duration timeout = Duration.ofMinutes(8);
 
