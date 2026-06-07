@@ -39,4 +39,13 @@ class PronunciationController implements MediaApi {
 				.body(new ByteArrayResource(video.bytes()));
 	}
 
+	@Override
+	public ResponseEntity<Resource> getSmallPronunciationVideo(UUID id) {
+		StoredMedia video = pronunciationService.getSmallVideo(id);
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType(video.contentType() == null ? "video/mp4" : video.contentType()))
+				.contentLength(video.bytes().length)
+				.body(new ByteArrayResource(video.bytes()));
+	}
+
 }

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.vocavista.backend.api.model.DictionaryReviewResponse;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitResponse;
+import com.vocavista.backend.api.model.DictionaryVideoManifestResponse;
 import com.vocavista.backend.auth.AuthErrorHandler;
 import com.vocavista.backend.auth.CurrentUserService;
 import com.vocavista.backend.auth.FunctionalAccessInterceptor;
@@ -73,6 +74,18 @@ class DictionaryControllerTest {
 		mockMvc.perform(get("/api/v1/dictionary/review"))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.code").value("access_denied"));
+	}
+
+	@Test
+	@WithMockUser
+	void returnsDictionaryVideoManifest() throws Exception {
+		when(userDictionaryService.getVideoManifest()).thenReturn(new DictionaryVideoManifestResponse(List.of()));
+
+		mockMvc.perform(get("/api/v1/dictionary/videos"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items").isArray());
+
+		verify(userDictionaryService).getVideoManifest();
 	}
 
 	@Test

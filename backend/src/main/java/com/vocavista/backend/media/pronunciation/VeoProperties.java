@@ -12,9 +12,10 @@ public class VeoProperties {
 	private String baseUrl = "https://generativelanguage.googleapis.com";
 	private String model = "veo-3.1-lite-generate-preview";
 	private String aspectRatio = "9:16";
+	private String resolution = "720p";
 	private String personGeneration;
 	private int sampleCount = 1;
-	private int durationSeconds = 6;
+	private int durationSeconds = 5;
 	private Duration pollInterval = Duration.ofSeconds(5);
 	private Duration timeout = Duration.ofMinutes(8);
 
@@ -48,6 +49,14 @@ public class VeoProperties {
 
 	public void setAspectRatio(String aspectRatio) {
 		this.aspectRatio = aspectRatio;
+	}
+
+	public String getResolution() {
+		return resolution;
+	}
+
+	public void setResolution(String resolution) {
+		this.resolution = resolution;
 	}
 
 	public String getPersonGeneration() {

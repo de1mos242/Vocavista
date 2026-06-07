@@ -22,6 +22,7 @@ class PronunciationGenerationProcessor {
 
 	private final PronunciationRepository pronunciationRepository;
 	private final PronunciationVideoGenerator pronunciationVideoGenerator;
+	private final PronunciationVideoCompressor pronunciationVideoCompressor;
 	private final MediaStorageService mediaStorageService;
 	private final ObjectMapper objectMapper = new ObjectMapper();
 	private final Clock clock = Clock.systemUTC();
@@ -58,6 +59,11 @@ class PronunciationGenerationProcessor {
 		String videoObjectKey = "pronunciations/" + asset.getId() + "/video." + extensionFor(video.contentType());
 		mediaStorageService.store(videoObjectKey, video.contentType(), video.bytes());
 		asset.setVideoObjectKey(videoObjectKey);
+		pronunciationVideoCompressor.compress(video).ifPresent(smallVideo -> {
+			String smallVideoObjectKey = "pronunciations/" + asset.getId() + "/video-small.mp4";
+			mediaStorageService.store(smallVideoObjectKey, smallVideo.contentType(), smallVideo.bytes());
+			asset.setSmallVideoObjectKey(smallVideoObjectKey);
+		});
 		asset.setVideoProvider(pronunciationVideoGenerator.providerName());
 		asset.setVideoModel(pronunciationVideoGenerator.modelName());
 	}
@@ -101,10 +107,10 @@ class PronunciationGenerationProcessor {
 
 	private static String speakerDescription(Gender gender) {
 		return switch (gender) {
-			case MASCULINE -> "male adult speaker";
-			case FEMININE -> "female adult speaker";
-			case NEUTER -> "young adult woman";
-			case null -> "young adult woman";
+			case MASCULINE -> "male german adult speaker";
+			case FEMININE -> "female german adult speaker";
+			case NEUTER -> "young german adult woman";
+			case null -> "young german adult woman";
 		};
 	}
 

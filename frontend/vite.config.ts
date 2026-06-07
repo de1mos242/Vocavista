@@ -31,12 +31,12 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//, /^\/actuator\//, /^\/oauth2\//, /^\/login\//, /^\/logout$/],
         runtimeCaching: [
           {
-            urlPattern: /\/api\/v1\/media\/pronunciations\/[^/]+\/video$/,
+            urlPattern: /\/api\/v1\/media\/pronunciations\/[^/]+\/video(?:\/small)?$/,
             handler: "CacheFirst",
             options: {
               cacheName: "pronunciation-videos",
               expiration: {
-                maxEntries: 40,
+                maxEntries: 500,
                 maxAgeSeconds: 60 * 60 * 24 * 30
               },
               cacheableResponse: {

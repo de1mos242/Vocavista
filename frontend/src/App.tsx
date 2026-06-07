@@ -4,9 +4,9 @@ import { accountRestrictionMessage, ApiError, loginUrl, logout, unwrap } from ".
 import {
   createPronunciation,
   getCurrentUser,
+  getDictionaryVideos,
   getDictionaryReview,
   getPronunciation,
-  getPronunciationVideo,
   getWordInfo,
   getWordSuggestions,
   listAdminUsers,
@@ -16,6 +16,7 @@ import {
 import type {
   AdminUserResponse,
   CurrentUserResponse,
+  DictionaryVideoManifestItem,
   DictionaryReviewItem,
   DictionaryReviewSubmitResponse,
   UserStatus,
@@ -24,6 +25,9 @@ import type {
 } from "./api/generated/types.gen";
 
 type AuthState = "checking" | "signed-out" | "signed-in";
+
+const PRONUNCIATION_VIDEO_CACHE = "pronunciation-videos";
+const DICTIONARY_VIDEO_MANIFEST_KEY = "vocavista.dictionaryVideoManifest.v1";
 
 export default function App() {
   const [authState, setAuthState] = useState<AuthState>("checking");
@@ -63,6 +67,13 @@ export default function App() {
   useEffect(() => {
     void reloadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?.functionalAccessAllowed) {
+      return;
+    }
+    syncDictionaryVideoCache().catch(handleAuthError);
+  }, [currentUser?.id, currentUser?.functionalAccessAllowed]);
 
   return (
     <div className="app-shell">
@@ -148,8 +159,8 @@ function HomePage({ user, authState }: { user?: CurrentUserResponse; authState: 
 }
 
 function AddWordPage({ user, authState, onAuthError }: PageProps) {
-  const [word, setWord] = useState("Hausaufgabe");
-  const [phrase, setPhrase] = useState("Ich mache meine Hausaufgabe nach dem Abendessen.");
+  const [word, setWord] = useState("");
+  const [phrase, setPhrase] = useState("");
   const [status, setStatus] = useState("Sign in with Google to use this page.");
   const [suggestions, setSuggestions] = useState<WordSuggestion[]>([]);
   const [wordInfo, setWordInfo] = useState<WordInfoResponse>();
@@ -276,7 +287,17 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
         <label>
           Word
-          <input value={word} onChange={(event) => { setWordInfoId(undefined); setWord(event.target.value); }} autoComplete="off" />
+          <input
+            value={word}
+            onChange={(event) => { setWordInfoId(undefined); setWord(event.target.value); }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void loadWordInfo();
+              }
+            }}
+            autoComplete="off"
+          />
         </label>
 
         <div className="suggestions">
@@ -524,34 +545,30 @@ function ReviewResult({ item, result, onNext, finalItem, onAuthError }: { item: 
 }
 
 function ReviewVideo({ assetId, onAuthError }: { assetId: string; onAuthError: (error: unknown) => void }) {
-  const [src, setSrc] = useState("");
   const [status, setStatus] = useState("Loading cached video...");
   const videoRef = useRef<HTMLVideoElement>(null);
+  const src = smallPronunciationVideoUrl(assetId);
 
   useEffect(() => {
-    let objectUrl = "";
-    unwrap(getPronunciationVideo({ path: { id: assetId }, parseAs: "blob" }))
-      .then((blob) => {
-        objectUrl = URL.createObjectURL(blob);
-        setSrc(objectUrl);
-        setStatus("");
-        window.setTimeout(() => void videoRef.current?.play(), 50);
-      })
-      .catch((error: unknown) => {
-        onAuthError(error);
-        setStatus(error instanceof Error ? error.message : "Could not load video.");
-      });
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
-  }, [assetId, onAuthError]);
+    setStatus("Loading cached video...");
+    window.setTimeout(() => void videoRef.current?.play(), 50);
+  }, [src]);
 
-  if (!src) {
-    return <small>{status}</small>;
-  }
-  return <video ref={videoRef} className="review-video" src={src} controls playsInline />;
+  return <>
+    {status ? <small>{status}</small> : null}
+    <video
+      ref={videoRef}
+      className="review-video"
+      src={src}
+      controls
+      playsInline
+      onCanPlay={() => setStatus("")}
+      onError={() => {
+        onAuthError(new Error("Could not load pronunciation video."));
+        setStatus("Could not load video.");
+      }}
+    />
+  </>;
 }
 
 function AdminUserRow({ user, onSave }: { user: AdminUserResponse; onSave: (id: string, status: UserStatus) => Promise<void> }) {
@@ -657,4 +674,70 @@ function normalizeAnswer(value: string) {
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+async function syncDictionaryVideoCache() {
+  if (!("caches" in window)) {
+    return;
+  }
+  const manifest = await unwrap(getDictionaryVideos());
+  const cache = await caches.open(PRONUNCIATION_VIDEO_CACHE);
+  const previousManifest = readCachedDictionaryVideoManifest();
+  const nextManifest: Record<string, string> = {};
+  const expectedUrls = new Set(manifest.items.map((item) => absoluteUrl(item.videoUrl)));
+
+  for (const item of manifest.items) {
+    const url = absoluteUrl(item.videoUrl);
+    const updatedAt = item.updatedAt;
+    nextManifest[url] = updatedAt;
+    const cached = await cache.match(url);
+    if (cached && previousManifest[url] === updatedAt) {
+      continue;
+    }
+    const response = await fetch(cacheRefreshUrl(url, updatedAt), { credentials: "include", cache: "reload" });
+    if (!response.ok) {
+      throw new Error(`Could not cache pronunciation video ${item.pronunciationAssetId}.`);
+    }
+    await cache.put(url, response.clone());
+  }
+
+  for (const request of await cache.keys()) {
+    if (isSmallPronunciationVideoUrl(request.url) && !expectedUrls.has(request.url)) {
+      await cache.delete(request);
+    }
+  }
+  localStorage.setItem(DICTIONARY_VIDEO_MANIFEST_KEY, JSON.stringify(nextManifest));
+}
+
+function readCachedDictionaryVideoManifest(): Record<string, string> {
+  try {
+    const rawValue = localStorage.getItem(DICTIONARY_VIDEO_MANIFEST_KEY);
+    if (!rawValue) {
+      return {};
+    }
+    const value = JSON.parse(rawValue) as Record<string, string>;
+    return value && typeof value === "object" ? value : {};
+  }
+  catch {
+    return {};
+  }
+}
+
+function smallPronunciationVideoUrl(assetId: string) {
+  return `/api/v1/media/pronunciations/${assetId}/video/small`;
+}
+
+function absoluteUrl(value: DictionaryVideoManifestItem["videoUrl"]) {
+  return new URL(value, window.location.origin).toString();
+}
+
+function cacheRefreshUrl(value: string, updatedAt: string) {
+  const url = new URL(value);
+  url.searchParams.set("cacheVersion", updatedAt);
+  return url.toString();
+}
+
+function isSmallPronunciationVideoUrl(value: string) {
+  const url = new URL(value);
+  return /^\/api\/v1\/media\/pronunciations\/[^/]+\/video\/small$/.test(url.pathname);
 }

@@ -35,6 +35,9 @@ class PronunciationServiceTest {
 	private PronunciationVideoGenerator pronunciationVideoGenerator;
 
 	@Mock
+	private PronunciationVideoCompressor pronunciationVideoCompressor;
+
+	@Mock
 	private MediaStorageService mediaStorageService;
 
 	@Mock
@@ -78,6 +81,8 @@ class PronunciationServiceTest {
 		assertThat(response.getId()).isEqualTo(existingAsset.getId());
 		assertThat(response.getStatus()).isEqualTo(PronunciationStatus.COMPLETED);
 		assertThat(response.getVideoUrl())
+				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/video/small");
+		assertThat(response.getFullVideoUrl())
 				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/video");
 		verify(userDictionaryService).ensureEntryForCurrentUser(any());
 		verify(pronunciationRepository, never()).save(any());
@@ -105,6 +110,7 @@ class PronunciationServiceTest {
 		assertThat(existingAsset.getErrorCode()).isNull();
 		assertThat(existingAsset.getErrorMessage()).isNull();
 		assertThat(existingAsset.getVideoObjectKey()).isNull();
+		assertThat(existingAsset.getSmallVideoObjectKey()).isNull();
 		verify(pronunciationRepository).save(existingAsset);
 		verify(generationProcessor).process(existingAsset.getId());
 	}
@@ -117,9 +123,26 @@ class PronunciationServiceTest {
 				.isInstanceOf(PronunciationValidationException.class);
 	}
 
+	@Test
+	void createsSmallVideoForExistingAssetOnFirstSmallVideoRequest() {
+		PronunciationAsset asset = completedVideoAsset();
+		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
+		when(mediaStorageService.read(asset.getVideoObjectKey())).thenReturn(new StoredMedia("video/mp4", "video".getBytes()));
+		when(pronunciationVideoCompressor.compress(any()))
+				.thenReturn(Optional.of(new GeneratedVideo("small".getBytes(), "video/mp4")));
+		PronunciationService service = service();
+
+		StoredMedia smallVideo = service.getSmallVideo(asset.getId());
+
+		assertThat(smallVideo.bytes()).isEqualTo("small".getBytes());
+		assertThat(asset.getSmallVideoObjectKey()).endsWith("/video-small.mp4");
+		verify(mediaStorageService).store(asset.getSmallVideoObjectKey(), "video/mp4", "small".getBytes());
+		verify(pronunciationRepository).save(asset);
+	}
+
 	private PronunciationService service() {
 		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationVideoGenerator,
-				mediaStorageService, wordInfoRepository, userDictionaryService);
+				pronunciationVideoCompressor, mediaStorageService, wordInfoRepository, userDictionaryService);
 	}
 
 	private static PronunciationRequest request(String word, String phrase) {

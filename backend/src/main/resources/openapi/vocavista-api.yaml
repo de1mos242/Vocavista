@@ -175,6 +175,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/dictionary/videos:
+    get:
+      tags:
+        - Dictionary
+      operationId: getDictionaryVideos
+      summary: Get cache manifest for dictionary pronunciation videos
+      security:
+        - GoogleOAuth: []
+      responses:
+        '200':
+          description: Pronunciation videos currently used by the user's dictionary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryVideoManifestResponse'
+        '401':
+          description: Authentication is required.
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/media/pronunciations:
     post:
       tags:
@@ -262,6 +285,42 @@ paths:
       responses:
         '200':
           description: Generated pronunciation video bytes.
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Pronunciation asset or generated video was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/media/pronunciations/{id}/video/small:
+    get:
+      tags:
+        - Media
+      operationId: getSmallPronunciationVideo
+      summary: Stream compressed pronunciation video for normal playback
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Pronunciation asset identifier.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Compressed pronunciation video bytes.
           content:
             video/mp4:
               schema:
@@ -540,6 +599,39 @@ components:
         lapseCount:
           type: integer
           minimum: 0
+    DictionaryVideoManifestResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryVideoManifestItem'
+    DictionaryVideoManifestItem:
+      type: object
+      required:
+        - pronunciationAssetId
+        - wordInfoId
+        - videoUrl
+        - fullVideoUrl
+        - updatedAt
+      properties:
+        pronunciationAssetId:
+          type: string
+          format: uuid
+        wordInfoId:
+          type: string
+          format: uuid
+        videoUrl:
+          type: string
+          format: uri
+        fullVideoUrl:
+          type: string
+          format: uri
+        updatedAt:
+          type: string
+          format: date-time
     PronunciationRequest:
       type: object
       required:
@@ -579,6 +671,10 @@ components:
         status:
           $ref: '#/components/schemas/PronunciationStatus'
         videoUrl:
+          type: string
+          format: uri
+          nullable: true
+        fullVideoUrl:
           type: string
           format: uri
           nullable: true
@@ -686,6 +782,10 @@ components:
           $ref: '#/components/schemas/PronunciationStatus'
           nullable: true
         videoUrl:
+          type: string
+          format: uri
+          nullable: true
+        fullVideoUrl:
           type: string
           format: uri
           nullable: true

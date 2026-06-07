@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreatePronunciationData, CreatePronunciationErrors, CreatePronunciationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetDictionaryReviewData, GetDictionaryReviewErrors, GetDictionaryReviewResponses, GetPronunciationData, GetPronunciationErrors, GetPronunciationResponses, GetPronunciationVideoData, GetPronunciationVideoErrors, GetPronunciationVideoResponses, GetWordInfoData, GetWordInfoErrors, GetWordInfoResponses, GetWordSuggestionsData, GetWordSuggestionsErrors, GetWordSuggestionsResponses, ListAdminUsersData, ListAdminUsersErrors, ListAdminUsersResponses, SubmitDictionaryReviewData, SubmitDictionaryReviewErrors, SubmitDictionaryReviewResponses, UpdateAdminUserStatusData, UpdateAdminUserStatusErrors, UpdateAdminUserStatusResponses } from './types.gen';
+import type { CreatePronunciationData, CreatePronunciationErrors, CreatePronunciationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetDictionaryReviewData, GetDictionaryReviewErrors, GetDictionaryReviewResponses, GetDictionaryVideosData, GetDictionaryVideosErrors, GetDictionaryVideosResponses, GetPronunciationData, GetPronunciationErrors, GetPronunciationResponses, GetPronunciationVideoData, GetPronunciationVideoErrors, GetPronunciationVideoResponses, GetSmallPronunciationVideoData, GetSmallPronunciationVideoErrors, GetSmallPronunciationVideoResponses, GetWordInfoData, GetWordInfoErrors, GetWordInfoResponses, GetWordSuggestionsData, GetWordSuggestionsErrors, GetWordSuggestionsResponses, ListAdminUsersData, ListAdminUsersErrors, ListAdminUsersResponses, SubmitDictionaryReviewData, SubmitDictionaryReviewErrors, SubmitDictionaryReviewResponses, UpdateAdminUserStatusData, UpdateAdminUserStatusErrors, UpdateAdminUserStatusResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -72,6 +72,15 @@ export const submitDictionaryReview = <ThrowOnError extends boolean = false>(opt
 });
 
 /**
+ * Get cache manifest for dictionary pronunciation videos
+ */
+export const getDictionaryVideos = <ThrowOnError extends boolean = false>(options?: Options<GetDictionaryVideosData, ThrowOnError>) => (options?.client ?? client).get<GetDictionaryVideosResponses, GetDictionaryVideosErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/dictionary/videos',
+    ...options
+});
+
+/**
  * Queue or reuse pronunciation video generation
  */
 export const createPronunciation = <ThrowOnError extends boolean = false>(options: Options<CreatePronunciationData, ThrowOnError>) => (options.client ?? client).post<CreatePronunciationResponses, CreatePronunciationErrors, ThrowOnError>({
@@ -99,6 +108,15 @@ export const getPronunciation = <ThrowOnError extends boolean = false>(options: 
 export const getPronunciationVideo = <ThrowOnError extends boolean = false>(options: Options<GetPronunciationVideoData, ThrowOnError>) => (options.client ?? client).get<GetPronunciationVideoResponses, GetPronunciationVideoErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/media/pronunciations/{id}/video',
+    ...options
+});
+
+/**
+ * Stream compressed pronunciation video for normal playback
+ */
+export const getSmallPronunciationVideo = <ThrowOnError extends boolean = false>(options: Options<GetSmallPronunciationVideoData, ThrowOnError>) => (options.client ?? client).get<GetSmallPronunciationVideoResponses, GetSmallPronunciationVideoErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/media/pronunciations/{id}/video/small',
     ...options
 });
 

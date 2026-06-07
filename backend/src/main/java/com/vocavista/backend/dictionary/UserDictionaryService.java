@@ -6,18 +6,23 @@ import com.vocavista.backend.api.model.DictionaryReviewItem;
 import com.vocavista.backend.api.model.DictionaryReviewResponse;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitRequest;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitResponse;
+import com.vocavista.backend.api.model.DictionaryVideoManifestItem;
+import com.vocavista.backend.api.model.DictionaryVideoManifestResponse;
 import com.vocavista.backend.api.model.PartOfSpeech;
 import com.vocavista.backend.api.model.WordInfoResponse;
 import com.vocavista.backend.auth.CurrentUserService;
 import com.vocavista.backend.auth.UserAccount;
+import com.vocavista.backend.media.pronunciation.PronunciationAsset;
 import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
 import com.vocavista.backend.media.pronunciation.PronunciationRepository;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
+import java.net.URI;
 import java.time.Clock;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -55,6 +60,20 @@ public class UserDictionaryService {
 				: entryRepository.findByUserAccountIdAndDueAtLessThanEqualOrderByDueAtAsc(userAccount.getId(), now(),
 						PageRequest.of(0, sanitizedLimit));
 		return new DictionaryReviewResponse(entries.stream().map(this::toReviewItem).toList());
+	}
+
+	@Transactional(readOnly = true)
+	DictionaryVideoManifestResponse getVideoManifest() {
+		UserAccount userAccount = currentUserService.getCurrentUserAccount();
+		List<DictionaryVideoManifestItem> items = entryRepository
+				.findByUserAccountIdOrderByNormalizedWordAsc(userAccount.getId())
+				.stream()
+				.map(UserDictionaryEntry::getWordInfoRecord)
+				.map(this::latestCompletedPronunciation)
+				.flatMap(Optional::stream)
+				.map(this::toVideoManifestItem)
+				.toList();
+		return new DictionaryVideoManifestResponse(items);
 	}
 
 	@Transactional
@@ -127,6 +146,24 @@ public class UserDictionaryService {
 						PronunciationAssetStatus.COMPLETED)
 				.ifPresent(asset -> item.setPronunciationAssetId(asset.getId()));
 		return item;
+	}
+
+	private Optional<PronunciationAsset> latestCompletedPronunciation(WordInfoRecord wordInfoRecord) {
+		return pronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(
+				wordInfoRecord.getId(), PronunciationAssetStatus.COMPLETED);
+	}
+
+	private DictionaryVideoManifestItem toVideoManifestItem(PronunciationAsset asset) {
+		return new DictionaryVideoManifestItem(asset.getId(), asset.getWordInfoRecord().getId(), smallVideoUri(asset),
+				fullVideoUri(asset), asset.getUpdatedAt());
+	}
+
+	private static URI smallVideoUri(PronunciationAsset asset) {
+		return URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video/small");
+	}
+
+	private static URI fullVideoUri(PronunciationAsset asset) {
+		return URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video");
 	}
 
 	private WordInfoResponse readWordInfo(WordInfoRecord record) {

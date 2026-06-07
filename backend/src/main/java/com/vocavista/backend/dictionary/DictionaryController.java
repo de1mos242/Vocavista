@@ -4,6 +4,7 @@ import com.vocavista.backend.api.DictionaryApi;
 import com.vocavista.backend.api.model.DictionaryReviewResponse;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitRequest;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitResponse;
+import com.vocavista.backend.api.model.DictionaryVideoManifestResponse;
 import com.vocavista.backend.auth.RequireFunctionalAccess;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,11 @@ class DictionaryController implements DictionaryApi {
 	public ResponseEntity<DictionaryReviewSubmitResponse> submitDictionaryReview(UUID entryId,
 			DictionaryReviewSubmitRequest dictionaryReviewSubmitRequest) {
 		return ResponseEntity.ok(userDictionaryService.submitReview(entryId, dictionaryReviewSubmitRequest));
+	}
+
+	@Override
+	public ResponseEntity<DictionaryVideoManifestResponse> getDictionaryVideos() {
+		return ResponseEntity.ok(userDictionaryService.getVideoManifest());
 	}
 
 }

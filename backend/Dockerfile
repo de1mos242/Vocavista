@@ -19,7 +19,11 @@ RUN mkdir /app \
 FROM eclipse-temurin:25-jre AS runtime
 
 WORKDIR /app
-RUN addgroup --system vocavista && adduser --system --ingroup vocavista vocavista
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && addgroup --system vocavista \
+    && adduser --system --ingroup vocavista vocavista
 
 FROM runtime AS aot
 

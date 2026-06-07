@@ -26,6 +26,9 @@ class PronunciationGenerationProcessorTest {
 	private PronunciationVideoGenerator pronunciationVideoGenerator;
 
 	@Mock
+	private PronunciationVideoCompressor pronunciationVideoCompressor;
+
+	@Mock
 	private MediaStorageService mediaStorageService;
 
 	@Test
@@ -33,22 +36,25 @@ class PronunciationGenerationProcessorTest {
 		PronunciationAsset asset = queuedAsset(nounWordInfoJson("feminine", "die"));
 		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
 		when(pronunciationVideoGenerator.generate(any())).thenReturn(new GeneratedVideo("video".getBytes(), "video/mp4"));
+		when(pronunciationVideoCompressor.compress(any())).thenReturn(Optional.of(new GeneratedVideo("small".getBytes(), "video/mp4")));
 		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
 		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
-				pronunciationVideoGenerator, mediaStorageService);
+				pronunciationVideoGenerator, pronunciationVideoCompressor, mediaStorageService);
 
 		processor.process(asset.getId());
 
 		assertThat(asset.getStatus()).isEqualTo(PronunciationAssetStatus.COMPLETED);
 		assertThat(asset.getVideoObjectKey()).endsWith("/video.mp4");
+		assertThat(asset.getSmallVideoObjectKey()).endsWith("/video-small.mp4");
 		assertThat(asset.getVideoProvider()).isEqualTo("google-veo");
 		assertThat(asset.getCompletedAt()).isNotNull();
 		ArgumentCaptor<PronunciationScript> script = ArgumentCaptor.forClass(PronunciationScript.class);
 		verify(pronunciationVideoGenerator).generate(script.capture());
 		assertThat(script.getValue().text()).isEqualTo("Hausaufgabe...\n\ndie Hausaufgabe!\n\nIch mache meine Hausaufgabe nach dem Abendessen.");
-		assertThat(script.getValue().speakerDescription()).isEqualTo("female adult speaker");
+		assertThat(script.getValue().speakerDescription()).isEqualTo("female german adult speaker");
 		verify(mediaStorageService).store(eq(asset.getVideoObjectKey()), eq("video/mp4"), any(byte[].class));
+		verify(mediaStorageService).store(eq(asset.getSmallVideoObjectKey()), eq("video/mp4"), any(byte[].class));
 	}
 
 	@Test
@@ -58,7 +64,7 @@ class PronunciationGenerationProcessorTest {
 		when(pronunciationVideoGenerator.generate(any()))
 				.thenThrow(new MediaGenerationException("video_provider_error", "Veo failed"));
 		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
-				pronunciationVideoGenerator, mediaStorageService);
+				pronunciationVideoGenerator, pronunciationVideoCompressor, mediaStorageService);
 
 		processor.process(asset.getId());
 

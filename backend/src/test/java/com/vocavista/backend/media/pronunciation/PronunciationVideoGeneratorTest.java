@@ -27,12 +27,11 @@ class PronunciationVideoGeneratorTest {
 		server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning"))
 				.andExpect(header("x-goog-api-key", "test-key"))
 				.andExpect(content().string(containsString("\"aspectRatio\":\"9:16\"")))
-				.andExpect(content().string(containsString("\"durationSeconds\":6")))
+				.andExpect(content().string(containsString("\"resolution\":\"720p\"")))
+				.andExpect(content().string(containsString("\"durationSeconds\":5")))
 				.andExpect(content().string(not(containsString("personGeneration"))))
-				.andExpect(content().string(containsString("female adult speaker")))
-				.andExpect(content().string(containsString("Start with 0.5 seconds of absolute silence")))
-				.andExpect(content().string(containsString("The first audible speech must be the first word of the quoted German script")))
-				.andExpect(content().string(containsString("do not add any greeting, intro, explanation, filler, English, Russian, or invented words")))
+				.andExpect(content().string(containsString("female german adult speaker")))
+				.andExpect(content().string(containsString("Match mouth movements to the quoted German words")))
 				.andRespond(withSuccess("""
 						{"name":"models/veo-3.1-lite-generate-preview/operations/abc"}
 						""", MediaType.APPLICATION_JSON));
@@ -50,7 +49,7 @@ class PronunciationVideoGeneratorTest {
 		assertThat(video.bytes()).isEqualTo("video".getBytes());
 		assertThat(video.contentType()).isEqualTo("video/mp4");
 		assertThat(generator.providerName()).isEqualTo("google-veo");
-		assertThat(generator.modelName()).contains("veo-3.1-lite-generate-preview", "9:16", "6s", "prompt-v4");
+		assertThat(generator.modelName()).contains("veo-3.1-lite-generate-preview", "9:16", "720p", "5s", "prompt-v4");
 		server.verify();
 	}
 
@@ -75,7 +74,7 @@ class PronunciationVideoGeneratorTest {
 
 	private static PronunciationScript script() {
 		return new PronunciationScript("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de",
-				"Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v6", "female adult speaker");
+				"Hausaufgabe...\n\nHausaufgabe!\n\nIch mache meine Hausaufgabe.", "v6", "female german adult speaker");
 	}
 
 }
