@@ -70,6 +70,6 @@ vocavista:
       model: veo-3.1-lite-generate-preview
       aspect-ratio: "9:16"
       resolution: 720p
-      duration-seconds: 5
+      duration-seconds: 6
       poll-interval: 5s
       timeout: 8m

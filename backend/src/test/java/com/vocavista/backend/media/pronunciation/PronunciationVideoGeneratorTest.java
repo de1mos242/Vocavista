@@ -28,7 +28,7 @@ class PronunciationVideoGeneratorTest {
 				.andExpect(header("x-goog-api-key", "test-key"))
 				.andExpect(content().string(containsString("\"aspectRatio\":\"9:16\"")))
 				.andExpect(content().string(containsString("\"resolution\":\"720p\"")))
-				.andExpect(content().string(containsString("\"durationSeconds\":5")))
+				.andExpect(content().string(containsString("\"durationSeconds\":6")))
 				.andExpect(content().string(not(containsString("personGeneration"))))
 				.andExpect(content().string(containsString("female german adult speaker")))
 				.andExpect(content().string(containsString("Match mouth movements to the quoted German words")))
@@ -49,7 +49,7 @@ class PronunciationVideoGeneratorTest {
 		assertThat(video.bytes()).isEqualTo("video".getBytes());
 		assertThat(video.contentType()).isEqualTo("video/mp4");
 		assertThat(generator.providerName()).isEqualTo("google-veo");
-		assertThat(generator.modelName()).contains("veo-3.1-lite-generate-preview", "9:16", "720p", "5s", "prompt-v4");
+		assertThat(generator.modelName()).contains("veo-3.1-lite-generate-preview", "9:16", "720p", "6s", "prompt-v4");
 		server.verify();
 	}
 
