@@ -44,7 +44,7 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 	SpringAiOpenAiWordInfoProvider(
 			ChatModel chatModel,
 			@Value("${spring.ai.openai.api-key:__missing__}") String apiKey,
-			@Value("${spring.ai.openai.chat.model:gpt-4o-mini}") String model) {
+			@Value("${spring.ai.openai.chat.model:gpt-5.4-nano}") String model) {
 		this.chatModel = chatModel;
 		this.apiKey = apiKey;
 		this.model = model;
