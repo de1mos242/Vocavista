@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.vocavista.backend.api.model.GermanArticle;
 import com.vocavista.backend.api.model.PartOfSpeech;
 import com.vocavista.backend.api.model.WordInfoResponse;
 import java.util.List;
@@ -81,6 +82,19 @@ class WordInfoServiceTest {
 				.doesNotContain("Extra sentence that should be ignored.");
 	}
 
+	@Test
+	void derivesMissingNounArticleFromProviderGender() {
+		ProviderWordInfo wordInfo = withArticle(SampleWordInfos.nounInfo(), Optional.empty(),
+				Optional.of(ProviderWordInfo.ProviderGender.masculine));
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(wordInfo, SampleWordInfos.nounInfoJson()),
+				providerWordInfoValidator, wordInfoMapper, emptyRepository());
+
+		WordInfoResponse response = service.getWordInfo("Aufwand");
+
+		assertThat(response.getGender()).isNotNull();
+		assertThat(response.getArticle()).isEqualTo(GermanArticle.DER);
+	}
+
 	private static ProviderWordInfo withExtraExample(ProviderWordInfo wordInfo) {
 		List<ProviderWordInfo.WordExample> examples = new java.util.ArrayList<>(wordInfo.examples());
 		examples.add(new ProviderWordInfo.WordExample("Extra sentence that should be ignored.",
@@ -88,6 +102,14 @@ class WordInfoServiceTest {
 		return new ProviderWordInfo(wordInfo.normalizedWord(), wordInfo.language(), wordInfo.translations(),
 				wordInfo.partOfSpeech(), wordInfo.gender(), wordInfo.article(), wordInfo.plural(), wordInfo.frequency(),
 				wordInfo.isCompound(), wordInfo.compoundParts(), wordInfo.shortNote(), examples);
+	}
+
+	private static ProviderWordInfo withArticle(ProviderWordInfo wordInfo,
+			Optional<ProviderWordInfo.ProviderArticle> article,
+			Optional<ProviderWordInfo.ProviderGender> gender) {
+		return new ProviderWordInfo(wordInfo.normalizedWord(), wordInfo.language(), wordInfo.translations(),
+				wordInfo.partOfSpeech(), gender, article, wordInfo.plural(), wordInfo.frequency(), wordInfo.isCompound(),
+				wordInfo.compoundParts(), wordInfo.shortNote(), wordInfo.examples());
 	}
 
 	private static WordInfoRepository emptyRepository() {

@@ -1,6 +1,8 @@
 package com.vocavista.backend.dictionary;
 
 import com.vocavista.backend.api.DictionaryApi;
+import com.vocavista.backend.api.model.AddDictionaryEntryRequest;
+import com.vocavista.backend.api.model.AddDictionaryEntryResponse;
 import com.vocavista.backend.api.model.DictionaryReviewResponse;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitRequest;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitResponse;
@@ -17,6 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 class DictionaryController implements DictionaryApi {
 
 	private final UserDictionaryService userDictionaryService;
+
+	@Override
+	public ResponseEntity<AddDictionaryEntryResponse> addDictionaryEntry(AddDictionaryEntryRequest addDictionaryEntryRequest) {
+		return ResponseEntity.ok(userDictionaryService.addEntry(addDictionaryEntryRequest));
+	}
 
 	@Override
 	public ResponseEntity<DictionaryReviewResponse> getDictionaryReview(Integer limit, Boolean includeUpcoming) {

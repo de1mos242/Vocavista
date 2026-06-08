@@ -1,15 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router";
 import { accountRestrictionMessage, ApiError, loginUrl, logout, unwrap } from "./api";
 import {
+  addDictionaryEntry,
+  createPhraseImage,
   createPronunciation,
   getCurrentUser,
   getDictionaryVideos,
   getDictionaryReview,
+  getPhraseImage,
   getPronunciation,
   getWordInfo,
   getWordSuggestions,
   listAdminUsers,
+  regeneratePhraseImage,
+  regeneratePronunciation,
   submitDictionaryReview,
   updateAdminUserStatus
 } from "./api/generated/sdk.gen";
@@ -19,6 +25,8 @@ import type {
   DictionaryVideoManifestItem,
   DictionaryReviewItem,
   DictionaryReviewSubmitResponse,
+  PhraseImageResponse,
+  PronunciationResponse,
   UserStatus,
   WordInfoResponse,
   WordSuggestion
@@ -147,7 +155,7 @@ function HomePage({ user, authState }: { user?: CurrentUserResponse; authState: 
       <section className="action-grid" aria-label="Primary actions">
         <NavLink className="action-card add-card" to="/add">
           <span>Add word</span>
-          <strong>Search, choose a phrase, generate video.</strong>
+          <strong>Search, choose a phrase, generate assets.</strong>
         </NavLink>
         <NavLink className="action-card review-card-link" to="/review">
           <span>Review</span>
@@ -165,11 +173,17 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   const [suggestions, setSuggestions] = useState<WordSuggestion[]>([]);
   const [wordInfo, setWordInfo] = useState<WordInfoResponse>();
   const [wordInfoId, setWordInfoId] = useState<string>();
+  const [pronunciation, setPronunciation] = useState<PronunciationResponse>();
   const [videoUrl, setVideoUrl] = useState<string>();
+  const [phraseImage, setPhraseImage] = useState<PhraseImageResponse>();
+  const [imageStatus, setImageStatus] = useState("");
   const [searchBusy, setSearchBusy] = useState(false);
   const [generateBusy, setGenerateBusy] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canUseFeatures = Boolean(user?.functionalAccessAllowed);
+  const assetsReady = Boolean(videoUrl && phraseImage?.imageUrl);
 
   useEffect(() => {
     if (authState === "signed-out") {
@@ -179,9 +193,16 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
       setStatus(accountRestrictionMessage(user.status));
     }
     else if (user) {
-      setStatus("Search a word first, choose an example phrase, then generate video.");
+      setStatus("Search a word first, choose an example phrase, then generate assets.");
     }
   }, [authState, user]);
+
+  function resetAssets() {
+    setPronunciation(undefined);
+    setVideoUrl(undefined);
+    setPhraseImage(undefined);
+    setImageStatus("");
+  }
 
   useEffect(() => {
     if (!canUseFeatures || word.trim().length < 2) {
@@ -217,7 +238,8 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
       setWordInfo(info);
       setWordInfoId(info.id);
       setWord(info.normalizedWord);
-      setStatus("Choose an example phrase, then generate Veo video.");
+      resetAssets();
+      setStatus("Choose an example phrase, then generate assets.");
     }
     catch (error) {
       onAuthError(error);
@@ -232,15 +254,36 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     setSuggestions([]);
     setWord(suggestion.word);
     setWordInfoId(suggestion.wordInfoId ?? undefined);
+    resetAssets();
     if (suggestion.phrase) {
       setPhrase(suggestion.phrase);
     }
     if (suggestion.videoUrl) {
       setVideoUrl(suggestion.videoUrl);
+      if (suggestion.pronunciationId && suggestion.wordInfoId) {
+        setPronunciation({ id: suggestion.pronunciationId, wordInfoId: suggestion.wordInfoId, status: "completed", videoUrl: suggestion.videoUrl, fullVideoUrl: suggestion.fullVideoUrl });
+      }
       setStatus("Selected an existing pronunciation video. Generate will reuse it.");
       return;
     }
     setStatus("Selected existing entry. Search word info or generate a new video when ready.");
+  }
+
+  async function generateAssets() {
+    if (!canUseFeatures) {
+      setStatus(user ? accountRestrictionMessage(user.status) : "Sign in with Google to use this page.");
+      return;
+    }
+    if (!wordInfoId) {
+      setStatus("Search word info before generating assets.");
+      return;
+    }
+    if (!phrase.trim()) {
+      setStatus("Choose a phrase before generating assets.");
+      return;
+    }
+    resetAssets();
+    await Promise.allSettled([generateVideo(), generateImage()]);
   }
 
   async function generateVideo() {
@@ -256,7 +299,9 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     try {
       setStatus("Queueing video generation...");
       const queued = await unwrap(createPronunciation({ body: { wordInfoId, word, phrase, language: "de" } }));
+      setPronunciation(queued);
       const completed = await pollPronunciation(queued.id, setStatus);
+      setPronunciation(completed);
       if (completed.status === "failed") {
         throw new Error(`${completed.errorCode ?? "generation_failed"}: ${completed.errorMessage ?? "Video generation failed."}`);
       }
@@ -264,7 +309,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
         throw new Error("Generation completed without videoUrl.");
       }
       setVideoUrl(completed.videoUrl);
-      setStatus(`Playing generated video. id=${completed.id}`);
+      setStatus(`Video ready. id=${completed.id}`);
       window.setTimeout(() => void videoRef.current?.play(), 50);
     }
     catch (error) {
@@ -276,12 +321,117 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     }
   }
 
+  async function regenerateVideo() {
+    if (!pronunciation?.id) {
+      await generateVideo();
+      return;
+    }
+    setGenerateBusy(true);
+    try {
+      setStatus("Replacing pronunciation video...");
+      setVideoUrl(undefined);
+      const queued = await unwrap(regeneratePronunciation({ path: { id: pronunciation.id } }));
+      setPronunciation(queued);
+      const completed = await pollPronunciation(queued.id, setStatus);
+      setPronunciation(completed);
+      if (completed.status === "failed") {
+        throw new Error(`${completed.errorCode ?? "generation_failed"}: ${completed.errorMessage ?? "Video generation failed."}`);
+      }
+      if (!completed.videoUrl) {
+        throw new Error("Generation completed without videoUrl.");
+      }
+      setVideoUrl(completed.videoUrl);
+      setStatus("Replacement video ready.");
+      window.setTimeout(() => void videoRef.current?.play(), 50);
+    }
+    catch (error) {
+      onAuthError(error);
+      setStatus(error instanceof Error ? error.message : "Could not regenerate video.");
+    }
+    finally {
+      setGenerateBusy(false);
+    }
+  }
+
+  async function generateImage() {
+    if (!canUseFeatures) {
+      setImageStatus(user ? accountRestrictionMessage(user.status) : "Sign in with Google to use this page.");
+      return;
+    }
+    if (!wordInfoId) {
+      setImageStatus("Search word info before generating an image.");
+      return;
+    }
+    if (!phrase.trim()) {
+      setImageStatus("Choose a phrase before generating an image.");
+      return;
+    }
+    setImageBusy(true);
+    try {
+      setImageStatus("Queueing cinematic image...");
+      const queued = await unwrap(createPhraseImage({ body: { wordInfoId, word, phrase, language: "de" } }));
+      setPhraseImage(queued);
+      const completed = await pollPhraseImage(queued.id, setImageStatus);
+      setPhraseImage(completed);
+      setImageStatus(completed.status === "completed" ? "Image ready." : completed.errorMessage ?? "Image generation failed. Review can continue without it.");
+    }
+    catch (error) {
+      onAuthError(error);
+      setImageStatus(error instanceof Error ? error.message : "Could not generate image.");
+    }
+    finally {
+      setImageBusy(false);
+    }
+  }
+
+  async function regenerateImage() {
+    if (!phraseImage?.id) {
+      await generateImage();
+      return;
+    }
+    setImageBusy(true);
+    try {
+      setImageStatus("Replacing image...");
+      const queued = await unwrap(regeneratePhraseImage({ path: { id: phraseImage.id } }));
+      setPhraseImage(queued);
+      const completed = await pollPhraseImage(queued.id, setImageStatus);
+      setPhraseImage(completed);
+      setImageStatus(completed.status === "completed" ? "Replacement image ready." : completed.errorMessage ?? "Image generation failed. Review can continue without it.");
+    }
+    catch (error) {
+      onAuthError(error);
+      setImageStatus(error instanceof Error ? error.message : "Could not regenerate image.");
+    }
+    finally {
+      setImageBusy(false);
+    }
+  }
+
+  async function saveToReviseList() {
+    if (!wordInfoId) {
+      setStatus("Search word info before saving.");
+      return;
+    }
+    setSaveBusy(true);
+    try {
+      const entry = await unwrap(addDictionaryEntry({ body: { wordInfoId } }));
+      setStatus(`Saved ${entry.normalizedWord} to revise list.`);
+    }
+    catch (error) {
+      onAuthError(error);
+      setStatus(error instanceof Error ? error.message : "Could not save to revise list.");
+    }
+    finally {
+      setSaveBusy(false);
+    }
+  }
+
   return (
     <main className="mobile-workspace add-layout">
       <section className="panel controls-panel">
         <p className="eyebrow">Add word</p>
         <h1>Make a tiny pronunciation lesson.</h1>
-        <p>Search a German word, pick an example sentence, and generate a vertical lip-sync video for mobile review.</p>
+        <p>Search a German word, pick an example sentence, generate the media assets, then save the result to your revise list.</p>
         {user && !user.functionalAccessAllowed ? <AccountNotice user={user} /> : null}
         {authState === "signed-out" ? <SignInCard message="Sign in with Google to search and generate pronunciation video." /> : null}
 
@@ -289,7 +439,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
           Word
           <input
             value={word}
-            onChange={(event) => { setWordInfoId(undefined); setWord(event.target.value); }}
+            onChange={(event) => { setWordInfoId(undefined); setWord(event.target.value); resetAssets(); }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
@@ -311,18 +461,36 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
         <button type="button" className="secondary" disabled={!canUseFeatures || searchBusy} onClick={loadWordInfo}>Search word</button>
 
-        {wordInfo ? <WordInfoPanel info={wordInfo} onUseWord={() => { setWord(wordInfo.normalizedWord); setWordInfoId(wordInfo.id); setStatus(`Using normalized word: ${wordInfo.normalizedWord}`); }} onUsePhrase={(sentence) => { setWord(wordInfo.normalizedWord); setPhrase(sentence); setStatus(`Phrase selected for ${wordInfo.normalizedWord}.`); }} /> : null}
+        {wordInfo ? <WordInfoPanel info={wordInfo} onUseWord={() => { setWord(wordInfo.normalizedWord); setWordInfoId(wordInfo.id); resetAssets(); setStatus(`Using normalized word: ${wordInfo.normalizedWord}`); }} onUsePhrase={(sentence) => { setWord(wordInfo.normalizedWord); setPhrase(sentence); resetAssets(); setStatus(`Phrase selected for ${wordInfo.normalizedWord}.`); }} /> : null}
 
         <label>
           Phrase
-          <textarea value={phrase} onChange={(event) => setPhrase(event.target.value)} />
+          <textarea value={phrase} onChange={(event) => { setPhrase(event.target.value); resetAssets(); }} />
         </label>
-        <button type="button" disabled={!canUseFeatures || generateBusy} onClick={generateVideo}>Generate video</button>
+        <button type="button" disabled={!canUseFeatures || generateBusy || imageBusy} onClick={() => void generateAssets()}>Generate assets</button>
+        <button type="button" className="secondary" disabled={!canUseFeatures || saveBusy || !assetsReady} onClick={() => void saveToReviseList()}>Save and add to revise list</button>
         <StatusBox>{status}</StatusBox>
       </section>
 
-      <section className="video-stage">
-        {videoUrl ? <video ref={videoRef} src={videoUrl} controls playsInline /> : <div className="placeholder">Generated MP4 video will appear here when Veo completes.</div>}
+      <section className="video-stage media-stage">
+        <div className="media-stack">
+          <PhraseImageCard
+            image={phraseImage}
+            status={imageStatus}
+            busy={imageBusy}
+            canGenerate={canUseFeatures}
+            onRegenerate={() => void regenerateImage()}
+          />
+          <PronunciationVideoCard
+            videoUrl={videoUrl}
+            status={status}
+            busy={generateBusy}
+            canGenerate={canUseFeatures}
+            canRegenerate={Boolean(pronunciation?.id)}
+            videoRef={videoRef}
+            onRegenerate={() => void regenerateVideo()}
+          />
+        </div>
       </section>
     </main>
   );
@@ -433,6 +601,7 @@ function ReviewPage({ user, authState, onAuthError }: PageProps) {
               <Prompt label="English" value={joinText(item.translations.en) || "No English translation"} />
               <Prompt label="Russian" value={joinText(item.translations.ru) || "No Russian translation"} />
             </div>
+            {item.phrase ? <ReviewPhraseImage item={item} onAuthError={onAuthError} /> : null}
             <label>
               German answer
               <input value={answer} onChange={(event) => setAnswer(event.target.value)} disabled={answered} autoComplete="off" autoFocus />
@@ -528,6 +697,115 @@ function WordInfoPanel({ info, onUseWord, onUsePhrase }: { info: WordInfoRespons
           <small>{joinText(example.translations.en)} · {joinText(example.translations.ru)}</small>
         </button>
       ))}
+    </div>
+  );
+}
+
+function PhraseImageCard({ image, status, busy, canGenerate, onRegenerate }: { image?: PhraseImageResponse; status: string; busy: boolean; canGenerate: boolean; onRegenerate: () => void }) {
+  const imageUrl = image?.status === "completed" ? image.imageUrl ?? undefined : undefined;
+  return (
+    <article className="phrase-image-card">
+      <div className="phrase-image-frame">
+        {imageUrl ? <img src={imageUrl} alt={image?.phrase ? `Generated scene for ${image.phrase}` : "Generated vocabulary scene"} /> : <div className="placeholder">Cinematic Imagen scene will appear here.</div>}
+      </div>
+      <div className="phrase-image-actions">
+        <button type="button" className="secondary small" disabled={!canGenerate || busy || !image?.id} onClick={onRegenerate}>Regenerate image</button>
+      </div>
+      {status ? <small>{status}</small> : null}
+    </article>
+  );
+}
+
+function PronunciationVideoCard({ videoUrl, status, busy, canGenerate, canRegenerate, videoRef, onRegenerate }: { videoUrl?: string; status: string; busy: boolean; canGenerate: boolean; canRegenerate: boolean; videoRef: RefObject<HTMLVideoElement | null>; onRegenerate: () => void }) {
+  return (
+    <article className="phrase-image-card video-card">
+      {videoUrl ? <video ref={videoRef} src={videoUrl} controls playsInline /> : <div className="placeholder">Generated MP4 video will appear here when Veo completes.</div>}
+      <div className="phrase-image-actions">
+        <button type="button" className="secondary small" disabled={!canGenerate || busy || !canRegenerate} onClick={onRegenerate}>Regenerate video</button>
+      </div>
+      {status ? <small>{status}</small> : null}
+    </article>
+  );
+}
+
+function ReviewPhraseImage({ item, onAuthError }: { item: DictionaryReviewItem; onAuthError: (error: unknown) => void }) {
+  const [imageId, setImageId] = useState(item.phraseImageId ?? undefined);
+  const [imageUrl, setImageUrl] = useState(item.phraseImageUrl ?? undefined);
+  const [status, setStatus] = useState(item.phraseImageUrl ? "" : "Loading image...");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setImageId(item.phraseImageId ?? undefined);
+    setImageUrl(item.phraseImageUrl ?? undefined);
+    setStatus(item.phraseImageUrl ? "" : "Loading image...");
+    if (!item.phrase) {
+      return;
+    }
+    if (item.phraseImageUrl) {
+      return;
+    }
+    void generateReviewImage(item);
+  }, [item.entryId]);
+
+  async function generateReviewImage(reviewItem: DictionaryReviewItem) {
+    if (!reviewItem.phrase) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const queued = await unwrap(createPhraseImage({ body: { wordInfoId: reviewItem.wordInfoId, word: reviewItem.normalizedWord, phrase: reviewItem.phrase, language: "de" } }));
+      setImageId(queued.id);
+      if (queued.imageUrl) {
+        setImageUrl(queued.imageUrl);
+        setStatus("");
+        return;
+      }
+      const completed = await pollPhraseImage(queued.id, setStatus);
+      setImageId(completed.id);
+      setImageUrl(completed.imageUrl ?? undefined);
+      setStatus(completed.status === "completed" ? "" : "Image unavailable. Review continues normally.");
+    }
+    catch (error) {
+      onAuthError(error);
+      setStatus("Image unavailable. Review continues normally.");
+    }
+    finally {
+      setBusy(false);
+    }
+  }
+
+  async function regenerateReviewImage() {
+    if (!imageId) {
+      await generateReviewImage(item);
+      return;
+    }
+    setBusy(true);
+    try {
+      setStatus("Replacing image...");
+      const queued = await unwrap(regeneratePhraseImage({ path: { id: imageId } }));
+      setImageId(queued.id);
+      setImageUrl(undefined);
+      const completed = await pollPhraseImage(queued.id, setStatus);
+      setImageId(completed.id);
+      setImageUrl(completed.imageUrl ?? undefined);
+      setStatus(completed.status === "completed" ? "" : "Image unavailable. Review continues normally.");
+    }
+    catch (error) {
+      onAuthError(error);
+      setStatus("Could not regenerate image. Review continues normally.");
+    }
+    finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="review-image-block">
+      {imageUrl ? <img src={imageUrl} alt={`Generated scene for ${item.phrase}`} /> : <div className="placeholder">Visual association image is loading.</div>}
+      <div className="phrase-image-actions">
+        <button type="button" className="secondary small" disabled={busy} onClick={() => void regenerateReviewImage()}>{imageId ? "Regenerate image" : "Retry image"}</button>
+      </div>
+      {status ? <small>{status}</small> : null}
     </div>
   );
 }
@@ -654,6 +932,18 @@ async function pollPronunciation(id: string, setStatus: (message: string) => voi
     await sleep(2000);
   }
   throw new Error("Timed out waiting for video generation.");
+}
+
+async function pollPhraseImage(id: string, setStatus: (message: string) => void) {
+  for (let attempt = 0; attempt < 90; attempt += 1) {
+    const image = await unwrap(getPhraseImage({ path: { id } }));
+    setStatus(`image=${image.id}\nstatus=${image.status}\nwaiting=${attempt * 2}s`);
+    if (image.status === "completed" || image.status === "failed" || image.status === "rejected") {
+      return image;
+    }
+    await sleep(2000);
+  }
+  throw new Error("Timed out waiting for image generation.");
 }
 
 function sleep(millis: number) {

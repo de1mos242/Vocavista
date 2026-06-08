@@ -7,8 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PronunciationRepository extends JpaRepository<PronunciationAsset, UUID> {
 
-	Optional<PronunciationAsset> findFirstByLanguageAndContentHashOrderByCreatedAtAsc(String language,
-			String contentHash);
+	Optional<PronunciationAsset> findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(
+			String language,
+			String contentHash,
+			PronunciationAssetStatus status);
 
 	Optional<PronunciationAsset> findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(UUID wordInfoRecordId,
 			PronunciationAssetStatus status);

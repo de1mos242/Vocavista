@@ -34,6 +34,9 @@ class WordSuggestionService {
 
 		for (PronunciationAsset asset : pronunciationRepository
 				.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc(normalizedQuery)) {
+			if (asset.getStatus() == PronunciationAssetStatus.REJECTED) {
+				continue;
+			}
 			WordSuggestion suggestion = new WordSuggestion(asset.getNormalizedWord(), WordSuggestion.SourceEnum.PRONUNCIATION);
 			suggestion.setPhrase(asset.getNormalizedPhrase());
 			suggestion.setWordInfoId(asset.getWordInfoRecord().getId());

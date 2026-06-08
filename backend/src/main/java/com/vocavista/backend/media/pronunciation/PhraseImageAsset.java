@@ -17,11 +17,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "pronunciation_assets")
+@Table(name = "phrase_image_assets")
 @Getter
 @Setter
 @NoArgsConstructor
-public class PronunciationAsset {
+public class PhraseImageAsset {
 
 	@Id
 	private UUID id;
@@ -47,19 +47,22 @@ public class PronunciationAsset {
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
-	private PronunciationAssetStatus status;
+	private PhraseImageAssetStatus status;
 
-	@Column(name = "video_object_key")
-	private String videoObjectKey;
+	@Column(name = "image_object_key")
+	private String imageObjectKey;
 
-	@Column(name = "small_video_object_key")
-	private String smallVideoObjectKey;
+	@Column(name = "image_provider")
+	private String imageProvider;
 
-	@Column(name = "video_provider")
-	private String videoProvider;
+	@Column(name = "image_model")
+	private String imageModel;
 
-	@Column(name = "video_model")
-	private String videoModel;
+	@Column(name = "prompt_version", nullable = false)
+	private String promptVersion;
+
+	@Column(name = "prompt_text")
+	private String promptText;
 
 	@Column(name = "content_hash", nullable = false)
 	private String contentHash;
@@ -82,16 +85,17 @@ public class PronunciationAsset {
 	@Column(name = "rejected_at")
 	private OffsetDateTime rejectedAt;
 
-	static PronunciationAsset queued(
+	static PhraseImageAsset queued(
 			WordInfoRecord wordInfoRecord,
 			String inputWord,
 			String inputPhrase,
 			String normalizedWord,
 			String normalizedPhrase,
 			String language,
+			String promptVersion,
 			String contentHash,
 			OffsetDateTime now) {
-		PronunciationAsset asset = new PronunciationAsset();
+		PhraseImageAsset asset = new PhraseImageAsset();
 		asset.id = UUID.randomUUID();
 		asset.wordInfoRecord = wordInfoRecord;
 		asset.inputWord = inputWord;
@@ -99,8 +103,9 @@ public class PronunciationAsset {
 		asset.normalizedWord = normalizedWord;
 		asset.normalizedPhrase = normalizedPhrase;
 		asset.language = language;
+		asset.promptVersion = promptVersion;
 		asset.contentHash = contentHash;
-		asset.status = PronunciationAssetStatus.QUEUED;
+		asset.status = PhraseImageAssetStatus.QUEUED;
 		asset.createdAt = now;
 		asset.updatedAt = now;
 		return asset;

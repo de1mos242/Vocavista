@@ -4,6 +4,17 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type AddDictionaryEntryRequest = {
+    wordInfoId: string;
+};
+
+export type AddDictionaryEntryResponse = {
+    entryId: string;
+    wordInfoId: string;
+    normalizedWord: string;
+    dueAt: string;
+};
+
 export type CurrentUserResponse = {
     id: string;
     email: string;
@@ -47,6 +58,9 @@ export type DictionaryReviewItem = {
     partOfSpeech: PartOfSpeech;
     article?: GermanArticle;
     pronunciationAssetId?: string | null;
+    phrase?: string | null;
+    phraseImageId?: string | null;
+    phraseImageUrl?: string | null;
     dueAt: string;
 };
 
@@ -94,7 +108,27 @@ export type PronunciationResponse = {
     errorMessage?: string | null;
 };
 
-export type PronunciationStatus = 'queued' | 'processing' | 'completed' | 'failed';
+export type PronunciationStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'rejected';
+
+export type PhraseImageRequest = {
+    wordInfoId: string;
+    word: string;
+    phrase: string;
+    language: 'de';
+};
+
+export type PhraseImageResponse = {
+    id: string;
+    wordInfoId: string;
+    status: PhraseImageStatus;
+    word?: string | null;
+    phrase?: string | null;
+    imageUrl?: string | null;
+    errorCode?: string | null;
+    errorMessage?: string | null;
+};
+
+export type PhraseImageStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'rejected';
 
 export type WordInfoResponse = {
     id: string;
@@ -282,6 +316,39 @@ export type GetDictionaryReviewResponses = {
 
 export type GetDictionaryReviewResponse = GetDictionaryReviewResponses[keyof GetDictionaryReviewResponses];
 
+export type AddDictionaryEntryData = {
+    body: AddDictionaryEntryRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/dictionary/entries';
+};
+
+export type AddDictionaryEntryErrors = {
+    /**
+     * Invalid request.
+     */
+    400: ErrorResponse;
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+    /**
+     * Word info record was not found.
+     */
+    404: ErrorResponse;
+};
+
+export type AddDictionaryEntryError = AddDictionaryEntryErrors[keyof AddDictionaryEntryErrors];
+
+export type AddDictionaryEntryResponses = {
+    /**
+     * Dictionary entry was created or already existed.
+     */
+    200: AddDictionaryEntryResponse;
+};
+
+export type AddDictionaryEntryResponse2 = AddDictionaryEntryResponses[keyof AddDictionaryEntryResponses];
+
 export type SubmitDictionaryReviewData = {
     body: DictionaryReviewSubmitRequest;
     path: {
@@ -412,6 +479,40 @@ export type GetPronunciationResponses = {
 
 export type GetPronunciationResponse = GetPronunciationResponses[keyof GetPronunciationResponses];
 
+export type RegeneratePronunciationData = {
+    body?: never;
+    path: {
+        /**
+         * Pronunciation asset identifier.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/media/pronunciations/{id}/regenerate';
+};
+
+export type RegeneratePronunciationErrors = {
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+    /**
+     * Pronunciation asset was not found.
+     */
+    404: ErrorResponse;
+};
+
+export type RegeneratePronunciationError = RegeneratePronunciationErrors[keyof RegeneratePronunciationErrors];
+
+export type RegeneratePronunciationResponses = {
+    /**
+     * Replacement pronunciation video generation was queued.
+     */
+    202: PronunciationResponse;
+};
+
+export type RegeneratePronunciationResponse = RegeneratePronunciationResponses[keyof RegeneratePronunciationResponses];
+
 export type GetPronunciationVideoData = {
     body?: never;
     path: {
@@ -479,6 +580,137 @@ export type GetSmallPronunciationVideoResponses = {
 };
 
 export type GetSmallPronunciationVideoResponse = GetSmallPronunciationVideoResponses[keyof GetSmallPronunciationVideoResponses];
+
+export type CreatePhraseImageData = {
+    body: PhraseImageRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/media/phrase-images';
+};
+
+export type CreatePhraseImageErrors = {
+    /**
+     * Invalid request.
+     */
+    400: ErrorResponse;
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+};
+
+export type CreatePhraseImageError = CreatePhraseImageErrors[keyof CreatePhraseImageErrors];
+
+export type CreatePhraseImageResponses = {
+    /**
+     * Phrase image generation was queued or reused.
+     */
+    202: PhraseImageResponse;
+};
+
+export type CreatePhraseImageResponse = CreatePhraseImageResponses[keyof CreatePhraseImageResponses];
+
+export type GetPhraseImageData = {
+    body?: never;
+    path: {
+        /**
+         * Phrase image asset identifier.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/media/phrase-images/{id}';
+};
+
+export type GetPhraseImageErrors = {
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+    /**
+     * Phrase image asset was not found.
+     */
+    404: ErrorResponse;
+};
+
+export type GetPhraseImageError = GetPhraseImageErrors[keyof GetPhraseImageErrors];
+
+export type GetPhraseImageResponses = {
+    /**
+     * Phrase image generation status.
+     */
+    200: PhraseImageResponse;
+};
+
+export type GetPhraseImageResponse = GetPhraseImageResponses[keyof GetPhraseImageResponses];
+
+export type RegeneratePhraseImageData = {
+    body?: never;
+    path: {
+        /**
+         * Phrase image asset identifier.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/media/phrase-images/{id}/regenerate';
+};
+
+export type RegeneratePhraseImageErrors = {
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+    /**
+     * Phrase image asset was not found.
+     */
+    404: ErrorResponse;
+};
+
+export type RegeneratePhraseImageError = RegeneratePhraseImageErrors[keyof RegeneratePhraseImageErrors];
+
+export type RegeneratePhraseImageResponses = {
+    /**
+     * Replacement image generation was queued.
+     */
+    202: PhraseImageResponse;
+};
+
+export type RegeneratePhraseImageResponse = RegeneratePhraseImageResponses[keyof RegeneratePhraseImageResponses];
+
+export type GetPhraseImageBytesData = {
+    body?: never;
+    path: {
+        /**
+         * Phrase image asset identifier.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/media/phrase-images/{id}/image';
+};
+
+export type GetPhraseImageBytesErrors = {
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+    /**
+     * Phrase image asset or generated image was not found.
+     */
+    404: ErrorResponse;
+};
+
+export type GetPhraseImageBytesError = GetPhraseImageBytesErrors[keyof GetPhraseImageBytesErrors];
+
+export type GetPhraseImageBytesResponses = {
+    /**
+     * Generated phrase image bytes.
+     */
+    200: Blob | File;
+};
+
+export type GetPhraseImageBytesResponse = GetPhraseImageBytesResponses[keyof GetPhraseImageBytesResponses];
 
 export type GetWordInfoData = {
     body?: never;

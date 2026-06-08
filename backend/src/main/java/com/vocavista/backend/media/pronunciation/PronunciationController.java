@@ -1,6 +1,8 @@
 package com.vocavista.backend.media.pronunciation;
 
 import com.vocavista.backend.api.MediaApi;
+import com.vocavista.backend.api.model.PhraseImageRequest;
+import com.vocavista.backend.api.model.PhraseImageResponse;
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.auth.RequireFunctionalAccess;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 class PronunciationController implements MediaApi {
 
 	private final PronunciationService pronunciationService;
+	private final PhraseImageService phraseImageService;
 
 	@Override
 	public ResponseEntity<PronunciationResponse> createPronunciation(PronunciationRequest pronunciationRequest) {
@@ -28,6 +31,11 @@ class PronunciationController implements MediaApi {
 	@Override
 	public ResponseEntity<PronunciationResponse> getPronunciation(UUID id) {
 		return ResponseEntity.ok(pronunciationService.get(id));
+	}
+
+	@Override
+	public ResponseEntity<PronunciationResponse> regeneratePronunciation(UUID id) {
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(pronunciationService.regenerate(id));
 	}
 
 	@Override
@@ -46,6 +54,30 @@ class PronunciationController implements MediaApi {
 				.contentType(MediaType.parseMediaType(video.contentType() == null ? "video/mp4" : video.contentType()))
 				.contentLength(video.bytes().length)
 				.body(new ByteArrayResource(video.bytes()));
+	}
+
+	@Override
+	public ResponseEntity<PhraseImageResponse> createPhraseImage(PhraseImageRequest phraseImageRequest) {
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(phraseImageService.create(phraseImageRequest));
+	}
+
+	@Override
+	public ResponseEntity<PhraseImageResponse> getPhraseImage(UUID id) {
+		return ResponseEntity.ok(phraseImageService.get(id));
+	}
+
+	@Override
+	public ResponseEntity<PhraseImageResponse> regeneratePhraseImage(UUID id) {
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(phraseImageService.regenerate(id));
+	}
+
+	@Override
+	public ResponseEntity<Resource> getPhraseImageBytes(UUID id) {
+		StoredMedia image = phraseImageService.getImage(id);
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType(image.contentType() == null ? "image/png" : image.contentType()))
+				.contentLength(image.bytes().length)
+				.body(new ByteArrayResource(image.bytes()));
 	}
 
 }
