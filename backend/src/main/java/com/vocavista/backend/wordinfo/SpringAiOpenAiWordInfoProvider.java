@@ -27,8 +27,9 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 			The learning language is German. The learner knows English and Russian.
 			Return only JSON matching the provided schema. Do not include markdown.
 			Keep translations and notes concise. Do not invent rare meanings unless clearly relevant.
-			Use null for noun-only fields when the word is not a noun.
-			For German nouns, include gender, article, and plural.
+			Use null for noun-only fields only when the word is not a noun.
+			For German nouns, gender, article, and plural are mandatory and must not be null.
+			For German noun article, use the nominative singular definite article derived from gender: masculine=der, feminine=die, neuter=das.
 			Use exact enum values: language de; partOfSpeech noun, verb, adjective, adverb, pronoun, preposition, conjunction, interjection, phrase, other; frequency rare, uncommon, common, very_common; gender masculine, feminine, neuter; article der, die, das.
 			Examples must contain exactly 3 natural German sentences.
 			Example objects must contain only the German sentence and translations.

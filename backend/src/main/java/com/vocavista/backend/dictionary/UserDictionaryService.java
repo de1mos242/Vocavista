@@ -2,6 +2,8 @@ package com.vocavista.backend.dictionary;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vocavista.backend.api.model.AddDictionaryEntryRequest;
+import com.vocavista.backend.api.model.AddDictionaryEntryResponse;
 import com.vocavista.backend.api.model.DictionaryReviewItem;
 import com.vocavista.backend.api.model.DictionaryReviewResponse;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitRequest;
@@ -15,7 +17,11 @@ import com.vocavista.backend.auth.UserAccount;
 import com.vocavista.backend.media.pronunciation.PronunciationAsset;
 import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
 import com.vocavista.backend.media.pronunciation.PronunciationRepository;
+import com.vocavista.backend.media.pronunciation.PhraseImageAsset;
+import com.vocavista.backend.media.pronunciation.PhraseImageAssetStatus;
+import com.vocavista.backend.media.pronunciation.PhraseImageRepository;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
+import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.net.URI;
 import java.time.Clock;
 import java.time.LocalTime;
@@ -42,6 +48,8 @@ public class UserDictionaryService {
 	private final UserDictionaryEntryRepository entryRepository;
 	private final CurrentUserService currentUserService;
 	private final PronunciationRepository pronunciationRepository;
+	private final PhraseImageRepository phraseImageRepository;
+	private final WordInfoRepository wordInfoRepository;
 	private final ObjectMapper objectMapper = new ObjectMapper();
 	private final Clock clock = Clock.systemUTC();
 
@@ -49,6 +57,20 @@ public class UserDictionaryService {
 	public void ensureEntryForCurrentUser(WordInfoRecord wordInfoRecord) {
 		UserAccount userAccount = currentUserService.getCurrentUserAccount();
 		ensureEntry(userAccount, wordInfoRecord);
+	}
+
+	@Transactional
+	AddDictionaryEntryResponse addEntry(AddDictionaryEntryRequest request) {
+		if (request == null || request.getWordInfoId() == null) {
+			throw new DictionaryValidationException("wordInfoId is required");
+		}
+
+		UserAccount userAccount = currentUserService.getCurrentUserAccount();
+		WordInfoRecord wordInfoRecord = wordInfoRepository.findById(request.getWordInfoId())
+				.orElseThrow(() -> new DictionaryNotFoundException("Word info record was not found"));
+		UserDictionaryEntry entry = ensureEntry(userAccount, wordInfoRecord);
+		return new AddDictionaryEntryResponse(entry.getId(), entry.getWordInfoRecord().getId(), entry.getNormalizedWord(),
+				entry.getDueAt());
 	}
 
 	@Transactional(readOnly = true)
@@ -141,16 +163,28 @@ public class UserDictionaryService {
 				entry.getNormalizedWord(), expectedAnswer(wordInfo), wordInfo.getTranslations(), wordInfo.getPartOfSpeech(),
 				entry.getDueAt());
 		item.setArticle(wordInfo.getArticle());
-		pronunciationRepository
+		Optional<PronunciationAsset> pronunciationAsset = pronunciationRepository
 				.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(entry.getWordInfoRecord().getId(),
-						PronunciationAssetStatus.COMPLETED)
-				.ifPresent(asset -> item.setPronunciationAssetId(asset.getId()));
+						PronunciationAssetStatus.COMPLETED);
+		pronunciationAsset.ifPresent(asset -> {
+			item.setPronunciationAssetId(asset.getId());
+			item.setPhrase(asset.getNormalizedPhrase());
+			latestCompletedPhraseImage(entry.getWordInfoRecord(), asset.getNormalizedPhrase()).ifPresent(image -> {
+				item.setPhraseImageId(image.getId());
+				item.setPhraseImageUrl(phraseImageUri(image));
+			});
+		});
 		return item;
 	}
 
 	private Optional<PronunciationAsset> latestCompletedPronunciation(WordInfoRecord wordInfoRecord) {
 		return pronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(
 				wordInfoRecord.getId(), PronunciationAssetStatus.COMPLETED);
+	}
+
+	private Optional<PhraseImageAsset> latestCompletedPhraseImage(WordInfoRecord wordInfoRecord, String normalizedPhrase) {
+		return phraseImageRepository.findFirstByWordInfoRecordIdAndNormalizedPhraseAndStatusOrderByUpdatedAtDesc(
+				wordInfoRecord.getId(), normalizedPhrase, PhraseImageAssetStatus.COMPLETED);
 	}
 
 	private DictionaryVideoManifestItem toVideoManifestItem(PronunciationAsset asset) {
@@ -164,6 +198,10 @@ public class UserDictionaryService {
 
 	private static URI fullVideoUri(PronunciationAsset asset) {
 		return URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video");
+	}
+
+	private static URI phraseImageUri(PhraseImageAsset asset) {
+		return URI.create("/api/v1/media/phrase-images/" + asset.getId() + "/image");
 	}
 
 	private WordInfoResponse readWordInfo(WordInfoRecord record) {

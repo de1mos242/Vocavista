@@ -3,7 +3,6 @@ package com.vocavista.backend.media.pronunciation;
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
-import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.net.URI;
@@ -18,6 +17,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -34,19 +36,19 @@ class PronunciationService {
 	private final PronunciationVideoCompressor pronunciationVideoCompressor;
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
-	private final UserDictionaryService userDictionaryService;
 	private final Clock clock = Clock.systemUTC();
 
 	@Value("${vocavista.media.script-template-version:v6}")
 	private String scriptTemplateVersion = "v6";
 
+	@Transactional
 	PronunciationResponse create(PronunciationRequest request) {
 		NormalizedInput input = normalize(request);
-		userDictionaryService.ensureEntryForCurrentUser(input.wordInfoRecord());
 		String contentHash = contentHash(input);
 
 		return pronunciationRepository
-				.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(input.language(), contentHash)
+				.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(input.language(), contentHash,
+						PronunciationAssetStatus.REJECTED)
 				.map(this::reuseOrRetry)
 				.orElseGet(() -> createQueuedAsset(input, contentHash));
 	}
@@ -83,6 +85,23 @@ class PronunciationService {
 				.orElse(originalVideo);
 	}
 
+	@Transactional
+	PronunciationResponse regenerate(UUID id) {
+		PronunciationAsset rejectedAsset = pronunciationRepository.findById(id)
+				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
+		OffsetDateTime now = OffsetDateTime.now(clock);
+		rejectedAsset.setStatus(PronunciationAssetStatus.REJECTED);
+		rejectedAsset.setRejectedAt(now);
+		rejectedAsset.setUpdatedAt(now);
+		pronunciationRepository.save(rejectedAsset);
+		pronunciationRepository.flush();
+
+		NormalizedInput input = new NormalizedInput(rejectedAsset.getWordInfoRecord(), rejectedAsset.getInputWord(),
+				rejectedAsset.getInputPhrase(), rejectedAsset.getNormalizedWord(), rejectedAsset.getNormalizedPhrase(),
+				rejectedAsset.getLanguage());
+		return createQueuedAsset(input, rejectedAsset.getContentHash());
+	}
+
 	private StoredMedia storeSmallVideo(PronunciationAsset asset, GeneratedVideo smallVideo) {
 		String smallVideoObjectKey = "pronunciations/" + asset.getId() + "/video-small.mp4";
 		mediaStorageService.store(smallVideoObjectKey, smallVideo.contentType(), smallVideo.bytes());
@@ -97,12 +116,13 @@ class PronunciationService {
 				input.normalizedPhrase(), input.language(), contentHash, OffsetDateTime.now(clock));
 		try {
 			PronunciationAsset savedAsset = pronunciationRepository.save(asset);
-			generationProcessor.process(savedAsset.getId());
+			queueGeneration(savedAsset.getId());
 			return toResponse(savedAsset);
 		}
 		catch (DataIntegrityViolationException ex) {
 			return pronunciationRepository
-					.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(input.language(), contentHash)
+					.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(input.language(), contentHash,
+							PronunciationAssetStatus.REJECTED)
 					.map(this::reuseOrRetry)
 					.orElseThrow(() -> ex);
 		}
@@ -123,8 +143,22 @@ class PronunciationService {
 		asset.setCompletedAt(null);
 		asset.setUpdatedAt(OffsetDateTime.now(clock));
 		PronunciationAsset savedAsset = pronunciationRepository.save(asset);
-		generationProcessor.process(savedAsset.getId());
+		queueGeneration(savedAsset.getId());
 		return toResponse(savedAsset);
+	}
+
+	private void queueGeneration(UUID id) {
+		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+			generationProcessor.process(id);
+			return;
+		}
+
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCommit() {
+				generationProcessor.process(id);
+			}
+		});
 	}
 
 	private PronunciationResponse toResponse(PronunciationAsset asset) {

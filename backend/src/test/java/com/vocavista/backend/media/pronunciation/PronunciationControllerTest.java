@@ -42,6 +42,9 @@ class PronunciationControllerTest {
 	private PronunciationService pronunciationService;
 
 	@MockitoBean
+	private PhraseImageService phraseImageService;
+
+	@MockitoBean
 	private GoogleOidcUserService googleOidcUserService;
 
 	@MockitoBean

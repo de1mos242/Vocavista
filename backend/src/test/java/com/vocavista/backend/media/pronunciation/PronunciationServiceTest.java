@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
-import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.time.OffsetDateTime;
@@ -21,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @ExtendWith(MockitoExtension.class)
 class PronunciationServiceTest {
@@ -43,14 +43,11 @@ class PronunciationServiceTest {
 	@Mock
 	private WordInfoRepository wordInfoRepository;
 
-	@Mock
-	private UserDictionaryService userDictionaryService;
-
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
 		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
 		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
-		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
+		when(pronunciationRepository.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(anyString(), anyString(), any()))
 				.thenReturn(Optional.empty());
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
 		when(pronunciationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -61,7 +58,6 @@ class PronunciationServiceTest {
 
 		assertThat(response.getId()).isNotNull();
 		assertThat(response.getStatus()).isEqualTo(PronunciationStatus.QUEUED);
-		verify(userDictionaryService).ensureEntryForCurrentUser(any());
 		verify(generationProcessor).process(response.getId());
 	}
 
@@ -70,7 +66,7 @@ class PronunciationServiceTest {
 		PronunciationAsset existingAsset = completedVideoAsset();
 		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
 		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
-		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
+		when(pronunciationRepository.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(anyString(), anyString(), any()))
 				.thenReturn(Optional.of(existingAsset));
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
 		PronunciationService service = service();
@@ -84,7 +80,6 @@ class PronunciationServiceTest {
 				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/video/small");
 		assertThat(response.getFullVideoUrl())
 				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/video");
-		verify(userDictionaryService).ensureEntryForCurrentUser(any());
 		verify(pronunciationRepository, never()).save(any());
 		verify(generationProcessor, never()).process(any());
 	}
@@ -94,7 +89,7 @@ class PronunciationServiceTest {
 		PronunciationAsset existingAsset = failedAsset();
 		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
 		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
-		when(pronunciationRepository.findFirstByLanguageAndContentHashOrderByCreatedAtAsc(anyString(), anyString()))
+		when(pronunciationRepository.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(anyString(), anyString(), any()))
 				.thenReturn(Optional.of(existingAsset));
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
 		when(pronunciationRepository.save(existingAsset)).thenReturn(existingAsset);
@@ -113,6 +108,30 @@ class PronunciationServiceTest {
 		assertThat(existingAsset.getSmallVideoObjectKey()).isNull();
 		verify(pronunciationRepository).save(existingAsset);
 		verify(generationProcessor).process(existingAsset.getId());
+	}
+
+	@Test
+	void startsGenerationAfterCommitWhenTransactionSynchronizationIsActive() {
+		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
+		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
+		when(pronunciationRepository.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(anyString(), anyString(), any()))
+				.thenReturn(Optional.empty());
+		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
+		when(pronunciationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		PronunciationService service = service();
+		TransactionSynchronizationManager.initSynchronization();
+		try {
+			PronunciationResponse response = service.create(request(" Hausaufgabe ",
+					" Ich mache meine Hausaufgabe nach dem Abendessen. "));
+
+			verify(generationProcessor, never()).process(any());
+			TransactionSynchronizationManager.getSynchronizations().forEach(synchronization -> synchronization.afterCommit());
+
+			verify(generationProcessor).process(response.getId());
+		}
+		finally {
+			TransactionSynchronizationManager.clearSynchronization();
+		}
 	}
 
 	@Test
@@ -142,7 +161,7 @@ class PronunciationServiceTest {
 
 	private PronunciationService service() {
 		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationVideoGenerator,
-				pronunciationVideoCompressor, mediaStorageService, wordInfoRepository, userDictionaryService);
+				pronunciationVideoCompressor, mediaStorageService, wordInfoRepository);
 	}
 
 	private static PronunciationRequest request(String word, String phrase) {

@@ -1,6 +1,6 @@
 package com.vocavista.backend.media.pronunciation;
 
-public enum PronunciationAssetStatus {
+public enum PhraseImageAssetStatus {
 
 	QUEUED,
 	PROCESSING,

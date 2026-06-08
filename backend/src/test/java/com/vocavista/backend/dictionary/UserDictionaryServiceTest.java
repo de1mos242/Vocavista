@@ -12,7 +12,9 @@ import com.vocavista.backend.auth.UserAccount;
 import com.vocavista.backend.media.pronunciation.PronunciationAsset;
 import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
 import com.vocavista.backend.media.pronunciation.PronunciationRepository;
+import com.vocavista.backend.media.pronunciation.PhraseImageRepository;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
+import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -35,6 +37,12 @@ class UserDictionaryServiceTest {
 
 	@Mock
 	private PronunciationRepository pronunciationRepository;
+
+	@Mock
+	private PhraseImageRepository phraseImageRepository;
+
+	@Mock
+	private WordInfoRepository wordInfoRepository;
 
 	@Test
 	void createsEntryForCurrentUserWhenMissing() {
@@ -101,10 +109,13 @@ class UserDictionaryServiceTest {
 				any(UUID.class), any(OffsetDateTime.class), any(Pageable.class))).thenReturn(List.of(entry));
 		when(pronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(
 				wordInfoRecord.getId(), PronunciationAssetStatus.COMPLETED)).thenReturn(Optional.of(asset));
+		when(phraseImageRepository.findFirstByWordInfoRecordIdAndNormalizedPhraseAndStatusOrderByUpdatedAtDesc(
+				any(UUID.class), any(), any())).thenReturn(Optional.empty());
 
 		var response = service().getReviewItems(10, false);
 
 		assertThat(response.getItems().getFirst().getPronunciationAssetId()).isEqualTo(asset.getId());
+		assertThat(response.getItems().getFirst().getPhrase()).isEqualTo(asset.getNormalizedPhrase());
 	}
 
 	@Test
@@ -166,7 +177,8 @@ class UserDictionaryServiceTest {
 	}
 
 	private UserDictionaryService service() {
-		return new UserDictionaryService(entryRepository, currentUserService, pronunciationRepository);
+		return new UserDictionaryService(entryRepository, currentUserService, pronunciationRepository, phraseImageRepository,
+				wordInfoRepository);
 	}
 
 	private static PronunciationAsset pronunciationAsset(WordInfoRecord wordInfoRecord) {

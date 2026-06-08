@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,7 +37,7 @@ class WordInfoService {
 
 	private WordInfoResponse generateAndStore(String word, String normalizedQuery) {
 		AiWordInfoResult providerResult = aiWordInfoProvider.generate(word);
-		ProviderWordInfo providerWordInfo = keepFirstThreeExamples(providerResult.wordInfo());
+		ProviderWordInfo providerWordInfo = normalizeProviderWordInfo(keepFirstThreeExamples(providerResult.wordInfo()));
 		try {
 			providerWordInfoValidator.validate(providerWordInfo);
 		}
@@ -56,6 +57,29 @@ class WordInfoService {
 				wordInfo.partOfSpeech(), wordInfo.gender(), wordInfo.article(), wordInfo.plural(), wordInfo.frequency(),
 				wordInfo.isCompound(), wordInfo.compoundParts(), wordInfo.shortNote(),
 				List.copyOf(wordInfo.examples().subList(0, 3)));
+	}
+
+	private static ProviderWordInfo normalizeProviderWordInfo(ProviderWordInfo wordInfo) {
+		if (wordInfo == null
+				|| wordInfo.partOfSpeech() != ProviderWordInfo.ProviderPartOfSpeech.noun
+				|| wordInfo.article() == null
+				|| wordInfo.article().isPresent()
+				|| wordInfo.gender() == null
+				|| wordInfo.gender().isEmpty()) {
+			return wordInfo;
+		}
+		return new ProviderWordInfo(wordInfo.normalizedWord(), wordInfo.language(), wordInfo.translations(),
+				wordInfo.partOfSpeech(), wordInfo.gender(), Optional.of(articleFor(wordInfo.gender().get())),
+				wordInfo.plural(), wordInfo.frequency(), wordInfo.isCompound(), wordInfo.compoundParts(),
+				wordInfo.shortNote(), wordInfo.examples());
+	}
+
+	private static ProviderWordInfo.ProviderArticle articleFor(ProviderWordInfo.ProviderGender gender) {
+		return switch (gender) {
+			case masculine -> ProviderWordInfo.ProviderArticle.der;
+			case feminine -> ProviderWordInfo.ProviderArticle.die;
+			case neuter -> ProviderWordInfo.ProviderArticle.das;
+		};
 	}
 
 	private WordInfoResponse store(String normalizedQuery, WordInfoResponse response) {

@@ -128,6 +128,45 @@ paths:
                 $ref: '#/components/schemas/DictionaryReviewResponse'
         '401':
           description: Authentication is required.
+  /api/v1/dictionary/entries:
+    post:
+      tags:
+        - Dictionary
+      operationId: addDictionaryEntry
+      summary: Add a word info record to the current user's revise list
+      security:
+        - GoogleOAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddDictionaryEntryRequest'
+      responses:
+        '200':
+          description: Dictionary entry was created or already existed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddDictionaryEntryResponse'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Word info record was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/dictionary/review/{entryId}:
     post:
       tags:
@@ -266,6 +305,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/media/pronunciations/{id}/regenerate:
+    post:
+      tags:
+        - Media
+      operationId: regeneratePronunciation
+      summary: Reject and replace a bad pronunciation video
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Pronunciation asset identifier.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Replacement pronunciation video generation was queued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PronunciationResponse'
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Pronunciation asset was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/media/pronunciations/{id}/video:
     get:
       tags:
@@ -334,6 +408,153 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Pronunciation asset or generated video was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/media/phrase-images:
+    post:
+      tags:
+        - Media
+      operationId: createPhraseImage
+      summary: Queue or reuse phrase image generation
+      security:
+        - GoogleOAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhraseImageRequest'
+      responses:
+        '202':
+          description: Phrase image generation was queued or reused.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhraseImageResponse'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/media/phrase-images/{id}:
+    get:
+      tags:
+        - Media
+      operationId: getPhraseImage
+      summary: Get phrase image generation status
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Phrase image asset identifier.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Phrase image generation status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhraseImageResponse'
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Phrase image asset was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/media/phrase-images/{id}/regenerate:
+    post:
+      tags:
+        - Media
+      operationId: regeneratePhraseImage
+      summary: Reject and replace a bad phrase image
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Phrase image asset identifier.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Replacement image generation was queued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhraseImageResponse'
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Phrase image asset was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/media/phrase-images/{id}/image:
+    get:
+      tags:
+        - Media
+      operationId: getPhraseImageBytes
+      summary: Stream generated phrase image
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Phrase image asset identifier.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Generated phrase image bytes.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Phrase image asset or generated image was not found.
           content:
             application/json:
               schema:
@@ -435,6 +656,34 @@ components:
             email: Read the user's email address.
             profile: Read the user's display name.
   schemas:
+    AddDictionaryEntryRequest:
+      type: object
+      required:
+        - wordInfoId
+      properties:
+        wordInfoId:
+          type: string
+          format: uuid
+    AddDictionaryEntryResponse:
+      type: object
+      required:
+        - entryId
+        - wordInfoId
+        - normalizedWord
+        - dueAt
+      properties:
+        entryId:
+          type: string
+          format: uuid
+        wordInfoId:
+          type: string
+          format: uuid
+        normalizedWord:
+          type: string
+          minLength: 1
+        dueAt:
+          type: string
+          format: date-time
     CurrentUserResponse:
       type: object
       required:
@@ -553,6 +802,17 @@ components:
         pronunciationAssetId:
           type: string
           format: uuid
+          nullable: true
+        phrase:
+          type: string
+          nullable: true
+        phraseImageId:
+          type: string
+          format: uuid
+          nullable: true
+        phraseImageUrl:
+          type: string
+          format: uri
           nullable: true
         dueAt:
           type: string
@@ -691,6 +951,69 @@ components:
         - processing
         - completed
         - failed
+        - rejected
+    PhraseImageRequest:
+      type: object
+      required:
+        - wordInfoId
+        - word
+        - phrase
+        - language
+      properties:
+        wordInfoId:
+          type: string
+          format: uuid
+        word:
+          type: string
+          minLength: 1
+          maxLength: 80
+        phrase:
+          type: string
+          minLength: 1
+          maxLength: 240
+        language:
+          type: string
+          enum:
+            - de
+    PhraseImageResponse:
+      type: object
+      required:
+        - id
+        - wordInfoId
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        wordInfoId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PhraseImageStatus'
+        word:
+          type: string
+          nullable: true
+        phrase:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        errorCode:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+    PhraseImageStatus:
+      type: string
+      enum:
+        - queued
+        - processing
+        - completed
+        - failed
+        - rejected
     WordInfoResponse:
       type: object
       required:
