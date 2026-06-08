@@ -28,12 +28,13 @@ import org.mockito.ArgumentCaptor;
 class SpringAiOpenAiWordInfoProviderTest {
 
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private static final String WORDS_MODEL = "gpt-5.4-mini";
 
 	@Test
 	void parsesStructuredProviderResponse() {
 		ChatModel chatModel = mock(ChatModel.class);
 		when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse(SampleWordInfos.nounInfoJson()));
-		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", "gpt-4o-mini");
+		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", WORDS_MODEL);
 
 		AiWordInfoResult result = provider.generate("Hausaufgabe");
 		ProviderWordInfo wordInfo = result.wordInfo();
@@ -48,13 +49,14 @@ class SpringAiOpenAiWordInfoProviderTest {
 	void sendsLocalizedTextSchemaWithExplicitLanguageProperties() throws Exception {
 		ChatModel chatModel = mock(ChatModel.class);
 		when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse(SampleWordInfos.nounInfoJson()));
-		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", "gpt-4o-mini");
+		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", WORDS_MODEL);
 
 		provider.generate("Hausaufgabe");
 
 		ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
 		verify(chatModel).call(promptCaptor.capture());
 		OpenAiChatOptions options = (OpenAiChatOptions) promptCaptor.getValue().getOptions();
+		assertThat(options.getModel()).isEqualTo(WORDS_MODEL);
 		JsonNode responseSchema = OBJECT_MAPPER.readTree(options.getResponseFormat().getJsonSchema());
 		JsonNode localizedTextSchema = responseSchema.path("$defs").path("LocalizedText");
 
@@ -89,7 +91,7 @@ class SpringAiOpenAiWordInfoProviderTest {
 		ChatModel chatModel = mock(ChatModel.class);
 		String rawResponse = "{not-json";
 		when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse(rawResponse));
-		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", "gpt-4o-mini");
+		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", WORDS_MODEL);
 
 		assertThatThrownBy(() -> provider.generate("Hausaufgabe"))
 				.isInstanceOf(AiProviderBadGatewayException.class)
@@ -110,7 +112,7 @@ class SpringAiOpenAiWordInfoProviderTest {
 						.param("model")
 						.build())
 				.build());
-		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", "gpt-4o-mini");
+		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", WORDS_MODEL);
 
 		assertThatThrownBy(() -> provider.generate("Hausaufgabe"))
 				.isInstanceOf(AiProviderBadGatewayException.class)
@@ -121,7 +123,7 @@ class SpringAiOpenAiWordInfoProviderTest {
 	void mapsOpenAiIoErrorsToUnavailable() {
 		ChatModel chatModel = mock(ChatModel.class);
 		when(chatModel.call(any(Prompt.class))).thenThrow(new OpenAIIoException("network error"));
-		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", "gpt-4o-mini");
+		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", WORDS_MODEL);
 
 		assertThatThrownBy(() -> provider.generate("Hausaufgabe"))
 				.isInstanceOf(AiProviderUnavailableException.class)
@@ -131,7 +133,7 @@ class SpringAiOpenAiWordInfoProviderTest {
 	@Test
 	void missingApiKeyIsUnavailableWithoutCallingProvider() {
 		ChatModel chatModel = mock(ChatModel.class);
-		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "__missing__", "gpt-4o-mini");
+		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "__missing__", WORDS_MODEL);
 
 		assertThatThrownBy(() -> provider.generate("Hausaufgabe")).isInstanceOf(AiProviderUnavailableException.class);
 		verifyNoInteractions(chatModel);
