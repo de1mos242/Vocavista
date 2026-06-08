@@ -1,4 +1,4 @@
-# Issue 51: Change OpenAI Words Model to gpt-5.4-nano
+# Issue 51: Change OpenAI Words Model to gpt-5.4-mini
 
 - Issue: https://github.com/de1mos242/Vocavista/issues/51
 - Pull request: https://github.com/de1mos242/Vocavista/pull/52
@@ -6,7 +6,7 @@
 
 ## Goal
 
-Update the OpenAI model used by words-related metadata generation to `gpt-5.4-nano`.
+Update the OpenAI model used by words-related metadata generation to `gpt-5.4-mini`.
 
 ## Scope
 
@@ -22,9 +22,10 @@ Update the OpenAI model used by words-related metadata generation to `gpt-5.4-na
 ## Progress
 
 - Created the issue/task branch.
-- Updated the word-info OpenAI model fallback to `gpt-5.4-nano`.
+- Updated the word-info OpenAI model fallback to `gpt-5.4-mini`.
 - Updated tests to use the new model and assert it is attached to provider prompt options.
 - Opened PR https://github.com/de1mos242/Vocavista/pull/52.
+- Changed the selected model from `gpt-5.4-nano` to `gpt-5.4-mini` after follow-up direction.
 
 ## Verification
 

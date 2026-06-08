@@ -28,7 +28,7 @@ import org.mockito.ArgumentCaptor;
 class SpringAiOpenAiWordInfoProviderTest {
 
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-	private static final String WORDS_MODEL = "gpt-5.4-nano";
+	private static final String WORDS_MODEL = "gpt-5.4-mini";
 
 	@Test
 	void parsesStructuredProviderResponse() {
