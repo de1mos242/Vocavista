@@ -28,7 +28,7 @@ class PhraseImageGeneratorTest {
 				.andExpect(header("x-goog-api-key", "test-key"))
 				.andExpect(content().string(containsString("\"aspectRatio\":\"16:9\"")))
 				.andExpect(content().string(containsString("\"sampleImageSize\":\"1K\"")))
-				.andExpect(content().string(containsString("realistic everyday scene")))
+				.andExpect(content().string(containsString("high-quality 16:9 image")))
 				.andExpect(content().string(not(containsString("Hausaufgabe"))))
 				.andExpect(content().string(not(containsString("Ich mache meine Hausaufgabe."))))
 				.andRespond(withSuccess("""
@@ -63,7 +63,7 @@ class PhraseImageGeneratorTest {
 
 	private static PhraseImagePrompt prompt() {
 		return new PhraseImagePrompt("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de",
-				"Create a cinematic 16:9 high-quality realistic everyday scene. Scene description: A focused student sits at a desk with an open blank notebook.",
+				"Create a high-quality 16:9 image of this scene: A focused student sits at a desk with an open blank notebook.",
 				"v4");
 	}
 

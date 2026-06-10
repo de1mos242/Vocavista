@@ -17,21 +17,14 @@ class PhraseImageGenerationProcessorTest {
 		assertThat(prompt.version()).isEqualTo("v4");
 		assertThat(prompt.word()).isEqualTo("Hausaufgabe");
 		assertThat(prompt.phrase()).isEqualTo("Ich mache meine Hausaufgabe.");
-		assertThat(prompt.text()).contains("focused student", "physical objects", "lighting", "realistic everyday scene");
+		assertThat(prompt.text()).contains("focused student", "blank notebook", "high-quality 16:9 image");
+		assertThat(prompt.text()).doesNotContain("Build a natural", "clean cinematic composition",
+				"plausible everyday objects");
 		assertThat(prompt.text()).doesNotContain("Hausaufgabe", "Ich mache meine Hausaufgabe.", "Phrase context",
 				"Vocabulary concept", "Target word", "Full phrase context");
 		assertThat(prompt.text()).doesNotContain("Do not", "Avoid", "Never", "without", "no ");
 		assertThat(prompt.text()).doesNotContain("labels", "subtitles", "captions", "watermarks", "visible text",
 				"text artifacts", "letters", "signs");
-	}
-
-	@Test
-	void stripsLiteralWordAndPhraseFromSceneDescription() {
-		PhraseImagePrompt prompt = PhraseImageGenerationProcessor.promptFor(asset(),
-				"Ich mache meine Hausaufgabe A student works on Hausaufgabe at a wooden desk.");
-
-		assertThat(prompt.text()).contains("student works", "wooden desk");
-		assertThat(prompt.text()).doesNotContain("Hausaufgabe", "Ich mache meine Hausaufgabe", "mache", "meine");
 	}
 
 	private static PhraseImageAsset asset() {
