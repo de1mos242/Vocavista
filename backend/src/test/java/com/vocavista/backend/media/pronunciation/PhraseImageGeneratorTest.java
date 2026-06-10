@@ -40,7 +40,7 @@ class PhraseImageGeneratorTest {
 		assertThat(image.bytes()).isEqualTo("image".getBytes());
 		assertThat(image.contentType()).isEqualTo("image/png");
 		assertThat(generator.providerName()).isEqualTo("google-imagen");
-		assertThat(generator.modelName()).contains("imagen-4.0-generate-001", "16:9", "1K", "prompt-v3");
+		assertThat(generator.modelName()).contains("imagen-4.0-generate-001", "16:9", "1K", "prompt-v4");
 		server.verify();
 	}
 
@@ -63,7 +63,8 @@ class PhraseImageGeneratorTest {
 
 	private static PhraseImagePrompt prompt() {
 		return new PhraseImagePrompt("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de",
-				"Create a cinematic 16:9 high-quality realistic everyday scene.", "v3");
+				"Create a cinematic 16:9 high-quality realistic everyday scene. Scene description: A focused student sits at a desk with an open blank notebook.",
+				"v4");
 	}
 
 }

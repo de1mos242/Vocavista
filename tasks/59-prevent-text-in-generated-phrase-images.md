@@ -6,36 +6,41 @@
 
 ## Goal
 
-Stop generated phrase images from containing visible text by ensuring the prompt sent to Imagen does not include the literal target word or phrase.
+Stop generated phrase images from containing visible text while preserving semantic relevance through a text-only scene-description pre-step.
 
 ## Scope
 
-- Remove dynamic vocabulary and phrase text from the image-provider prompt body.
+- Generate a visual scene description from the vocabulary word and phrase before calling Imagen.
+- Remove dynamic vocabulary and phrase text from the Imagen prompt body.
 - Keep word and phrase metadata for persistence, responses, and cache hashing.
 - Bump prompt metadata so new generations bypass earlier prompt versions.
-- Add tests that prove the provider prompt does not contain the literal German word or sentence.
+- Add tests that prove the Imagen prompt does not contain the literal German word or sentence.
 
 ## Implementation Notes
 
 - The prior positive-only prompt still included `Phrase context` and `Vocabulary concept` with literal user text; Gemini/Imagen can copy that into images.
-- This change trades semantic specificity for preventing rendered text. A later improvement can add a separate visual-scene-description step if stronger semantic matching is needed without exposing raw words to Imagen.
+- Use OpenAI chat with the same model configuration as word info (`spring.ai.openai.chat.model`, default `gpt-5.4-mini`) to convert the word and phrase into an English visual scene description.
+- The final Imagen prompt strips exact raw German literals and phrase tokens as a safety net if the scene-description model repeats them.
 
 ## Decisions
 
-- Keep the Imagen request prompt static and visual-only.
-- Move phrase image prompt metadata to `prompt-v3`/`v3`.
+- Keep German word and phrase input in the OpenAI scene-description step, not the Imagen request.
+- Move phrase image prompt metadata to `prompt-v4`/`v4`.
 
 ## Progress
 
-- Removed literal target word and phrase text from the prompt body sent to Imagen.
+- Added a `PhraseImageSceneDescriber` pre-step backed by OpenAI chat.
+- OpenAI receives the target word and phrase and returns a concise English visual scene description.
+- Removed literal target word and phrase text from the final prompt body sent to Imagen.
 - Kept word and phrase values in `PhraseImagePrompt` metadata, persistence, and cache hashing inputs.
-- Bumped prompt metadata to `prompt-v3`/`v3` so new image requests bypass earlier cached prompt versions.
-- Added focused test coverage proving `prompt.text()` and the Imagen request body omit the literal German word and phrase.
-- Opened PR #60 and updated issue #59 with final implementation status.
+- Bumped prompt metadata to `prompt-v4`/`v4` so new image requests bypass earlier cached prompt versions.
+- Added focused test coverage for the scene-description pre-step and for raw German literal stripping from Imagen prompts.
+- Updated PR #60 after correcting the generic-prompt stopgap into the scene-description design.
 
 ## Verification
 
-- `cd backend && ./mvnw test` passed with 70 tests.
+- `cd backend && ./mvnw -Dtest=PhraseImageGenerationProcessorTest,PhraseImageGeneratorTest,SpringAiPhraseImageSceneDescriberTest test` passed with 6 tests.
+- `cd backend && ./mvnw test` passed with 73 tests.
 
 ## Open Questions
 
