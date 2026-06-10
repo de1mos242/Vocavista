@@ -3,6 +3,7 @@ package com.vocavista.backend.media.pronunciation;
 import com.vocavista.backend.api.model.PhraseImageRequest;
 import com.vocavista.backend.api.model.PhraseImageResponse;
 import com.vocavista.backend.api.model.PhraseImageStatus;
+import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.net.URI;
@@ -35,6 +36,7 @@ class PhraseImageService {
 	private final PhraseImageGenerator phraseImageGenerator;
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
+	private final UserDictionaryService userDictionaryService;
 	private final Clock clock = Clock.systemUTC();
 
 	@Value("${vocavista.media.image-prompt-version:v1}")
@@ -43,6 +45,7 @@ class PhraseImageService {
 	@Transactional
 	PhraseImageResponse create(PhraseImageRequest request) {
 		NormalizedInput input = normalize(request);
+		userDictionaryService.ensureEntryForCurrentUser(input.wordInfoRecord());
 		String contentHash = contentHash(input);
 
 		return phraseImageRepository
@@ -79,6 +82,7 @@ class PhraseImageService {
 		rejectedAsset.setUpdatedAt(now);
 		phraseImageRepository.save(rejectedAsset);
 		phraseImageRepository.flush();
+		userDictionaryService.ensureEntryForCurrentUser(rejectedAsset.getWordInfoRecord());
 
 		NormalizedInput input = new NormalizedInput(rejectedAsset.getWordInfoRecord(), rejectedAsset.getInputWord(),
 				rejectedAsset.getInputPhrase(), rejectedAsset.getNormalizedWord(), rejectedAsset.getNormalizedPhrase(),

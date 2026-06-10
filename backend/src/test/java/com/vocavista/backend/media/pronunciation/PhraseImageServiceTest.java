@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.vocavista.backend.api.model.PhraseImageRequest;
 import com.vocavista.backend.api.model.PhraseImageStatus;
+import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.time.OffsetDateTime;
@@ -38,6 +39,9 @@ class PhraseImageServiceTest {
 	@Mock
 	private WordInfoRepository wordInfoRepository;
 
+	@Mock
+	private UserDictionaryService userDictionaryService;
+
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
 		when(phraseImageGenerator.providerName()).thenReturn("google-imagen");
@@ -51,6 +55,7 @@ class PhraseImageServiceTest {
 
 		assertThat(response.getId()).isNotNull();
 		assertThat(response.getStatus()).isEqualTo(PhraseImageStatus.QUEUED);
+		verify(userDictionaryService).ensureEntryForCurrentUser(any(WordInfoRecord.class));
 		verify(generationProcessor).process(response.getId());
 	}
 
@@ -68,6 +73,7 @@ class PhraseImageServiceTest {
 		assertThat(response.getId()).isEqualTo(asset.getId());
 		assertThat(response.getStatus()).isEqualTo(PhraseImageStatus.COMPLETED);
 		assertThat(response.getImageUrl()).hasToString("/api/v1/media/phrase-images/" + asset.getId() + "/image");
+		verify(userDictionaryService).ensureEntryForCurrentUser(any(WordInfoRecord.class));
 	}
 
 	@Test
@@ -108,7 +114,7 @@ class PhraseImageServiceTest {
 
 	private PhraseImageService service() {
 		return new PhraseImageService(phraseImageRepository, generationProcessor, phraseImageGenerator, mediaStorageService,
-				wordInfoRepository);
+				wordInfoRepository, userDictionaryService);
 	}
 
 	private static PhraseImageRequest request() {

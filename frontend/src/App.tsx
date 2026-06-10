@@ -183,7 +183,6 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   const [saveBusy, setSaveBusy] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canUseFeatures = Boolean(user?.functionalAccessAllowed);
-  const assetsReady = Boolean(videoUrl && phraseImage?.imageUrl);
 
   useEffect(() => {
     if (authState === "signed-out") {
@@ -250,7 +249,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     }
   }
 
-  function selectSuggestion(suggestion: WordSuggestion) {
+  async function selectSuggestion(suggestion: WordSuggestion) {
     setSuggestions([]);
     setWord(suggestion.word);
     setWordInfoId(suggestion.wordInfoId ?? undefined);
@@ -258,15 +257,33 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     if (suggestion.phrase) {
       setPhrase(suggestion.phrase);
     }
+    let savedWord = "";
+    if (suggestion.wordInfoId) {
+      savedWord = await saveWordToReviseList(suggestion.wordInfoId);
+    }
     if (suggestion.videoUrl) {
       setVideoUrl(suggestion.videoUrl);
       if (suggestion.pronunciationId && suggestion.wordInfoId) {
         setPronunciation({ id: suggestion.pronunciationId, wordInfoId: suggestion.wordInfoId, status: "completed", videoUrl: suggestion.videoUrl, fullVideoUrl: suggestion.fullVideoUrl });
       }
-      setStatus("Selected an existing pronunciation video. Generate will reuse it.");
+      setStatus(savedWord ? `Selected existing pronunciation video and saved ${savedWord} to your revise list.` : "Selected an existing pronunciation video. Generate will reuse it.");
       return;
     }
-    setStatus("Selected existing entry. Search word info or generate a new video when ready.");
+    setStatus(savedWord ? `Selected phrase and saved ${savedWord} to your revise list. Generate assets when ready.` : "Selected existing entry. Search word info or generate a new video when ready.");
+  }
+
+  async function selectWordInfoPhrase(sentence: string) {
+    setWord(wordInfo?.normalizedWord ?? word);
+    setWordInfoId(wordInfo?.id);
+    setPhrase(sentence);
+    resetAssets();
+    if (!wordInfo?.id) {
+      setStatus("Phrase selected. Search word info before generating assets.");
+      return;
+    }
+
+    const savedWord = await saveWordToReviseList(wordInfo.id);
+    setStatus(savedWord ? `Phrase selected and saved ${savedWord} to your revise list. Generate assets when ready.` : `Phrase selected for ${wordInfo.normalizedWord}.`);
   }
 
   async function generateAssets() {
@@ -280,6 +297,10 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     }
     if (!phrase.trim()) {
       setStatus("Choose a phrase before generating assets.");
+      return;
+    }
+    const savedWord = await saveWordToReviseList(wordInfoId);
+    if (!savedWord) {
       return;
     }
     resetAssets();
@@ -407,19 +428,21 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     }
   }
 
-  async function saveToReviseList() {
-    if (!wordInfoId) {
+  async function saveWordToReviseList(targetWordInfoId: string) {
+    if (!targetWordInfoId) {
       setStatus("Search word info before saving.");
-      return;
+      return "";
     }
     setSaveBusy(true);
     try {
-      const entry = await unwrap(addDictionaryEntry({ body: { wordInfoId } }));
-      setStatus(`Saved ${entry.normalizedWord} to revise list.`);
+      setStatus("Saving word to revise list...");
+      const entry = await unwrap(addDictionaryEntry({ body: { wordInfoId: targetWordInfoId } }));
+      return entry.normalizedWord;
     }
     catch (error) {
       onAuthError(error);
       setStatus(error instanceof Error ? error.message : "Could not save to revise list.");
+      return "";
     }
     finally {
       setSaveBusy(false);
@@ -431,7 +454,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
       <section className="panel controls-panel">
         <p className="eyebrow">Add word</p>
         <h1>Make a tiny pronunciation lesson.</h1>
-        <p>Search a German word, pick an example sentence, generate the media assets, then save the result to your revise list.</p>
+        <p>Search a German word, pick an example sentence, save it to your revise list, then generate the media assets.</p>
         {user && !user.functionalAccessAllowed ? <AccountNotice user={user} /> : null}
         {authState === "signed-out" ? <SignInCard message="Sign in with Google to search and generate pronunciation video." /> : null}
 
@@ -452,7 +475,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
         <div className="suggestions">
           {suggestions.map((suggestion) => (
-            <button key={`${suggestion.source}-${suggestion.word}-${suggestion.phrase ?? ""}`} type="button" className="soft-list-button" disabled={!canUseFeatures} onClick={() => selectSuggestion(suggestion)}>
+            <button key={`${suggestion.source}-${suggestion.word}-${suggestion.phrase ?? ""}`} type="button" className="soft-list-button" disabled={!canUseFeatures || saveBusy} onClick={() => void selectSuggestion(suggestion)}>
               <strong>{suggestion.word}</strong>
               <small>{describeSuggestion(suggestion)}</small>
             </button>
@@ -461,14 +484,13 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
         <button type="button" className="secondary" disabled={!canUseFeatures || searchBusy} onClick={loadWordInfo}>Search word</button>
 
-        {wordInfo ? <WordInfoPanel info={wordInfo} onUseWord={() => { setWord(wordInfo.normalizedWord); setWordInfoId(wordInfo.id); resetAssets(); setStatus(`Using normalized word: ${wordInfo.normalizedWord}`); }} onUsePhrase={(sentence) => { setWord(wordInfo.normalizedWord); setPhrase(sentence); resetAssets(); setStatus(`Phrase selected for ${wordInfo.normalizedWord}.`); }} /> : null}
+        {wordInfo ? <WordInfoPanel info={wordInfo} onUseWord={() => { setWord(wordInfo.normalizedWord); setWordInfoId(wordInfo.id); resetAssets(); setStatus(`Using normalized word: ${wordInfo.normalizedWord}`); }} onUsePhrase={(sentence) => void selectWordInfoPhrase(sentence)} /> : null}
 
         <label>
           Phrase
           <textarea value={phrase} onChange={(event) => { setPhrase(event.target.value); resetAssets(); }} />
         </label>
-        <button type="button" disabled={!canUseFeatures || generateBusy || imageBusy} onClick={() => void generateAssets()}>Generate assets</button>
-        <button type="button" className="secondary" disabled={!canUseFeatures || saveBusy || !assetsReady} onClick={() => void saveToReviseList()}>Save and add to revise list</button>
+        <button type="button" disabled={!canUseFeatures || generateBusy || imageBusy || saveBusy} onClick={() => void generateAssets()}>Save and generate assets</button>
         <StatusBox>{status}</StatusBox>
       </section>
 
