@@ -54,7 +54,7 @@ class PhraseImageGenerator {
 
 	String modelName() {
 		return "%s:%s:%s:%s".formatted(properties.getModel(), properties.getAspectRatio(),
-				properties.getSampleImageSize(), "prompt-v1");
+				properties.getSampleImageSize(), "prompt-v2");
 	}
 
 	private JsonNode predict(PhraseImagePrompt prompt) {
