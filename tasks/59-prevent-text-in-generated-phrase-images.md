@@ -1,6 +1,7 @@
 # Prevent Text in Generated Phrase Images
 
 - Issue: https://github.com/de1mos242/Vocavista/issues/59
+- Pull Request: https://github.com/de1mos242/Vocavista/pull/60
 - Branch: `59-prevent-text-in-generated-phrase-images`
 
 ## Goal
@@ -30,6 +31,7 @@ Stop generated phrase images from containing visible text by ensuring the prompt
 - Kept word and phrase values in `PhraseImagePrompt` metadata, persistence, and cache hashing inputs.
 - Bumped prompt metadata to `prompt-v3`/`v3` so new image requests bypass earlier cached prompt versions.
 - Added focused test coverage proving `prompt.text()` and the Imagen request body omit the literal German word and phrase.
+- Opened PR #60 and updated issue #59 with final implementation status.
 
 ## Verification
 
