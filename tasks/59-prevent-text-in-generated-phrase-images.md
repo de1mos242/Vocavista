@@ -41,6 +41,7 @@ Stop generated phrase images from containing visible text while preserving seman
 
 - `cd backend && ./mvnw -Dtest=PhraseImageGenerationProcessorTest,PhraseImageGeneratorTest,SpringAiPhraseImageSceneDescriberTest test` passed with 6 tests.
 - `cd backend && ./mvnw test` passed with 73 tests.
+- GitHub PR CI `Build` passed after the scene-description follow-up commit.
 
 ## Open Questions
 
