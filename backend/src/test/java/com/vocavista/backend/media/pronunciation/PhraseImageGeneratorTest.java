@@ -38,7 +38,7 @@ class PhraseImageGeneratorTest {
 		assertThat(image.bytes()).isEqualTo("image".getBytes());
 		assertThat(image.contentType()).isEqualTo("image/png");
 		assertThat(generator.providerName()).isEqualTo("google-imagen");
-		assertThat(generator.modelName()).contains("imagen-4.0-generate-001", "16:9", "1K", "prompt-v1");
+		assertThat(generator.modelName()).contains("imagen-4.0-generate-001", "16:9", "1K", "prompt-v2");
 		server.verify();
 	}
 

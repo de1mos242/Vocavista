@@ -37,8 +37,8 @@ class PhraseImageService {
 	private final WordInfoRepository wordInfoRepository;
 	private final Clock clock = Clock.systemUTC();
 
-	@Value("${vocavista.media.image-prompt-version:v1}")
-	private String promptVersion = "v1";
+	@Value("${vocavista.media.image-prompt-version:v2}")
+	private String promptVersion = "v2";
 
 	@Transactional
 	PhraseImageResponse create(PhraseImageRequest request) {
