@@ -1,6 +1,7 @@
 # Persist selected vocabulary before starting media generation
 
 - Issue: https://github.com/de1mos242/Vocavista/issues/56
+- Pull Request: https://github.com/de1mos242/Vocavista/pull/58
 - Branch: `56-persist-selected-vocabulary-before-starting-media-generation`
 
 ## Goal
@@ -25,6 +26,7 @@ When a user selects a generated phrase, persist the associated word and user voc
 - Changed the generate action to save the word before queueing image and video generation, replacing the separate save button with a combined "Save and generate assets" action.
 - Added backend safety in pronunciation and phrase image creation/regeneration so media generation always ensures the current user's dictionary entry before queueing work.
 - Extended affected media service tests to assert dictionary persistence is ensured before generation/reuse.
+- Opened PR #58 with `Fixes #56`.
 
 ## Verification
 
