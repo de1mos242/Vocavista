@@ -1,6 +1,7 @@
 # Clean Up Image Generation Prompt
 
 - Issue: https://github.com/de1mos242/Vocavista/issues/55
+- Pull Request: https://github.com/de1mos242/Vocavista/pull/57
 - Branch: `55-clean-up-image-generation-prompt`
 
 ## Goal
@@ -30,6 +31,7 @@ Remove negative command wording from the phrase image generation prompt because 
 - Removed negative command wording and references to known text-artifact terms from the generated prompt.
 - Bumped prompt metadata to `prompt-v2`/`v2` so new generations are separated from previous cache keys.
 - Added test coverage for the cleaned prompt language.
+- Opened PR #57 and updated issue #55 with final implementation status.
 
 ## Verification
 
