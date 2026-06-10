@@ -11,10 +11,17 @@ class PhraseImageGenerationProcessorTest {
 
 	@Test
 	void buildsPositiveOnlyImagePrompt() {
-		PhraseImagePrompt prompt = PhraseImageGenerationProcessor.promptFor(asset());
+		PhraseImagePrompt prompt = PhraseImageGenerationProcessor.promptFor(asset(),
+				"A focused student sits at a desk with an open blank notebook, pencil, textbooks, and warm evening light.");
 
-		assertThat(prompt.version()).isEqualTo("v2");
-		assertThat(prompt.text()).contains("Phrase context", "Vocabulary concept", "physical objects", "lighting");
+		assertThat(prompt.version()).isEqualTo("v4");
+		assertThat(prompt.word()).isEqualTo("Hausaufgabe");
+		assertThat(prompt.phrase()).isEqualTo("Ich mache meine Hausaufgabe.");
+		assertThat(prompt.text()).contains("focused student", "blank notebook", "high-quality 16:9 image");
+		assertThat(prompt.text()).doesNotContain("Build a natural", "clean cinematic composition",
+				"plausible everyday objects");
+		assertThat(prompt.text()).doesNotContain("Hausaufgabe", "Ich mache meine Hausaufgabe.", "Phrase context",
+				"Vocabulary concept", "Target word", "Full phrase context");
 		assertThat(prompt.text()).doesNotContain("Do not", "Avoid", "Never", "without", "no ");
 		assertThat(prompt.text()).doesNotContain("labels", "subtitles", "captions", "watermarks", "visible text",
 				"text artifacts", "letters", "signs");
@@ -22,7 +29,7 @@ class PhraseImageGenerationProcessorTest {
 
 	private static PhraseImageAsset asset() {
 		return PhraseImageAsset.queued(wordInfoRecord(), "Hausaufgabe", "Ich mache meine Hausaufgabe.", "Hausaufgabe",
-				"Ich mache meine Hausaufgabe.", "de", "v2", "hash", OffsetDateTime.now());
+				"Ich mache meine Hausaufgabe.", "de", "v4", "hash", OffsetDateTime.now());
 	}
 
 	private static WordInfoRecord wordInfoRecord() {

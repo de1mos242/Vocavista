@@ -3,6 +3,7 @@ package com.vocavista.backend.media.pronunciation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -27,8 +28,9 @@ class PhraseImageGeneratorTest {
 				.andExpect(header("x-goog-api-key", "test-key"))
 				.andExpect(content().string(containsString("\"aspectRatio\":\"16:9\"")))
 				.andExpect(content().string(containsString("\"sampleImageSize\":\"1K\"")))
-				.andExpect(content().string(containsString("Full phrase context")))
-				.andExpect(content().string(containsString("Target word")))
+				.andExpect(content().string(containsString("high-quality 16:9 image")))
+				.andExpect(content().string(not(containsString("Hausaufgabe"))))
+				.andExpect(content().string(not(containsString("Ich mache meine Hausaufgabe."))))
 				.andRespond(withSuccess("""
 						{"predictions":[{"bytesBase64Encoded":"%s","mimeType":"image/png"}]}
 						""".formatted(Base64.getEncoder().encodeToString("image".getBytes())), MediaType.APPLICATION_JSON));
@@ -38,7 +40,7 @@ class PhraseImageGeneratorTest {
 		assertThat(image.bytes()).isEqualTo("image".getBytes());
 		assertThat(image.contentType()).isEqualTo("image/png");
 		assertThat(generator.providerName()).isEqualTo("google-imagen");
-		assertThat(generator.modelName()).contains("imagen-4.0-generate-001", "16:9", "1K", "prompt-v2");
+		assertThat(generator.modelName()).contains("imagen-4.0-generate-001", "16:9", "1K", "prompt-v4");
 		server.verify();
 	}
 
@@ -61,7 +63,8 @@ class PhraseImageGeneratorTest {
 
 	private static PhraseImagePrompt prompt() {
 		return new PhraseImagePrompt("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de",
-				"Full phrase context: Ich mache meine Hausaufgabe. Target word: Hausaufgabe.", "v1");
+				"Create a high-quality 16:9 image of this scene: A focused student sits at a desk with an open blank notebook.",
+				"v4");
 	}
 
 }

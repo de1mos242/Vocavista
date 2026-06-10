@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 class PhraseImageGenerationProcessor {
 
 	private final PhraseImageRepository phraseImageRepository;
+	private final PhraseImageSceneDescriber phraseImageSceneDescriber;
 	private final PhraseImageGenerator phraseImageGenerator;
 	private final MediaStorageService mediaStorageService;
 	private final Clock clock = Clock.systemUTC();
@@ -29,7 +30,9 @@ class PhraseImageGenerationProcessor {
 			asset.setStatus(PhraseImageAssetStatus.PROCESSING);
 			asset.setUpdatedAt(now);
 
-			PhraseImagePrompt prompt = promptFor(asset);
+			String sceneDescription = phraseImageSceneDescriber.describe(asset.getNormalizedWord(), asset.getNormalizedPhrase(),
+					asset.getLanguage());
+			PhraseImagePrompt prompt = promptFor(asset, sceneDescription);
 			asset.setPromptText(prompt.text());
 			generateImage(asset, prompt);
 			asset.setStatus(PhraseImageAssetStatus.COMPLETED);
@@ -61,17 +64,13 @@ class PhraseImageGenerationProcessor {
 		asset.setUpdatedAt(OffsetDateTime.now(clock));
 	}
 
-	static PhraseImagePrompt promptFor(PhraseImageAsset asset) {
+	static PhraseImagePrompt promptFor(PhraseImageAsset asset, String sceneDescription) {
 		String phrase = asset.getNormalizedPhrase().replaceAll("\\s+", " ").trim();
 		String word = asset.getNormalizedWord().replaceAll("\\s+", " ").trim();
+		String cleanSceneDescription = sceneDescription.replaceAll("\\s+", " ").trim();
 		String text = """
-				Create a cinematic 16:9 high-quality educational image for a German vocabulary card.
-				Phrase context: "%s".
-				Vocabulary concept: "%s".
-				Build a natural, realistic, memorable scene for language learning.
-				Communicate the vocabulary concept with physical objects, people, actions, environment, lighting, color, focus, and framing.
-				Use clean cinematic composition, polished realistic details, natural anatomy, expressive faces, and plausible everyday objects.
-				""".formatted(phrase, word).replaceAll("\\s+", " ").trim();
+				Create a high-quality 16:9 image of this scene: %s.
+				""".formatted(cleanSceneDescription).replaceAll("\\s+", " ").trim();
 		return new PhraseImagePrompt(word, phrase, asset.getLanguage(), text, asset.getPromptVersion());
 	}
 
