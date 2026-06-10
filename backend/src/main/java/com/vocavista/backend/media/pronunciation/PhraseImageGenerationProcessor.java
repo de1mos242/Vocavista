@@ -65,13 +65,10 @@ class PhraseImageGenerationProcessor {
 		String phrase = asset.getNormalizedPhrase().replaceAll("\\s+", " ").trim();
 		String word = asset.getNormalizedWord().replaceAll("\\s+", " ").trim();
 		String text = """
-				Create a cinematic 16:9 high-quality educational image for a German vocabulary card.
-				Phrase context: "%s".
-				Vocabulary concept: "%s".
-				Build a natural, realistic, memorable scene for language learning.
-				Communicate the vocabulary concept with physical objects, people, actions, environment, lighting, color, focus, and framing.
+				Create a cinematic 16:9 high-quality realistic everyday scene.
+				Build a natural, memorable composition using physical objects, people, actions, environment, lighting, color, focus, and framing.
 				Use clean cinematic composition, polished realistic details, natural anatomy, expressive faces, and plausible everyday objects.
-				""".formatted(phrase, word).replaceAll("\\s+", " ").trim();
+				""".replaceAll("\\s+", " ").trim();
 		return new PhraseImagePrompt(word, phrase, asset.getLanguage(), text, asset.getPromptVersion());
 	}
 
