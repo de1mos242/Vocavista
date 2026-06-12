@@ -26,8 +26,11 @@
 - Added Flyway migration `V10__single_media_asset_per_phrase.sql` to delete obsolete rejected/history rows, drop rejected columns/indexes, and add unique phrase indexes.
 - Updated media service tests for in-place regeneration semantics.
 - Added generation failure coverage that verifies failed video regeneration keeps previous video keys.
+- Collapsed one-line media records into nearby implementation files and removed the single-implementation phrase image scene-describer interface.
+- Removed standalone files for `GeneratedVideo`, `GeneratedImage`, `StoredMedia`, `PronunciationScript`, `PhraseImagePrompt`, and `PhraseImageSceneDescriber`.
 
 ## Verification
 
 - `./mvnw -Dtest=PronunciationServiceTest,PhraseImageServiceTest,PronunciationGenerationProcessorTest,PhraseImageGenerationProcessorTest test` passed after the final media test updates.
+- `./mvnw -Dtest=PronunciationServiceTest,PhraseImageServiceTest,PronunciationGenerationProcessorTest,PhraseImageGenerationProcessorTest,PronunciationVideoGeneratorTest,PhraseImageGeneratorTest,SpringAiPhraseImageSceneDescriberTest,PronunciationControllerTest test` passed after collapsing media support types.
 - `./mvnw test` compiled and ran non-container tests, but failed on `VocavistaBackendApplicationTests` and `AuthControllerTest` because Docker/Testcontainers is unavailable in this environment.

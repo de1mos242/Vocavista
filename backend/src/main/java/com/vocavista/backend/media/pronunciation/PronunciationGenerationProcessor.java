@@ -137,3 +137,12 @@ class PronunciationGenerationProcessor {
 	}
 
 }
+
+record PronunciationScript(
+		String word,
+		String phrase,
+		String language,
+		String text,
+		String templateVersion,
+		String speakerDescription) {
+}

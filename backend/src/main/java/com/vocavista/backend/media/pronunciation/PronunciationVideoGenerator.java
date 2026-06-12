@@ -198,3 +198,6 @@ class PronunciationVideoGenerator {
 	}
 
 }
+
+record GeneratedVideo(byte[] bytes, String contentType) {
+}
