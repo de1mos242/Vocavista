@@ -86,7 +86,7 @@ class PronunciationGenerationProcessorTest {
 		wordInfoRecord.setId(UUID.randomUUID());
 		wordInfoRecord.setResponseJson(responseJson);
 		return PronunciationAsset.queued(wordInfoRecord, "Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.",
-				"Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
+				"Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.", "de", OffsetDateTime.now());
 	}
 
 	private static String nounWordInfoJson(String gender, String article) {

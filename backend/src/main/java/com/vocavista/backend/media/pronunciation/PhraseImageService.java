@@ -7,12 +7,8 @@ import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.util.HexFormat;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +29,6 @@ class PhraseImageService {
 
 	private final PhraseImageRepository phraseImageRepository;
 	private final PhraseImageGenerationProcessor generationProcessor;
-	private final PhraseImageGenerator phraseImageGenerator;
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
 	private final UserDictionaryService userDictionaryService;
@@ -46,12 +41,11 @@ class PhraseImageService {
 	PhraseImageResponse create(PhraseImageRequest request) {
 		NormalizedInput input = normalize(request);
 		userDictionaryService.ensureEntryForCurrentUser(input.wordInfoRecord());
-		String contentHash = contentHash(input);
 
 		return phraseImageRepository
 				.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
-				.map(asset -> reuseOrRetry(asset, contentHash))
-				.orElseGet(() -> createQueuedAsset(input, contentHash));
+				.map(this::reuseOrRetry)
+				.orElseGet(() -> createQueuedAsset(input));
 	}
 
 	@Transactional(readOnly = true)
@@ -76,15 +70,12 @@ class PhraseImageService {
 		PhraseImageAsset asset = phraseImageRepository.findById(id)
 				.orElseThrow(() -> new PronunciationNotFoundException("Phrase image asset was not found"));
 		userDictionaryService.ensureEntryForCurrentUser(asset.getWordInfoRecord());
-		NormalizedInput input = new NormalizedInput(asset.getWordInfoRecord(), asset.getInputWord(), asset.getInputPhrase(),
-				asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage());
-		return requeue(asset, contentHash(input));
+		return requeue(asset);
 	}
 
-	private PhraseImageResponse createQueuedAsset(NormalizedInput input, String contentHash) {
+	private PhraseImageResponse createQueuedAsset(NormalizedInput input) {
 		PhraseImageAsset asset = PhraseImageAsset.queued(input.wordInfoRecord(), input.word(), input.phrase(),
-				input.normalizedWord(), input.normalizedPhrase(), input.language(), promptVersion, contentHash,
-				OffsetDateTime.now(clock));
+				input.normalizedWord(), input.normalizedPhrase(), input.language(), promptVersion, OffsetDateTime.now(clock));
 		try {
 			PhraseImageAsset savedAsset = phraseImageRepository.save(asset);
 			queueGeneration(savedAsset.getId());
@@ -93,22 +84,21 @@ class PhraseImageService {
 		catch (DataIntegrityViolationException ex) {
 			return phraseImageRepository
 					.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
-					.map(existingAsset -> reuseOrRetry(existingAsset, contentHash))
+					.map(this::reuseOrRetry)
 					.orElseThrow(() -> ex);
 		}
 	}
 
-	private PhraseImageResponse reuseOrRetry(PhraseImageAsset asset, String contentHash) {
+	private PhraseImageResponse reuseOrRetry(PhraseImageAsset asset) {
 		if (asset.getStatus() != PhraseImageAssetStatus.FAILED) {
 			return toResponse(asset);
 		}
-		return requeue(asset, contentHash);
+		return requeue(asset);
 	}
 
-	private PhraseImageResponse requeue(PhraseImageAsset asset, String contentHash) {
+	private PhraseImageResponse requeue(PhraseImageAsset asset) {
 		asset.setStatus(PhraseImageAssetStatus.QUEUED);
 		asset.setPromptVersion(promptVersion);
-		asset.setContentHash(contentHash);
 		asset.setErrorCode(null);
 		asset.setErrorMessage(null);
 		asset.setCompletedAt(null);
@@ -177,19 +167,6 @@ class PhraseImageService {
 		WordInfoRecord wordInfoRecord = wordInfoRepository.findById(wordInfoId)
 				.orElseThrow(() -> new PronunciationValidationException("wordInfoId must reference an existing word info record"));
 		return new NormalizedInput(wordInfoRecord, request.getWord(), request.getPhrase(), word, phrase, language);
-	}
-
-	private String contentHash(NormalizedInput input) {
-		String value = String.join("\n", input.language(), input.normalizedWord().toLowerCase(),
-				input.normalizedPhrase().toLowerCase(), promptVersion, phraseImageGenerator.providerName(),
-				phraseImageGenerator.modelName());
-		try {
-			MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
-		}
-		catch (NoSuchAlgorithmException ex) {
-			throw new IllegalStateException("SHA-256 is not available", ex);
-		}
 	}
 
 	private static String trimAndCollapse(String value) {

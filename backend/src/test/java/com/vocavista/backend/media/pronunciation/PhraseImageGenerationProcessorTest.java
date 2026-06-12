@@ -29,7 +29,7 @@ class PhraseImageGenerationProcessorTest {
 
 	private static PhraseImageAsset asset() {
 		return PhraseImageAsset.queued(wordInfoRecord(), "Hausaufgabe", "Ich mache meine Hausaufgabe.", "Hausaufgabe",
-				"Ich mache meine Hausaufgabe.", "de", "v4", "hash", OffsetDateTime.now());
+				"Ich mache meine Hausaufgabe.", "de", "v4", OffsetDateTime.now());
 	}
 
 	private static WordInfoRecord wordInfoRecord() {

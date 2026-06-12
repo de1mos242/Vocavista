@@ -32,9 +32,6 @@ class PronunciationServiceTest {
 	private PronunciationGenerationProcessor generationProcessor;
 
 	@Mock
-	private PronunciationVideoGenerator pronunciationVideoGenerator;
-
-	@Mock
 	private PronunciationVideoCompressor pronunciationVideoCompressor;
 
 	@Mock
@@ -48,8 +45,6 @@ class PronunciationServiceTest {
 
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
-		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
-		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		when(pronunciationRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(),
 				"Ich mache meine Hausaufgabe nach dem Abendessen."))
 				.thenReturn(Optional.empty());
@@ -69,8 +64,6 @@ class PronunciationServiceTest {
 	@Test
 	void reusesExistingCachedVideoAsset() {
 		PronunciationAsset existingAsset = completedVideoAsset();
-		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
-		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		when(pronunciationRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(),
 				"Ich mache meine Hausaufgabe nach dem Abendessen."))
 				.thenReturn(Optional.of(existingAsset));
@@ -94,8 +87,6 @@ class PronunciationServiceTest {
 	@Test
 	void retriesExistingFailedAsset() {
 		PronunciationAsset existingAsset = failedAsset();
-		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
-		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		when(pronunciationRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(),
 				"Ich mache meine Hausaufgabe nach dem Abendessen."))
 				.thenReturn(Optional.of(existingAsset));
@@ -121,8 +112,6 @@ class PronunciationServiceTest {
 	void regeneratesExistingAssetInPlace() {
 		PronunciationAsset existingAsset = completedVideoAsset();
 		String originalVideoKey = existingAsset.getVideoObjectKey();
-		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
-		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		when(pronunciationRepository.findById(existingAsset.getId())).thenReturn(Optional.of(existingAsset));
 		when(pronunciationRepository.save(existingAsset)).thenReturn(existingAsset);
 		PronunciationService service = service();
@@ -142,8 +131,6 @@ class PronunciationServiceTest {
 
 	@Test
 	void startsGenerationAfterCommitWhenTransactionSynchronizationIsActive() {
-		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
-		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		when(pronunciationRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(),
 				"Ich mache meine Hausaufgabe nach dem Abendessen."))
 				.thenReturn(Optional.empty());
@@ -191,8 +178,8 @@ class PronunciationServiceTest {
 	}
 
 	private PronunciationService service() {
-		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationVideoGenerator,
-				pronunciationVideoCompressor, mediaStorageService, wordInfoRepository, userDictionaryService);
+		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationVideoCompressor,
+				mediaStorageService, wordInfoRepository, userDictionaryService);
 	}
 
 	private static PronunciationRequest request(String word, String phrase) {
@@ -202,7 +189,7 @@ class PronunciationServiceTest {
 	private static PronunciationAsset completedVideoAsset() {
 		PronunciationAsset asset = PronunciationAsset.queued(wordInfoRecord(), "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "Hausaufgabe",
-				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
+				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", OffsetDateTime.now());
 		asset.setId(UUID.randomUUID());
 		asset.setStatus(PronunciationAssetStatus.COMPLETED);
 		asset.setVideoObjectKey("pronunciations/%s/video.mp4".formatted(asset.getId()));
@@ -213,7 +200,7 @@ class PronunciationServiceTest {
 	private static PronunciationAsset failedAsset() {
 		PronunciationAsset asset = PronunciationAsset.queued(wordInfoRecord(), "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "Hausaufgabe",
-				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", "hash", OffsetDateTime.now());
+				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", OffsetDateTime.now());
 		asset.setId(UUID.randomUUID());
 		asset.setStatus(PronunciationAssetStatus.FAILED);
 		asset.setVideoObjectKey("pronunciations/%s/video.mp4".formatted(asset.getId()));

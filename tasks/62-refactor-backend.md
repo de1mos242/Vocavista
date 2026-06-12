@@ -28,9 +28,13 @@
 - Added generation failure coverage that verifies failed video regeneration keeps previous video keys.
 - Collapsed one-line media records into nearby implementation files and removed the single-implementation phrase image scene-describer interface.
 - Removed standalone files for `GeneratedVideo`, `GeneratedImage`, `StoredMedia`, `PronunciationScript`, `PhraseImagePrompt`, and `PhraseImageSceneDescriber`.
+- Removed obsolete media `contentHash` runtime flow now that media is keyed by word-info phrase instead of provider/model cache keys.
+- Dropped provider-client dependencies from `PronunciationService` and `PhraseImageService`; provider/model details are now only used by generation processors.
+- Added Flyway migration `V11__drop_media_content_hashes.sql` to remove obsolete media hash columns.
 
 ## Verification
 
 - `./mvnw -Dtest=PronunciationServiceTest,PhraseImageServiceTest,PronunciationGenerationProcessorTest,PhraseImageGenerationProcessorTest test` passed after the final media test updates.
 - `./mvnw -Dtest=PronunciationServiceTest,PhraseImageServiceTest,PronunciationGenerationProcessorTest,PhraseImageGenerationProcessorTest,PronunciationVideoGeneratorTest,PhraseImageGeneratorTest,SpringAiPhraseImageSceneDescriberTest,PronunciationControllerTest test` passed after collapsing media support types.
+- `./mvnw -Dtest=PronunciationServiceTest,PhraseImageServiceTest,PronunciationGenerationProcessorTest,PhraseImageGenerationProcessorTest,PronunciationVideoGeneratorTest,PhraseImageGeneratorTest,SpringAiPhraseImageSceneDescriberTest,PronunciationControllerTest,UserDictionaryServiceTest test` passed after removing media content hashes.
 - `./mvnw test` compiled and ran non-container tests, but failed on `VocavistaBackendApplicationTests` and `AuthControllerTest` because Docker/Testcontainers is unavailable in this environment.

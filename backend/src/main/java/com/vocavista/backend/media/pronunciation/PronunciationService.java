@@ -7,15 +7,10 @@ import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.util.HexFormat;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,26 +28,21 @@ class PronunciationService {
 
 	private final PronunciationRepository pronunciationRepository;
 	private final PronunciationGenerationProcessor generationProcessor;
-	private final PronunciationVideoGenerator pronunciationVideoGenerator;
 	private final PronunciationVideoCompressor pronunciationVideoCompressor;
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
 	private final UserDictionaryService userDictionaryService;
 	private final Clock clock = Clock.systemUTC();
 
-	@Value("${vocavista.media.script-template-version:v6}")
-	private String scriptTemplateVersion = "v6";
-
 	@Transactional
 	PronunciationResponse create(PronunciationRequest request) {
 		NormalizedInput input = normalize(request);
 		userDictionaryService.ensureEntryForCurrentUser(input.wordInfoRecord());
-		String contentHash = contentHash(input);
 
 		return pronunciationRepository
 				.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
-				.map(asset -> reuseOrRetry(asset, contentHash))
-				.orElseGet(() -> createQueuedAsset(input, contentHash));
+				.map(this::reuseOrRetry)
+				.orElseGet(() -> createQueuedAsset(input));
 	}
 
 	PronunciationResponse get(UUID id) {
@@ -92,9 +82,7 @@ class PronunciationService {
 		PronunciationAsset asset = pronunciationRepository.findById(id)
 				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
 		userDictionaryService.ensureEntryForCurrentUser(asset.getWordInfoRecord());
-		NormalizedInput input = new NormalizedInput(asset.getWordInfoRecord(), asset.getInputWord(), asset.getInputPhrase(),
-				asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage());
-		return requeue(asset, contentHash(input));
+		return requeue(asset);
 	}
 
 	private StoredMedia storeSmallVideo(PronunciationAsset asset, GeneratedVideo smallVideo) {
@@ -106,9 +94,9 @@ class PronunciationService {
 		return new StoredMedia(smallVideo.contentType(), smallVideo.bytes());
 	}
 
-	private PronunciationResponse createQueuedAsset(NormalizedInput input, String contentHash) {
+	private PronunciationResponse createQueuedAsset(NormalizedInput input) {
 		PronunciationAsset asset = PronunciationAsset.queued(input.wordInfoRecord(), input.word(), input.phrase(), input.normalizedWord(),
-				input.normalizedPhrase(), input.language(), contentHash, OffsetDateTime.now(clock));
+				input.normalizedPhrase(), input.language(), OffsetDateTime.now(clock));
 		try {
 			PronunciationAsset savedAsset = pronunciationRepository.save(asset);
 			queueGeneration(savedAsset.getId());
@@ -117,21 +105,20 @@ class PronunciationService {
 		catch (DataIntegrityViolationException ex) {
 			return pronunciationRepository
 					.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
-					.map(existingAsset -> reuseOrRetry(existingAsset, contentHash))
+					.map(this::reuseOrRetry)
 					.orElseThrow(() -> ex);
 		}
 	}
 
-	private PronunciationResponse reuseOrRetry(PronunciationAsset asset, String contentHash) {
+	private PronunciationResponse reuseOrRetry(PronunciationAsset asset) {
 		if (asset.getStatus() != PronunciationAssetStatus.FAILED) {
 			return toResponse(asset);
 		}
-		return requeue(asset, contentHash);
+		return requeue(asset);
 	}
 
-	private PronunciationResponse requeue(PronunciationAsset asset, String contentHash) {
+	private PronunciationResponse requeue(PronunciationAsset asset) {
 		asset.setStatus(PronunciationAssetStatus.QUEUED);
-		asset.setContentHash(contentHash);
 		asset.setErrorCode(null);
 		asset.setErrorMessage(null);
 		asset.setCompletedAt(null);
@@ -199,19 +186,6 @@ class PronunciationService {
 		WordInfoRecord wordInfoRecord = wordInfoRepository.findById(wordInfoId)
 				.orElseThrow(() -> new PronunciationValidationException("wordInfoId must reference an existing word info record"));
 		return new NormalizedInput(wordInfoRecord, request.getWord(), request.getPhrase(), word, phrase, language);
-	}
-
-	private String contentHash(NormalizedInput input) {
-		String value = String.join("\n", input.language(), input.wordInfoRecord().getId().toString(), input.normalizedWord().toLowerCase(),
-				input.normalizedPhrase().toLowerCase(), scriptTemplateVersion, pronunciationVideoGenerator.providerName(),
-				pronunciationVideoGenerator.modelName());
-		try {
-			MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
-		}
-		catch (NoSuchAlgorithmException ex) {
-			throw new IllegalStateException("SHA-256 is not available", ex);
-		}
 	}
 
 	private static String trimAndCollapse(String value) {

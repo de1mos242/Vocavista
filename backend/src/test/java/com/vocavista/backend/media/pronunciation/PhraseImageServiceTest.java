@@ -30,9 +30,6 @@ class PhraseImageServiceTest {
 	private PhraseImageGenerationProcessor generationProcessor;
 
 	@Mock
-	private PhraseImageGenerator phraseImageGenerator;
-
-	@Mock
 	private MediaStorageService mediaStorageService;
 
 	@Mock
@@ -43,8 +40,6 @@ class PhraseImageServiceTest {
 
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
-		when(phraseImageGenerator.providerName()).thenReturn("google-imagen");
-		when(phraseImageGenerator.modelName()).thenReturn("imagen-model");
 		when(phraseImageRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(), "Ich mache meine Hausaufgabe."))
 				.thenReturn(Optional.empty());
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
@@ -61,8 +56,6 @@ class PhraseImageServiceTest {
 	@Test
 	void reusesExistingCachedCompletedImage() {
 		PhraseImageAsset asset = completedImageAsset();
-		when(phraseImageGenerator.providerName()).thenReturn("google-imagen");
-		when(phraseImageGenerator.modelName()).thenReturn("imagen-model");
 		when(phraseImageRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(), "Ich mache meine Hausaufgabe."))
 				.thenReturn(Optional.of(asset));
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
@@ -79,8 +72,6 @@ class PhraseImageServiceTest {
 	void regeneratesExistingImageInPlace() {
 		PhraseImageAsset asset = completedImageAsset();
 		String originalImageKey = asset.getImageObjectKey();
-		when(phraseImageGenerator.providerName()).thenReturn("google-imagen");
-		when(phraseImageGenerator.modelName()).thenReturn("imagen-model");
 		when(phraseImageRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
 		when(phraseImageRepository.save(asset)).thenReturn(asset);
 
@@ -97,8 +88,6 @@ class PhraseImageServiceTest {
 
 	@Test
 	void startsGenerationAfterCommitWhenTransactionSynchronizationIsActive() {
-		when(phraseImageGenerator.providerName()).thenReturn("google-imagen");
-		when(phraseImageGenerator.modelName()).thenReturn("imagen-model");
 		when(phraseImageRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(), "Ich mache meine Hausaufgabe."))
 				.thenReturn(Optional.empty());
 		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
@@ -118,8 +107,8 @@ class PhraseImageServiceTest {
 	}
 
 	private PhraseImageService service() {
-		return new PhraseImageService(phraseImageRepository, generationProcessor, phraseImageGenerator, mediaStorageService,
-				wordInfoRepository, userDictionaryService);
+		return new PhraseImageService(phraseImageRepository, generationProcessor, mediaStorageService, wordInfoRepository,
+				userDictionaryService);
 	}
 
 	private static PhraseImageRequest request() {
@@ -129,7 +118,7 @@ class PhraseImageServiceTest {
 
 	private static PhraseImageAsset completedImageAsset() {
 		PhraseImageAsset asset = PhraseImageAsset.queued(wordInfoRecord(), "Hausaufgabe", "Ich mache meine Hausaufgabe.",
-				"Hausaufgabe", "Ich mache meine Hausaufgabe.", "de", "v1", "hash", OffsetDateTime.now());
+				"Hausaufgabe", "Ich mache meine Hausaufgabe.", "de", "v1", OffsetDateTime.now());
 		asset.setStatus(PhraseImageAssetStatus.COMPLETED);
 		asset.setImageObjectKey("phrase-images/%s/image.png".formatted(asset.getId()));
 		asset.setCompletedAt(OffsetDateTime.now());

@@ -64,9 +64,6 @@ public class PhraseImageAsset {
 	@Column(name = "prompt_text")
 	private String promptText;
 
-	@Column(name = "content_hash", nullable = false)
-	private String contentHash;
-
 	@Column(name = "error_code")
 	private String errorCode;
 
@@ -90,7 +87,6 @@ public class PhraseImageAsset {
 			String normalizedPhrase,
 			String language,
 			String promptVersion,
-			String contentHash,
 			OffsetDateTime now) {
 		PhraseImageAsset asset = new PhraseImageAsset();
 		asset.id = UUID.randomUUID();
@@ -101,7 +97,6 @@ public class PhraseImageAsset {
 		asset.normalizedPhrase = normalizedPhrase;
 		asset.language = language;
 		asset.promptVersion = promptVersion;
-		asset.contentHash = contentHash;
 		asset.status = PhraseImageAssetStatus.QUEUED;
 		asset.createdAt = now;
 		asset.updatedAt = now;
