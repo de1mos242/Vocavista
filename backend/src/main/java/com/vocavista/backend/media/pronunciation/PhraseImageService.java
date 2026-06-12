@@ -49,9 +49,8 @@ class PhraseImageService {
 		String contentHash = contentHash(input);
 
 		return phraseImageRepository
-				.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(input.language(), contentHash,
-						PhraseImageAssetStatus.REJECTED)
-				.map(this::reuseOrRetry)
+				.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
+				.map(asset -> reuseOrRetry(asset, contentHash))
 				.orElseGet(() -> createQueuedAsset(input, contentHash));
 	}
 
@@ -74,20 +73,12 @@ class PhraseImageService {
 
 	@Transactional
 	PhraseImageResponse regenerate(UUID id) {
-		PhraseImageAsset rejectedAsset = phraseImageRepository.findById(id)
+		PhraseImageAsset asset = phraseImageRepository.findById(id)
 				.orElseThrow(() -> new PronunciationNotFoundException("Phrase image asset was not found"));
-		OffsetDateTime now = OffsetDateTime.now(clock);
-		rejectedAsset.setStatus(PhraseImageAssetStatus.REJECTED);
-		rejectedAsset.setRejectedAt(now);
-		rejectedAsset.setUpdatedAt(now);
-		phraseImageRepository.save(rejectedAsset);
-		phraseImageRepository.flush();
-		userDictionaryService.ensureEntryForCurrentUser(rejectedAsset.getWordInfoRecord());
-
-		NormalizedInput input = new NormalizedInput(rejectedAsset.getWordInfoRecord(), rejectedAsset.getInputWord(),
-				rejectedAsset.getInputPhrase(), rejectedAsset.getNormalizedWord(), rejectedAsset.getNormalizedPhrase(),
-				rejectedAsset.getLanguage());
-		return createQueuedAsset(input, rejectedAsset.getContentHash());
+		userDictionaryService.ensureEntryForCurrentUser(asset.getWordInfoRecord());
+		NormalizedInput input = new NormalizedInput(asset.getWordInfoRecord(), asset.getInputWord(), asset.getInputPhrase(),
+				asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage());
+		return requeue(asset, contentHash(input));
 	}
 
 	private PhraseImageResponse createQueuedAsset(NormalizedInput input, String contentHash) {
@@ -101,23 +92,23 @@ class PhraseImageService {
 		}
 		catch (DataIntegrityViolationException ex) {
 			return phraseImageRepository
-					.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(input.language(), contentHash,
-							PhraseImageAssetStatus.REJECTED)
-					.map(this::reuseOrRetry)
+					.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
+					.map(existingAsset -> reuseOrRetry(existingAsset, contentHash))
 					.orElseThrow(() -> ex);
 		}
 	}
 
-	private PhraseImageResponse reuseOrRetry(PhraseImageAsset asset) {
+	private PhraseImageResponse reuseOrRetry(PhraseImageAsset asset, String contentHash) {
 		if (asset.getStatus() != PhraseImageAssetStatus.FAILED) {
 			return toResponse(asset);
 		}
+		return requeue(asset, contentHash);
+	}
 
+	private PhraseImageResponse requeue(PhraseImageAsset asset, String contentHash) {
 		asset.setStatus(PhraseImageAssetStatus.QUEUED);
-		asset.setImageObjectKey(null);
-		asset.setImageProvider(null);
-		asset.setImageModel(null);
-		asset.setPromptText(null);
+		asset.setPromptVersion(promptVersion);
+		asset.setContentHash(contentHash);
 		asset.setErrorCode(null);
 		asset.setErrorMessage(null);
 		asset.setCompletedAt(null);
@@ -146,7 +137,7 @@ class PhraseImageService {
 				PhraseImageStatus.fromValue(asset.getStatus().name().toLowerCase()));
 		response.setWord(asset.getNormalizedWord());
 		response.setPhrase(asset.getNormalizedPhrase());
-		if (asset.getStatus() == PhraseImageAssetStatus.COMPLETED && StringUtils.hasText(asset.getImageObjectKey())) {
+		if (StringUtils.hasText(asset.getImageObjectKey())) {
 			response.setImageUrl(imageUri(asset));
 		}
 		if (asset.getStatus() == PhraseImageAssetStatus.FAILED) {

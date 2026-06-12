@@ -59,6 +59,7 @@ class PronunciationGenerationProcessor {
 		String videoObjectKey = "pronunciations/" + asset.getId() + "/video." + extensionFor(video.contentType());
 		mediaStorageService.store(videoObjectKey, video.contentType(), video.bytes());
 		asset.setVideoObjectKey(videoObjectKey);
+		asset.setSmallVideoObjectKey(null);
 		pronunciationVideoCompressor.compress(video).ifPresent(smallVideo -> {
 			String smallVideoObjectKey = "pronunciations/" + asset.getId() + "/video-small.mp4";
 			mediaStorageService.store(smallVideoObjectKey, smallVideo.contentType(), smallVideo.bytes());

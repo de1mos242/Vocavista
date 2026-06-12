@@ -60,6 +60,8 @@ class PronunciationGenerationProcessorTest {
 	@Test
 	void marksAssetFailedWhenProviderFails() {
 		PronunciationAsset asset = queuedAsset();
+		asset.setVideoObjectKey("pronunciations/%s/video.mp4".formatted(asset.getId()));
+		asset.setSmallVideoObjectKey("pronunciations/%s/video-small.mp4".formatted(asset.getId()));
 		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
 		when(pronunciationVideoGenerator.generate(any()))
 				.thenThrow(new MediaGenerationException("video_provider_error", "Veo failed"));
@@ -71,6 +73,8 @@ class PronunciationGenerationProcessorTest {
 		assertThat(asset.getStatus()).isEqualTo(PronunciationAssetStatus.FAILED);
 		assertThat(asset.getErrorCode()).isEqualTo("video_provider_error");
 		assertThat(asset.getErrorMessage()).isEqualTo("Veo failed");
+		assertThat(asset.getVideoObjectKey()).endsWith("/video.mp4");
+		assertThat(asset.getSmallVideoObjectKey()).endsWith("/video-small.mp4");
 	}
 
 	private static PronunciationAsset queuedAsset() {

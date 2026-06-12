@@ -82,9 +82,6 @@ public class PhraseImageAsset {
 	@Column(name = "completed_at")
 	private OffsetDateTime completedAt;
 
-	@Column(name = "rejected_at")
-	private OffsetDateTime rejectedAt;
-
 	static PhraseImageAsset queued(
 			WordInfoRecord wordInfoRecord,
 			String inputWord,

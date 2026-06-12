@@ -5,7 +5,6 @@ public enum PronunciationAssetStatus {
 	QUEUED,
 	PROCESSING,
 	COMPLETED,
-	FAILED,
-	REJECTED
+	FAILED
 
 }

@@ -79,9 +79,6 @@ public class PronunciationAsset {
 	@Column(name = "completed_at")
 	private OffsetDateTime completedAt;
 
-	@Column(name = "rejected_at")
-	private OffsetDateTime rejectedAt;
-
 	static PronunciationAsset queued(
 			WordInfoRecord wordInfoRecord,
 			String inputWord,

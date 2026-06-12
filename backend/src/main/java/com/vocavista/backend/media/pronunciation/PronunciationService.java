@@ -50,9 +50,8 @@ class PronunciationService {
 		String contentHash = contentHash(input);
 
 		return pronunciationRepository
-				.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(input.language(), contentHash,
-						PronunciationAssetStatus.REJECTED)
-				.map(this::reuseOrRetry)
+				.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
+				.map(asset -> reuseOrRetry(asset, contentHash))
 				.orElseGet(() -> createQueuedAsset(input, contentHash));
 	}
 
@@ -90,20 +89,12 @@ class PronunciationService {
 
 	@Transactional
 	PronunciationResponse regenerate(UUID id) {
-		PronunciationAsset rejectedAsset = pronunciationRepository.findById(id)
+		PronunciationAsset asset = pronunciationRepository.findById(id)
 				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
-		OffsetDateTime now = OffsetDateTime.now(clock);
-		rejectedAsset.setStatus(PronunciationAssetStatus.REJECTED);
-		rejectedAsset.setRejectedAt(now);
-		rejectedAsset.setUpdatedAt(now);
-		pronunciationRepository.save(rejectedAsset);
-		pronunciationRepository.flush();
-		userDictionaryService.ensureEntryForCurrentUser(rejectedAsset.getWordInfoRecord());
-
-		NormalizedInput input = new NormalizedInput(rejectedAsset.getWordInfoRecord(), rejectedAsset.getInputWord(),
-				rejectedAsset.getInputPhrase(), rejectedAsset.getNormalizedWord(), rejectedAsset.getNormalizedPhrase(),
-				rejectedAsset.getLanguage());
-		return createQueuedAsset(input, rejectedAsset.getContentHash());
+		userDictionaryService.ensureEntryForCurrentUser(asset.getWordInfoRecord());
+		NormalizedInput input = new NormalizedInput(asset.getWordInfoRecord(), asset.getInputWord(), asset.getInputPhrase(),
+				asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage());
+		return requeue(asset, contentHash(input));
 	}
 
 	private StoredMedia storeSmallVideo(PronunciationAsset asset, GeneratedVideo smallVideo) {
@@ -125,23 +116,22 @@ class PronunciationService {
 		}
 		catch (DataIntegrityViolationException ex) {
 			return pronunciationRepository
-					.findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(input.language(), contentHash,
-							PronunciationAssetStatus.REJECTED)
-					.map(this::reuseOrRetry)
+					.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
+					.map(existingAsset -> reuseOrRetry(existingAsset, contentHash))
 					.orElseThrow(() -> ex);
 		}
 	}
 
-	private PronunciationResponse reuseOrRetry(PronunciationAsset asset) {
+	private PronunciationResponse reuseOrRetry(PronunciationAsset asset, String contentHash) {
 		if (asset.getStatus() != PronunciationAssetStatus.FAILED) {
 			return toResponse(asset);
 		}
+		return requeue(asset, contentHash);
+	}
 
+	private PronunciationResponse requeue(PronunciationAsset asset, String contentHash) {
 		asset.setStatus(PronunciationAssetStatus.QUEUED);
-		asset.setVideoObjectKey(null);
-		asset.setSmallVideoObjectKey(null);
-		asset.setVideoProvider(null);
-		asset.setVideoModel(null);
+		asset.setContentHash(contentHash);
 		asset.setErrorCode(null);
 		asset.setErrorMessage(null);
 		asset.setCompletedAt(null);
@@ -168,7 +158,7 @@ class PronunciationService {
 	private PronunciationResponse toResponse(PronunciationAsset asset) {
 		PronunciationResponse response = new PronunciationResponse(asset.getId(),
 				asset.getWordInfoRecord().getId(), PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
-		if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getVideoObjectKey())) {
+		if (StringUtils.hasText(asset.getVideoObjectKey())) {
 			response.setVideoUrl(smallVideoUri(asset));
 			response.setFullVideoUrl(fullVideoUri(asset));
 		}
