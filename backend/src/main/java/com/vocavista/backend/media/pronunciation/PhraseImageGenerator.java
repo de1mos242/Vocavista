@@ -147,3 +147,9 @@ class PhraseImageGenerator {
 	}
 
 }
+
+record PhraseImagePrompt(String word, String phrase, String language, String text, String version) {
+}
+
+record GeneratedImage(byte[] bytes, String contentType) {
+}

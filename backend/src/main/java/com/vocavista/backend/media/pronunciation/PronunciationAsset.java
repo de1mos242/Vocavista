@@ -61,9 +61,6 @@ public class PronunciationAsset {
 	@Column(name = "video_model")
 	private String videoModel;
 
-	@Column(name = "content_hash", nullable = false)
-	private String contentHash;
-
 	@Column(name = "error_code")
 	private String errorCode;
 
@@ -79,9 +76,6 @@ public class PronunciationAsset {
 	@Column(name = "completed_at")
 	private OffsetDateTime completedAt;
 
-	@Column(name = "rejected_at")
-	private OffsetDateTime rejectedAt;
-
 	static PronunciationAsset queued(
 			WordInfoRecord wordInfoRecord,
 			String inputWord,
@@ -89,7 +83,6 @@ public class PronunciationAsset {
 			String normalizedWord,
 			String normalizedPhrase,
 			String language,
-			String contentHash,
 			OffsetDateTime now) {
 		PronunciationAsset asset = new PronunciationAsset();
 		asset.id = UUID.randomUUID();
@@ -99,7 +92,6 @@ public class PronunciationAsset {
 		asset.normalizedWord = normalizedWord;
 		asset.normalizedPhrase = normalizedPhrase;
 		asset.language = language;
-		asset.contentHash = contentHash;
 		asset.status = PronunciationAssetStatus.QUEUED;
 		asset.createdAt = now;
 		asset.updatedAt = now;

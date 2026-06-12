@@ -192,7 +192,6 @@ class UserDictionaryServiceTest {
 		asset.setLanguage("de");
 		asset.setStatus(PronunciationAssetStatus.COMPLETED);
 		asset.setVideoObjectKey("pronunciations/%s/video.mp4".formatted(asset.getId()));
-		asset.setContentHash("hash");
 		asset.setCreatedAt(OffsetDateTime.now());
 		asset.setUpdatedAt(OffsetDateTime.now());
 		asset.setCompletedAt(OffsetDateTime.now());

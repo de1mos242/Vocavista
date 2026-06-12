@@ -6,10 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PhraseImageRepository extends JpaRepository<PhraseImageAsset, UUID> {
 
-	Optional<PhraseImageAsset> findFirstByLanguageAndContentHashAndStatusNotOrderByCreatedAtAsc(
-			String language,
-			String contentHash,
-			PhraseImageAssetStatus status);
+	Optional<PhraseImageAsset> findByWordInfoRecordIdAndNormalizedPhrase(UUID wordInfoRecordId, String normalizedPhrase);
 
 	Optional<PhraseImageAsset> findFirstByWordInfoRecordIdAndNormalizedPhraseAndStatusOrderByUpdatedAtDesc(
 			UUID wordInfoRecordId,

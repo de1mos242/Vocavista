@@ -7,3 +7,6 @@ interface MediaStorageService {
 	StoredMedia read(String objectKey);
 
 }
+
+record StoredMedia(String contentType, byte[] bytes) {
+}

@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
-class SpringAiPhraseImageSceneDescriber implements PhraseImageSceneDescriber {
+class SpringAiPhraseImageSceneDescriber {
 
 	private static final String MISSING_API_KEY = "__missing__";
 
@@ -40,7 +40,6 @@ class SpringAiPhraseImageSceneDescriber implements PhraseImageSceneDescriber {
 		this.model = model;
 	}
 
-	@Override
 	public String describe(String word, String phrase, String language) {
 		if (!StringUtils.hasText(apiKey) || MISSING_API_KEY.equals(apiKey)) {
 			throw new MediaGenerationException("scene_provider_unavailable", "OpenAI API key is not configured");

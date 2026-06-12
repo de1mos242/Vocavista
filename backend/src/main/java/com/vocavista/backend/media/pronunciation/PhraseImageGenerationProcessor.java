@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 class PhraseImageGenerationProcessor {
 
 	private final PhraseImageRepository phraseImageRepository;
-	private final PhraseImageSceneDescriber phraseImageSceneDescriber;
+	private final SpringAiPhraseImageSceneDescriber phraseImageSceneDescriber;
 	private final PhraseImageGenerator phraseImageGenerator;
 	private final MediaStorageService mediaStorageService;
 	private final Clock clock = Clock.systemUTC();
