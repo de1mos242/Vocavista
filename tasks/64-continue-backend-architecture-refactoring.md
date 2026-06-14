@@ -25,6 +25,8 @@
 - Follow-up issue #65 created for moving phrase image backend code out of the pronunciation package.
 - Task branch fast-forwarded to include PR #63 before implementation.
 - Added `MediaAssetQueryService` as a neutral read boundary for pronunciation and phrase image lookups used by word suggestions and dictionary review/manifest responses.
+- Moved media query projections from manual service methods into `MediaAssetMapper` so the query service only queries and delegates mapping.
+- Moved word suggestion, dictionary review/manifest, pronunciation response, and phrase-image response projections into MapStruct mappers while leaving validation, deduplication, persistence, and enrichment in services.
 - Replaced `WordInfoMetadataReader`/`PronunciationMetadata` with `WordInfoArticleReader`, which returns only the stored noun article; pronunciation generation derives speaker wording from that article.
 - Kept existing domain error handlers/status mappings separate and removed the low-value `ApiErrorResponses` helper so each handler constructs its own response explicitly.
 - Removed the empty `VocavistaBackendApplicationTests` context smoke test and two dictionary tests that only asserted repository method selection.
@@ -35,4 +37,7 @@
 - `./mvnw -Dtest=WordInfoControllerTest,PronunciationControllerTest test` passed after removing `ApiErrorResponses`.
 - `./mvnw -Dtest=DictionaryControllerTest test` passed after removing `ApiErrorResponses`.
 - `./mvnw -Dtest=PronunciationGenerationProcessorTest test` passed after replacing `PronunciationMetadata` with article-only reading.
+- `./mvnw -Dtest=UserDictionaryServiceTest test` passed after restoring the `Optional` import style.
+- `./mvnw -Dtest=UserDictionaryServiceTest,PronunciationControllerTest test` passed after moving media query projections into MapStruct.
+- `./mvnw -Dtest=UserDictionaryServiceTest,DictionaryControllerTest,WordInfoControllerTest,PronunciationServiceTest,PhraseImageServiceTest,PronunciationControllerTest test` passed after moving additional service projections into MapStruct.
 - `./mvnw test` compiled and ran non-container tests, but failed on `AuthControllerTest` because Docker/Testcontainers is unavailable for the PostgreSQL container in this environment.

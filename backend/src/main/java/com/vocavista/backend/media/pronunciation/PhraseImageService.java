@@ -2,11 +2,9 @@ package com.vocavista.backend.media.pronunciation;
 
 import com.vocavista.backend.api.model.PhraseImageRequest;
 import com.vocavista.backend.api.model.PhraseImageResponse;
-import com.vocavista.backend.api.model.PhraseImageStatus;
 import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
-import java.net.URI;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -32,6 +30,7 @@ class PhraseImageService {
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
 	private final UserDictionaryService userDictionaryService;
+	private final MediaResponseMapper mediaResponseMapper;
 	private final Clock clock = Clock.systemUTC();
 
 	@Value("${vocavista.media.image-prompt-version:v4}")
@@ -52,7 +51,7 @@ class PhraseImageService {
 	PhraseImageResponse get(UUID id) {
 		PhraseImageAsset asset = phraseImageRepository.findById(id)
 				.orElseThrow(() -> new PronunciationNotFoundException("Phrase image asset was not found"));
-		return toResponse(asset);
+		return mediaResponseMapper.toResponse(asset);
 	}
 
 	@Transactional(readOnly = true)
@@ -79,7 +78,7 @@ class PhraseImageService {
 		try {
 			PhraseImageAsset savedAsset = phraseImageRepository.save(asset);
 			queueGeneration(savedAsset.getId());
-			return toResponse(savedAsset);
+			return mediaResponseMapper.toResponse(savedAsset);
 		}
 		catch (DataIntegrityViolationException ex) {
 			return phraseImageRepository
@@ -91,7 +90,7 @@ class PhraseImageService {
 
 	private PhraseImageResponse reuseOrRetry(PhraseImageAsset asset) {
 		if (asset.getStatus() != PhraseImageAssetStatus.FAILED) {
-			return toResponse(asset);
+			return mediaResponseMapper.toResponse(asset);
 		}
 		return requeue(asset);
 	}
@@ -105,7 +104,7 @@ class PhraseImageService {
 		asset.setUpdatedAt(OffsetDateTime.now(clock));
 		PhraseImageAsset savedAsset = phraseImageRepository.save(asset);
 		queueGeneration(savedAsset.getId());
-		return toResponse(savedAsset);
+		return mediaResponseMapper.toResponse(savedAsset);
 	}
 
 	private void queueGeneration(UUID id) {
@@ -120,21 +119,6 @@ class PhraseImageService {
 				generationProcessor.process(id);
 			}
 		});
-	}
-
-	PhraseImageResponse toResponse(PhraseImageAsset asset) {
-		PhraseImageResponse response = new PhraseImageResponse(asset.getId(), asset.getWordInfoRecord().getId(),
-				PhraseImageStatus.fromValue(asset.getStatus().name().toLowerCase()));
-		response.setWord(asset.getNormalizedWord());
-		response.setPhrase(asset.getNormalizedPhrase());
-		if (StringUtils.hasText(asset.getImageObjectKey())) {
-			response.setImageUrl(imageUri(asset));
-		}
-		if (asset.getStatus() == PhraseImageAssetStatus.FAILED) {
-			response.setErrorCode(asset.getErrorCode());
-			response.setErrorMessage(asset.getErrorMessage());
-		}
-		return response;
 	}
 
 	private NormalizedInput normalize(PhraseImageRequest request) {
@@ -171,10 +155,6 @@ class PhraseImageService {
 
 	private static String trimAndCollapse(String value) {
 		return value == null ? "" : value.trim().replaceAll("\\s+", " ");
-	}
-
-	static URI imageUri(PhraseImageAsset asset) {
-		return URI.create("/api/v1/media/phrase-images/" + asset.getId() + "/image");
 	}
 
 	private record NormalizedInput(WordInfoRecord wordInfoRecord, String word, String phrase, String normalizedWord,

@@ -151,7 +151,8 @@ class UserDictionaryServiceTest {
 	}
 
 	private UserDictionaryService service() {
-		return new UserDictionaryService(entryRepository, currentUserService, mediaAssetQueryService, wordInfoRepository);
+		return new UserDictionaryService(entryRepository, currentUserService, mediaAssetQueryService, wordInfoRepository,
+				new DictionaryMapperImpl());
 	}
 
 	private static MediaAssetQueryService.CompletedPronunciation completedPronunciation(PronunciationAsset asset) {

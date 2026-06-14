@@ -1,6 +1,5 @@
 package com.vocavista.backend.wordinfo;
 
-import com.vocavista.backend.api.model.PronunciationStatus;
 import com.vocavista.backend.api.model.WordSuggestion;
 import com.vocavista.backend.api.model.WordSuggestionsResponse;
 import com.vocavista.backend.media.MediaAssetQueryService;
@@ -17,6 +16,7 @@ class WordSuggestionService {
 
 	private final WordInfoRepository wordInfoRepository;
 	private final MediaAssetQueryService mediaAssetQueryService;
+	private final WordSuggestionMapper wordSuggestionMapper;
 
 	WordSuggestionsResponse search(String query) {
 		String normalizedQuery = trimAndValidate(query);
@@ -24,20 +24,13 @@ class WordSuggestionService {
 
 		for (WordInfoRecord record : wordInfoRepository
 				.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc(normalizedQuery)) {
-			WordSuggestion suggestion = new WordSuggestion(record.getNormalizedWord(), WordSuggestion.SourceEnum.WORD_INFO);
-			suggestion.setWordInfoId(record.getId());
+			WordSuggestion suggestion = wordSuggestionMapper.toWordInfoSuggestion(record);
 			suggestions.putIfAbsent(key(record.getNormalizedWord(), null), suggestion);
 		}
 
 		for (MediaAssetQueryService.PronunciationSuggestion pronunciation : mediaAssetQueryService
 				.findPronunciationSuggestions(normalizedQuery)) {
-			WordSuggestion suggestion = new WordSuggestion(pronunciation.word(), WordSuggestion.SourceEnum.PRONUNCIATION);
-			suggestion.setPhrase(pronunciation.phrase());
-			suggestion.setWordInfoId(pronunciation.wordInfoId());
-			suggestion.setPronunciationId(pronunciation.pronunciationId());
-			suggestion.setStatus(PronunciationStatus.fromValue(pronunciation.status()));
-			suggestion.setVideoUrl(pronunciation.videoUrl());
-			suggestion.setFullVideoUrl(pronunciation.fullVideoUrl());
+			WordSuggestion suggestion = wordSuggestionMapper.toPronunciationSuggestion(pronunciation);
 			suggestions.putIfAbsent(key(pronunciation.word(), pronunciation.phrase()), suggestion);
 		}
 

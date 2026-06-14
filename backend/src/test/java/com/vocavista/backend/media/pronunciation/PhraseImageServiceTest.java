@@ -108,7 +108,7 @@ class PhraseImageServiceTest {
 
 	private PhraseImageService service() {
 		return new PhraseImageService(phraseImageRepository, generationProcessor, mediaStorageService, wordInfoRepository,
-				userDictionaryService);
+				userDictionaryService, new MediaResponseMapperImpl());
 	}
 
 	private static PhraseImageRequest request() {

@@ -22,6 +22,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -42,6 +43,7 @@ public class UserDictionaryService {
 	private final CurrentUserService currentUserService;
 	private final MediaAssetQueryService mediaAssetQueryService;
 	private final WordInfoRepository wordInfoRepository;
+	private final DictionaryMapper dictionaryMapper;
 	private final ObjectMapper objectMapper = new ObjectMapper();
 	private final Clock clock = Clock.systemUTC();
 
@@ -84,8 +86,8 @@ public class UserDictionaryService {
 				.stream()
 				.map(UserDictionaryEntry::getWordInfoRecord)
 				.map(wordInfoRecord -> mediaAssetQueryService.latestCompletedPronunciation(wordInfoRecord.getId()))
-				.flatMap(java.util.Optional::stream)
-				.map(this::toVideoManifestItem)
+				.flatMap(Optional::stream)
+				.map(dictionaryMapper::toVideoManifestItem)
 				.toList();
 		return new DictionaryVideoManifestResponse(items);
 	}
@@ -151,10 +153,7 @@ public class UserDictionaryService {
 
 	private DictionaryReviewItem toReviewItem(UserDictionaryEntry entry) {
 		WordInfoResponse wordInfo = readWordInfo(entry.getWordInfoRecord());
-		DictionaryReviewItem item = new DictionaryReviewItem(entry.getId(), entry.getWordInfoRecord().getId(),
-				entry.getNormalizedWord(), expectedAnswer(wordInfo), wordInfo.getTranslations(), wordInfo.getPartOfSpeech(),
-				entry.getDueAt());
-		item.setArticle(wordInfo.getArticle());
+		DictionaryReviewItem item = dictionaryMapper.toReviewItem(entry, wordInfo, expectedAnswer(wordInfo));
 		mediaAssetQueryService.latestCompletedPronunciation(entry.getWordInfoRecord().getId()).ifPresent(pronunciation -> {
 			item.setPronunciationAssetId(pronunciation.id());
 			item.setPhrase(pronunciation.phrase());
@@ -164,11 +163,6 @@ public class UserDictionaryService {
 			});
 		});
 		return item;
-	}
-
-	private DictionaryVideoManifestItem toVideoManifestItem(MediaAssetQueryService.CompletedPronunciation pronunciation) {
-		return new DictionaryVideoManifestItem(pronunciation.id(), pronunciation.wordInfoId(), pronunciation.videoUrl(),
-				pronunciation.fullVideoUrl(), pronunciation.updatedAt());
 	}
 
 	private WordInfoResponse readWordInfo(WordInfoRecord record) {

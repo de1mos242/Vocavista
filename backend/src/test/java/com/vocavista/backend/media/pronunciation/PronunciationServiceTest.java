@@ -179,7 +179,7 @@ class PronunciationServiceTest {
 
 	private PronunciationService service() {
 		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationVideoCompressor,
-				mediaStorageService, wordInfoRepository, userDictionaryService);
+				mediaStorageService, wordInfoRepository, userDictionaryService, new MediaResponseMapperImpl());
 	}
 
 	private static PronunciationRequest request(String word, String phrase) {

@@ -33,7 +33,8 @@ import java.util.UUID;
 
 @WebMvcTest(value = WordInfoController.class, excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class)
 @Import({ WordInfoService.class, WordSuggestionService.class, ProviderWordInfoValidator.class, WordInfoMapperImpl.class,
-		WordInfoErrorHandler.class, AuthErrorHandler.class, FunctionalAccessInterceptor.class, FunctionalAccessWebConfig.class })
+		WordSuggestionMapperImpl.class, WordInfoErrorHandler.class, AuthErrorHandler.class, FunctionalAccessInterceptor.class,
+		FunctionalAccessWebConfig.class })
 class WordInfoControllerTest {
 
 	@Autowired
