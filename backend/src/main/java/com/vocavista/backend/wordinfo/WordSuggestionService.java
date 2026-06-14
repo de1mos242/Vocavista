@@ -3,10 +3,7 @@ package com.vocavista.backend.wordinfo;
 import com.vocavista.backend.api.model.PronunciationStatus;
 import com.vocavista.backend.api.model.WordSuggestion;
 import com.vocavista.backend.api.model.WordSuggestionsResponse;
-import com.vocavista.backend.media.pronunciation.PronunciationAsset;
-import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
-import com.vocavista.backend.media.pronunciation.PronunciationRepository;
-import java.net.URI;
+import com.vocavista.backend.media.MediaAssetQueryService;
 import java.util.LinkedHashMap;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,7 +16,7 @@ class WordSuggestionService {
 	private static final int MAX_QUERY_LENGTH = 80;
 
 	private final WordInfoRepository wordInfoRepository;
-	private final PronunciationRepository pronunciationRepository;
+	private final MediaAssetQueryService mediaAssetQueryService;
 
 	WordSuggestionsResponse search(String query) {
 		String normalizedQuery = trimAndValidate(query);
@@ -32,18 +29,16 @@ class WordSuggestionService {
 			suggestions.putIfAbsent(key(record.getNormalizedWord(), null), suggestion);
 		}
 
-		for (PronunciationAsset asset : pronunciationRepository
-				.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc(normalizedQuery)) {
-			WordSuggestion suggestion = new WordSuggestion(asset.getNormalizedWord(), WordSuggestion.SourceEnum.PRONUNCIATION);
-			suggestion.setPhrase(asset.getNormalizedPhrase());
-			suggestion.setWordInfoId(asset.getWordInfoRecord().getId());
-			suggestion.setPronunciationId(asset.getId());
-			suggestion.setStatus(PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
-			if (asset.getStatus() == PronunciationAssetStatus.COMPLETED && StringUtils.hasText(asset.getVideoObjectKey())) {
-				suggestion.setVideoUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video/small"));
-				suggestion.setFullVideoUrl(URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video"));
-			}
-			suggestions.putIfAbsent(key(asset.getNormalizedWord(), asset.getNormalizedPhrase()), suggestion);
+		for (MediaAssetQueryService.PronunciationSuggestion pronunciation : mediaAssetQueryService
+				.findPronunciationSuggestions(normalizedQuery)) {
+			WordSuggestion suggestion = new WordSuggestion(pronunciation.word(), WordSuggestion.SourceEnum.PRONUNCIATION);
+			suggestion.setPhrase(pronunciation.phrase());
+			suggestion.setWordInfoId(pronunciation.wordInfoId());
+			suggestion.setPronunciationId(pronunciation.pronunciationId());
+			suggestion.setStatus(PronunciationStatus.fromValue(pronunciation.status()));
+			suggestion.setVideoUrl(pronunciation.videoUrl());
+			suggestion.setFullVideoUrl(pronunciation.fullVideoUrl());
+			suggestions.putIfAbsent(key(pronunciation.word(), pronunciation.phrase()), suggestion);
 		}
 
 		return new WordSuggestionsResponse(suggestions.values().stream().toList());

@@ -14,21 +14,14 @@ import com.vocavista.backend.api.model.PartOfSpeech;
 import com.vocavista.backend.api.model.WordInfoResponse;
 import com.vocavista.backend.auth.CurrentUserService;
 import com.vocavista.backend.auth.UserAccount;
-import com.vocavista.backend.media.pronunciation.PronunciationAsset;
-import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
-import com.vocavista.backend.media.pronunciation.PronunciationRepository;
-import com.vocavista.backend.media.pronunciation.PhraseImageAsset;
-import com.vocavista.backend.media.pronunciation.PhraseImageAssetStatus;
-import com.vocavista.backend.media.pronunciation.PhraseImageRepository;
+import com.vocavista.backend.media.MediaAssetQueryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
-import java.net.URI;
 import java.time.Clock;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -47,8 +40,7 @@ public class UserDictionaryService {
 
 	private final UserDictionaryEntryRepository entryRepository;
 	private final CurrentUserService currentUserService;
-	private final PronunciationRepository pronunciationRepository;
-	private final PhraseImageRepository phraseImageRepository;
+	private final MediaAssetQueryService mediaAssetQueryService;
 	private final WordInfoRepository wordInfoRepository;
 	private final ObjectMapper objectMapper = new ObjectMapper();
 	private final Clock clock = Clock.systemUTC();
@@ -91,8 +83,8 @@ public class UserDictionaryService {
 				.findByUserAccountIdOrderByNormalizedWordAsc(userAccount.getId())
 				.stream()
 				.map(UserDictionaryEntry::getWordInfoRecord)
-				.map(this::latestCompletedPronunciation)
-				.flatMap(Optional::stream)
+				.map(wordInfoRecord -> mediaAssetQueryService.latestCompletedPronunciation(wordInfoRecord.getId()))
+				.flatMap(java.util.Optional::stream)
 				.map(this::toVideoManifestItem)
 				.toList();
 		return new DictionaryVideoManifestResponse(items);
@@ -163,45 +155,20 @@ public class UserDictionaryService {
 				entry.getNormalizedWord(), expectedAnswer(wordInfo), wordInfo.getTranslations(), wordInfo.getPartOfSpeech(),
 				entry.getDueAt());
 		item.setArticle(wordInfo.getArticle());
-		Optional<PronunciationAsset> pronunciationAsset = pronunciationRepository
-				.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(entry.getWordInfoRecord().getId(),
-						PronunciationAssetStatus.COMPLETED);
-		pronunciationAsset.ifPresent(asset -> {
-			item.setPronunciationAssetId(asset.getId());
-			item.setPhrase(asset.getNormalizedPhrase());
-			latestCompletedPhraseImage(entry.getWordInfoRecord(), asset.getNormalizedPhrase()).ifPresent(image -> {
-				item.setPhraseImageId(image.getId());
-				item.setPhraseImageUrl(phraseImageUri(image));
+		mediaAssetQueryService.latestCompletedPronunciation(entry.getWordInfoRecord().getId()).ifPresent(pronunciation -> {
+			item.setPronunciationAssetId(pronunciation.id());
+			item.setPhrase(pronunciation.phrase());
+			mediaAssetQueryService.latestCompletedPhraseImage(entry.getWordInfoRecord().getId(), pronunciation.phrase()).ifPresent(image -> {
+				item.setPhraseImageId(image.id());
+				item.setPhraseImageUrl(image.imageUrl());
 			});
 		});
 		return item;
 	}
 
-	private Optional<PronunciationAsset> latestCompletedPronunciation(WordInfoRecord wordInfoRecord) {
-		return pronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(
-				wordInfoRecord.getId(), PronunciationAssetStatus.COMPLETED);
-	}
-
-	private Optional<PhraseImageAsset> latestCompletedPhraseImage(WordInfoRecord wordInfoRecord, String normalizedPhrase) {
-		return phraseImageRepository.findFirstByWordInfoRecordIdAndNormalizedPhraseAndStatusOrderByUpdatedAtDesc(
-				wordInfoRecord.getId(), normalizedPhrase, PhraseImageAssetStatus.COMPLETED);
-	}
-
-	private DictionaryVideoManifestItem toVideoManifestItem(PronunciationAsset asset) {
-		return new DictionaryVideoManifestItem(asset.getId(), asset.getWordInfoRecord().getId(), smallVideoUri(asset),
-				fullVideoUri(asset), asset.getUpdatedAt());
-	}
-
-	private static URI smallVideoUri(PronunciationAsset asset) {
-		return URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video/small");
-	}
-
-	private static URI fullVideoUri(PronunciationAsset asset) {
-		return URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video");
-	}
-
-	private static URI phraseImageUri(PhraseImageAsset asset) {
-		return URI.create("/api/v1/media/phrase-images/" + asset.getId() + "/image");
+	private DictionaryVideoManifestItem toVideoManifestItem(MediaAssetQueryService.CompletedPronunciation pronunciation) {
+		return new DictionaryVideoManifestItem(pronunciation.id(), pronunciation.wordInfoId(), pronunciation.videoUrl(),
+				pronunciation.fullVideoUrl(), pronunciation.updatedAt());
 	}
 
 	private WordInfoResponse readWordInfo(WordInfoRecord record) {

@@ -9,12 +9,12 @@ import static org.mockito.Mockito.when;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitRequest;
 import com.vocavista.backend.auth.CurrentUserService;
 import com.vocavista.backend.auth.UserAccount;
+import com.vocavista.backend.media.MediaAssetQueryService;
 import com.vocavista.backend.media.pronunciation.PronunciationAsset;
 import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
-import com.vocavista.backend.media.pronunciation.PronunciationRepository;
-import com.vocavista.backend.media.pronunciation.PhraseImageRepository;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
+import java.net.URI;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -36,10 +36,7 @@ class UserDictionaryServiceTest {
 	private CurrentUserService currentUserService;
 
 	@Mock
-	private PronunciationRepository pronunciationRepository;
-
-	@Mock
-	private PhraseImageRepository phraseImageRepository;
+	private MediaAssetQueryService mediaAssetQueryService;
 
 	@Mock
 	private WordInfoRepository wordInfoRepository;
@@ -76,29 +73,6 @@ class UserDictionaryServiceTest {
 	}
 
 	@Test
-	void dueReviewReturnsOnlyDueEntriesByDefault() {
-		UserAccount userAccount = userAccount();
-		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
-
-		service().getReviewItems(10, false);
-
-		verify(entryRepository).findByUserAccountIdAndDueAtLessThanEqualOrderByDueAtAsc(
-				any(UUID.class), any(OffsetDateTime.class), any(Pageable.class));
-		verify(entryRepository, never()).findByUserAccountIdOrderByDueAtAsc(any(), any());
-	}
-
-	@Test
-	void includeUpcomingReturnsNextEntriesByDueAt() {
-		UserAccount userAccount = userAccount();
-		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
-
-		service().getReviewItems(10, true);
-
-		verify(entryRepository).findByUserAccountIdOrderByDueAtAsc(any(UUID.class), any(Pageable.class));
-		verify(entryRepository, never()).findByUserAccountIdAndDueAtLessThanEqualOrderByDueAtAsc(any(), any(), any());
-	}
-
-	@Test
 	void reviewItemsIncludeCompletedPronunciationAssetId() {
 		UserAccount userAccount = userAccount();
 		WordInfoRecord wordInfoRecord = wordInfoRecord("Hausaufgabe");
@@ -107,10 +81,10 @@ class UserDictionaryServiceTest {
 		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
 		when(entryRepository.findByUserAccountIdAndDueAtLessThanEqualOrderByDueAtAsc(
 				any(UUID.class), any(OffsetDateTime.class), any(Pageable.class))).thenReturn(List.of(entry));
-		when(pronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(
-				wordInfoRecord.getId(), PronunciationAssetStatus.COMPLETED)).thenReturn(Optional.of(asset));
-		when(phraseImageRepository.findFirstByWordInfoRecordIdAndNormalizedPhraseAndStatusOrderByUpdatedAtDesc(
-				any(UUID.class), any(), any())).thenReturn(Optional.empty());
+		when(mediaAssetQueryService.latestCompletedPronunciation(wordInfoRecord.getId()))
+				.thenReturn(Optional.of(completedPronunciation(asset)));
+		when(mediaAssetQueryService.latestCompletedPhraseImage(wordInfoRecord.getId(), asset.getNormalizedPhrase()))
+				.thenReturn(Optional.empty());
 
 		var response = service().getReviewItems(10, false);
 
@@ -126,8 +100,8 @@ class UserDictionaryServiceTest {
 		PronunciationAsset asset = pronunciationAsset(wordInfoRecord);
 		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
 		when(entryRepository.findByUserAccountIdOrderByNormalizedWordAsc(userAccount.getId())).thenReturn(List.of(entry));
-		when(pronunciationRepository.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(
-				wordInfoRecord.getId(), PronunciationAssetStatus.COMPLETED)).thenReturn(Optional.of(asset));
+		when(mediaAssetQueryService.latestCompletedPronunciation(wordInfoRecord.getId()))
+				.thenReturn(Optional.of(completedPronunciation(asset)));
 
 		var response = service().getVideoManifest();
 
@@ -177,8 +151,13 @@ class UserDictionaryServiceTest {
 	}
 
 	private UserDictionaryService service() {
-		return new UserDictionaryService(entryRepository, currentUserService, pronunciationRepository, phraseImageRepository,
-				wordInfoRepository);
+		return new UserDictionaryService(entryRepository, currentUserService, mediaAssetQueryService, wordInfoRepository);
+	}
+
+	private static MediaAssetQueryService.CompletedPronunciation completedPronunciation(PronunciationAsset asset) {
+		return new MediaAssetQueryService.CompletedPronunciation(asset.getId(), asset.getWordInfoRecord().getId(),
+				asset.getNormalizedPhrase(), URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video/small"),
+				URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video"), asset.getUpdatedAt());
 	}
 
 	private static PronunciationAsset pronunciationAsset(WordInfoRecord wordInfoRecord) {

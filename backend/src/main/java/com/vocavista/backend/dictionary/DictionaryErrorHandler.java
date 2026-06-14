@@ -1,6 +1,7 @@
 package com.vocavista.backend.dictionary;
 
 import com.vocavista.backend.api.model.ErrorResponse;
+import static com.vocavista.backend.web.ApiErrorResponses.error;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -25,10 +26,6 @@ class DictionaryErrorHandler {
 	@ExceptionHandler(DictionaryNotFoundException.class)
 	ResponseEntity<ErrorResponse> handleNotFound(DictionaryNotFoundException ex) {
 		return error(HttpStatus.NOT_FOUND, "not_found", "Dictionary entry was not found");
-	}
-
-	private static ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {
-		return ResponseEntity.status(status).body(new ErrorResponse(code, message));
 	}
 
 }

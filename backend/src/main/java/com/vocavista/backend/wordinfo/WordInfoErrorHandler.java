@@ -1,6 +1,7 @@
 package com.vocavista.backend.wordinfo;
 
 import com.vocavista.backend.api.model.ErrorResponse;
+import static com.vocavista.backend.web.ApiErrorResponses.error;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -36,10 +37,6 @@ class WordInfoErrorHandler {
 	ResponseEntity<ErrorResponse> handleUnavailable(AiProviderUnavailableException ex) {
 		log.warn("AI provider is unavailable", ex);
 		return error(HttpStatus.SERVICE_UNAVAILABLE, "ai_provider_unavailable", "AI provider is unavailable");
-	}
-
-	private static ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {
-		return ResponseEntity.status(status).body(new ErrorResponse(code, message));
 	}
 
 }

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.vocavista.backend.wordinfo.WordInfoMetadataReader;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -40,7 +41,7 @@ class PronunciationGenerationProcessorTest {
 		when(pronunciationVideoGenerator.providerName()).thenReturn("google-veo");
 		when(pronunciationVideoGenerator.modelName()).thenReturn("veo-model");
 		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
-				pronunciationVideoGenerator, pronunciationVideoCompressor, mediaStorageService);
+				pronunciationVideoGenerator, pronunciationVideoCompressor, mediaStorageService, new WordInfoMetadataReader());
 
 		processor.process(asset.getId());
 
@@ -66,7 +67,7 @@ class PronunciationGenerationProcessorTest {
 		when(pronunciationVideoGenerator.generate(any()))
 				.thenThrow(new MediaGenerationException("video_provider_error", "Veo failed"));
 		PronunciationGenerationProcessor processor = new PronunciationGenerationProcessor(pronunciationRepository,
-				pronunciationVideoGenerator, pronunciationVideoCompressor, mediaStorageService);
+				pronunciationVideoGenerator, pronunciationVideoCompressor, mediaStorageService, new WordInfoMetadataReader());
 
 		processor.process(asset.getId());
 

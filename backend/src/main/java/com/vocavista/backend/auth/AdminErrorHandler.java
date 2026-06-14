@@ -1,6 +1,7 @@
 package com.vocavista.backend.auth;
 
 import com.vocavista.backend.api.model.ErrorResponse;
+import static com.vocavista.backend.web.ApiErrorResponses.error;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +23,6 @@ class AdminErrorHandler {
 	@ExceptionHandler(AdminUserNotFoundException.class)
 	ResponseEntity<ErrorResponse> handleNotFound(AdminUserNotFoundException ex) {
 		return error(HttpStatus.NOT_FOUND, "not_found", "User account was not found");
-	}
-
-	private static ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {
-		return ResponseEntity.status(status).body(new ErrorResponse(code, message));
 	}
 
 }

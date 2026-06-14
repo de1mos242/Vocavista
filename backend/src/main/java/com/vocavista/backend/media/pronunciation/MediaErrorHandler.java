@@ -1,6 +1,7 @@
 package com.vocavista.backend.media.pronunciation;
 
 import com.vocavista.backend.api.model.ErrorResponse;
+import static com.vocavista.backend.web.ApiErrorResponses.error;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -31,10 +32,6 @@ class MediaErrorHandler {
 	ResponseEntity<ErrorResponse> handleProviderFailure(MediaGenerationException ex) {
 		log.warn("Media provider failed", ex);
 		return error(HttpStatus.SERVICE_UNAVAILABLE, ex.getCode(), ex.getMessage());
-	}
-
-	private static ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {
-		return ResponseEntity.status(status).body(new ErrorResponse(code, message));
 	}
 
 }

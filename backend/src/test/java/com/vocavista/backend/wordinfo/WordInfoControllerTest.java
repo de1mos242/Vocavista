@@ -15,6 +15,7 @@ import com.vocavista.backend.auth.FunctionalAccessInterceptor;
 import com.vocavista.backend.auth.FunctionalAccessWebConfig;
 import com.vocavista.backend.auth.GoogleOidcUserService;
 import com.vocavista.backend.auth.UserAccessService;
+import com.vocavista.backend.media.MediaAssetQueryService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.vocavista.backend.media.pronunciation.PronunciationRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -46,7 +46,7 @@ class WordInfoControllerTest {
 	private WordInfoRepository wordInfoRepository;
 
 	@MockitoBean
-	private PronunciationRepository pronunciationRepository;
+	private MediaAssetQueryService mediaAssetQueryService;
 
 	@MockitoBean
 	private GoogleOidcUserService googleOidcUserService;
@@ -60,6 +60,7 @@ class WordInfoControllerTest {
 	@BeforeEach
 	void setUp() {
 		when(wordInfoRepository.findByNormalizedQuery(anyString())).thenReturn(Optional.empty());
+		when(mediaAssetQueryService.findPronunciationSuggestions(anyString())).thenReturn(List.of());
 	}
 
 	@Test
@@ -96,9 +97,6 @@ class WordInfoControllerTest {
 				OffsetDateTime.now());
 		when(wordInfoRepository.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc("haus"))
 				.thenReturn(List.of(record));
-		when(pronunciationRepository.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc("haus"))
-				.thenReturn(List.of());
-
 		mockMvc.perform(get("/api/v1/words/suggestions").param("query", "haus"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items[0].word").value("Hausaufgabe"))
