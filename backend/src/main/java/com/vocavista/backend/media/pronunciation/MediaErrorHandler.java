@@ -19,22 +19,21 @@ class MediaErrorHandler {
 			ConstraintViolationException.class, HandlerMethodValidationException.class, HttpMessageNotReadableException.class })
 	ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
 		log.debug("Invalid media request", ex);
-		return error(HttpStatus.BAD_REQUEST, "invalid_request", "Invalid pronunciation request");
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new ErrorResponse("invalid_request", "Invalid pronunciation request"));
 	}
 
 	@ExceptionHandler(PronunciationNotFoundException.class)
 	ResponseEntity<ErrorResponse> handleNotFound(PronunciationNotFoundException ex) {
-		return error(HttpStatus.NOT_FOUND, "not_found", "Pronunciation asset was not found");
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new ErrorResponse("not_found", "Pronunciation asset was not found"));
 	}
 
 	@ExceptionHandler(MediaGenerationException.class)
 	ResponseEntity<ErrorResponse> handleProviderFailure(MediaGenerationException ex) {
 		log.warn("Media provider failed", ex);
-		return error(HttpStatus.SERVICE_UNAVAILABLE, ex.getCode(), ex.getMessage());
-	}
-
-	private static ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {
-		return ResponseEntity.status(status).body(new ErrorResponse(code, message));
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+			.body(new ErrorResponse(ex.getCode(), ex.getMessage()));
 	}
 
 }

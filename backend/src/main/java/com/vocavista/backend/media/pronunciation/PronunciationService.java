@@ -2,11 +2,9 @@ package com.vocavista.backend.media.pronunciation;
 
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
-import com.vocavista.backend.api.model.PronunciationStatus;
 import com.vocavista.backend.dictionary.UserDictionaryService;
 import com.vocavista.backend.wordinfo.WordInfoRecord;
 import com.vocavista.backend.wordinfo.WordInfoRepository;
-import java.net.URI;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -32,6 +30,7 @@ class PronunciationService {
 	private final MediaStorageService mediaStorageService;
 	private final WordInfoRepository wordInfoRepository;
 	private final UserDictionaryService userDictionaryService;
+	private final MediaResponseMapper mediaResponseMapper;
 	private final Clock clock = Clock.systemUTC();
 
 	@Transactional
@@ -48,7 +47,7 @@ class PronunciationService {
 	PronunciationResponse get(UUID id) {
 		PronunciationAsset asset = pronunciationRepository.findById(id)
 				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
-		return toResponse(asset);
+		return mediaResponseMapper.toResponse(asset);
 	}
 
 	StoredMedia getVideo(UUID id) {
@@ -100,7 +99,7 @@ class PronunciationService {
 		try {
 			PronunciationAsset savedAsset = pronunciationRepository.save(asset);
 			queueGeneration(savedAsset.getId());
-			return toResponse(savedAsset);
+			return mediaResponseMapper.toResponse(savedAsset);
 		}
 		catch (DataIntegrityViolationException ex) {
 			return pronunciationRepository
@@ -112,7 +111,7 @@ class PronunciationService {
 
 	private PronunciationResponse reuseOrRetry(PronunciationAsset asset) {
 		if (asset.getStatus() != PronunciationAssetStatus.FAILED) {
-			return toResponse(asset);
+			return mediaResponseMapper.toResponse(asset);
 		}
 		return requeue(asset);
 	}
@@ -125,7 +124,7 @@ class PronunciationService {
 		asset.setUpdatedAt(OffsetDateTime.now(clock));
 		PronunciationAsset savedAsset = pronunciationRepository.save(asset);
 		queueGeneration(savedAsset.getId());
-		return toResponse(savedAsset);
+		return mediaResponseMapper.toResponse(savedAsset);
 	}
 
 	private void queueGeneration(UUID id) {
@@ -140,20 +139,6 @@ class PronunciationService {
 				generationProcessor.process(id);
 			}
 		});
-	}
-
-	private PronunciationResponse toResponse(PronunciationAsset asset) {
-		PronunciationResponse response = new PronunciationResponse(asset.getId(),
-				asset.getWordInfoRecord().getId(), PronunciationStatus.fromValue(asset.getStatus().name().toLowerCase()));
-		if (StringUtils.hasText(asset.getVideoObjectKey())) {
-			response.setVideoUrl(smallVideoUri(asset));
-			response.setFullVideoUrl(fullVideoUri(asset));
-		}
-		if (asset.getStatus() == PronunciationAssetStatus.FAILED) {
-			response.setErrorCode(asset.getErrorCode());
-			response.setErrorMessage(asset.getErrorMessage());
-		}
-		return response;
 	}
 
 	private NormalizedInput normalize(PronunciationRequest request) {
@@ -194,14 +179,6 @@ class PronunciationService {
 
 	private record NormalizedInput(WordInfoRecord wordInfoRecord, String word, String phrase, String normalizedWord, String normalizedPhrase,
 			String language) {
-	}
-
-	static URI smallVideoUri(PronunciationAsset asset) {
-		return URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video/small");
-	}
-
-	static URI fullVideoUri(PronunciationAsset asset) {
-		return URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video");
 	}
 
 }

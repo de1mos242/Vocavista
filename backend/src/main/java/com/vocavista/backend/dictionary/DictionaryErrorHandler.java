@@ -19,16 +19,14 @@ class DictionaryErrorHandler {
 			ConstraintViolationException.class, HandlerMethodValidationException.class, HttpMessageNotReadableException.class })
 	ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
 		log.debug("Invalid dictionary request", ex);
-		return error(HttpStatus.BAD_REQUEST, "invalid_request", "Invalid dictionary request");
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new ErrorResponse("invalid_request", "Invalid dictionary request"));
 	}
 
 	@ExceptionHandler(DictionaryNotFoundException.class)
 	ResponseEntity<ErrorResponse> handleNotFound(DictionaryNotFoundException ex) {
-		return error(HttpStatus.NOT_FOUND, "not_found", "Dictionary entry was not found");
-	}
-
-	private static ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {
-		return ResponseEntity.status(status).body(new ErrorResponse(code, message));
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new ErrorResponse("not_found", "Dictionary entry was not found"));
 	}
 
 }

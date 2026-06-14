@@ -1,10 +1,6 @@
 package com.vocavista.backend.media.pronunciation;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vocavista.backend.api.model.Gender;
-import com.vocavista.backend.api.model.PartOfSpeech;
-import com.vocavista.backend.api.model.WordInfoResponse;
+import com.vocavista.backend.wordinfo.WordInfoArticleReader;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -24,7 +20,7 @@ class PronunciationGenerationProcessor {
 	private final PronunciationVideoGenerator pronunciationVideoGenerator;
 	private final PronunciationVideoCompressor pronunciationVideoCompressor;
 	private final MediaStorageService mediaStorageService;
-	private final ObjectMapper objectMapper = new ObjectMapper();
+	private final WordInfoArticleReader wordInfoArticleReader;
 	private final Clock clock = Clock.systemUTC();
 
 	@Value("${vocavista.media.script-template-version:v6}")
@@ -78,40 +74,22 @@ class PronunciationGenerationProcessor {
 	}
 
 	private PronunciationScript scriptFor(PronunciationAsset asset) {
-		WordInfoMetadata metadata = wordInfoMetadata(asset);
-		String repeatedWord = metadata.article() == null
+		String article = wordInfoArticleReader.nounArticle(asset.getWordInfoRecord());
+		String repeatedWord = article == null
 				? asset.getNormalizedWord()
-				: metadata.article() + " " + asset.getNormalizedWord();
+				: article + " " + asset.getNormalizedWord();
 		String text = "%s...\n\n%s!\n\n%s".formatted(asset.getNormalizedWord(), repeatedWord,
 				punctuated(asset.getNormalizedPhrase()));
 		return new PronunciationScript(asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage(), text,
-				scriptTemplateVersion, metadata.speakerDescription());
+				scriptTemplateVersion, speakerDescription(article));
 	}
 
-	private WordInfoMetadata wordInfoMetadata(PronunciationAsset asset) {
-		try {
-			String responseJson = asset.getWordInfoRecord().getResponseJson();
-			if (responseJson == null || responseJson.isBlank()) {
-				return WordInfoMetadata.defaultMetadata();
-			}
-			WordInfoResponse wordInfo = objectMapper.readValue(responseJson, WordInfoResponse.class);
-			String article = wordInfo.getPartOfSpeech() == PartOfSpeech.NOUN && wordInfo.getArticle() != null
-					? wordInfo.getArticle().getValue()
-					: null;
-			return new WordInfoMetadata(article, speakerDescription(wordInfo.getGender()));
-		}
-		catch (JsonProcessingException | IllegalArgumentException ex) {
-			log.warn("Could not read word info metadata for pronunciation script", ex);
-			return WordInfoMetadata.defaultMetadata();
-		}
-	}
-
-	private static String speakerDescription(Gender gender) {
-		return switch (gender) {
-			case MASCULINE -> "male german adult speaker";
-			case FEMININE -> "female german adult speaker";
-			case NEUTER -> "young german adult woman";
-			case null -> "young german adult woman";
+	private static String speakerDescription(String article) {
+		return switch (article) {
+			case "der" -> "male german adult speaker";
+			case "die" -> "female german adult speaker";
+			case "das" -> "male german young speaker";
+			case null, default -> "female german young speaker";
 		};
 	}
 
@@ -126,14 +104,6 @@ class PronunciationGenerationProcessor {
 			case "video/quicktime" -> "mov";
 			default -> "bin";
 		};
-	}
-
-	private record WordInfoMetadata(String article, String speakerDescription) {
-
-		static WordInfoMetadata defaultMetadata() {
-			return new WordInfoMetadata(null, "young adult woman");
-		}
-
 	}
 
 }

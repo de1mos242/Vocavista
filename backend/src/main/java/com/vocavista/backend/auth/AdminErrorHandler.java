@@ -16,16 +16,14 @@ class AdminErrorHandler {
 	@ExceptionHandler({ AdminUserValidationException.class, MethodArgumentNotValidException.class,
 			ConstraintViolationException.class, HandlerMethodValidationException.class, HttpMessageNotReadableException.class })
 	ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
-		return error(HttpStatus.BAD_REQUEST, "invalid_request", "Invalid admin user request");
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new ErrorResponse("invalid_request", "Invalid admin user request"));
 	}
 
 	@ExceptionHandler(AdminUserNotFoundException.class)
 	ResponseEntity<ErrorResponse> handleNotFound(AdminUserNotFoundException ex) {
-		return error(HttpStatus.NOT_FOUND, "not_found", "User account was not found");
-	}
-
-	private static ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {
-		return ResponseEntity.status(status).body(new ErrorResponse(code, message));
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new ErrorResponse("not_found", "User account was not found"));
 	}
 
 }
