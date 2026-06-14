@@ -1,7 +1,6 @@
 package com.vocavista.backend.dictionary;
 
 import com.vocavista.backend.api.model.ErrorResponse;
-import static com.vocavista.backend.web.ApiErrorResponses.error;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -20,12 +19,14 @@ class DictionaryErrorHandler {
 			ConstraintViolationException.class, HandlerMethodValidationException.class, HttpMessageNotReadableException.class })
 	ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
 		log.debug("Invalid dictionary request", ex);
-		return error(HttpStatus.BAD_REQUEST, "invalid_request", "Invalid dictionary request");
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new ErrorResponse("invalid_request", "Invalid dictionary request"));
 	}
 
 	@ExceptionHandler(DictionaryNotFoundException.class)
 	ResponseEntity<ErrorResponse> handleNotFound(DictionaryNotFoundException ex) {
-		return error(HttpStatus.NOT_FOUND, "not_found", "Dictionary entry was not found");
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new ErrorResponse("not_found", "Dictionary entry was not found"));
 	}
 
 }

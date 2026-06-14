@@ -1,7 +1,6 @@
 package com.vocavista.backend.wordinfo;
 
 import com.vocavista.backend.api.model.ErrorResponse;
-import static com.vocavista.backend.web.ApiErrorResponses.error;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -19,7 +18,8 @@ class WordInfoErrorHandler {
 			ConstraintViolationException.class, HandlerMethodValidationException.class })
 	ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
 		log.debug("Invalid word info request", ex);
-		return error(HttpStatus.BAD_REQUEST, "invalid_request", "Invalid word request");
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new ErrorResponse("invalid_request", "Invalid word request"));
 	}
 
 	@ExceptionHandler(AiProviderBadGatewayException.class)
@@ -30,13 +30,15 @@ class WordInfoErrorHandler {
 		else {
 			log.warn("AI provider returned an invalid response. rawProviderResponse={}", ex.providerResponse(), ex);
 		}
-		return error(HttpStatus.BAD_GATEWAY, "ai_provider_error", "AI provider returned an invalid response");
+		return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+			.body(new ErrorResponse("ai_provider_error", "AI provider returned an invalid response"));
 	}
 
 	@ExceptionHandler(AiProviderUnavailableException.class)
 	ResponseEntity<ErrorResponse> handleUnavailable(AiProviderUnavailableException ex) {
 		log.warn("AI provider is unavailable", ex);
-		return error(HttpStatus.SERVICE_UNAVAILABLE, "ai_provider_unavailable", "AI provider is unavailable");
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+			.body(new ErrorResponse("ai_provider_unavailable", "AI provider is unavailable"));
 	}
 
 }

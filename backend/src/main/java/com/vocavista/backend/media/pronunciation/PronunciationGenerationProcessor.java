@@ -1,7 +1,6 @@
 package com.vocavista.backend.media.pronunciation;
 
-import com.vocavista.backend.wordinfo.WordInfoMetadataReader;
-import com.vocavista.backend.wordinfo.WordInfoMetadataReader.PronunciationMetadata;
+import com.vocavista.backend.wordinfo.WordInfoArticleReader;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -21,7 +20,7 @@ class PronunciationGenerationProcessor {
 	private final PronunciationVideoGenerator pronunciationVideoGenerator;
 	private final PronunciationVideoCompressor pronunciationVideoCompressor;
 	private final MediaStorageService mediaStorageService;
-	private final WordInfoMetadataReader wordInfoMetadataReader;
+	private final WordInfoArticleReader wordInfoArticleReader;
 	private final Clock clock = Clock.systemUTC();
 
 	@Value("${vocavista.media.script-template-version:v6}")
@@ -75,14 +74,23 @@ class PronunciationGenerationProcessor {
 	}
 
 	private PronunciationScript scriptFor(PronunciationAsset asset) {
-		PronunciationMetadata metadata = wordInfoMetadataReader.pronunciationMetadata(asset.getWordInfoRecord());
-		String repeatedWord = metadata.article() == null
+		String article = wordInfoArticleReader.nounArticle(asset.getWordInfoRecord());
+		String repeatedWord = article == null
 				? asset.getNormalizedWord()
-				: metadata.article() + " " + asset.getNormalizedWord();
+				: article + " " + asset.getNormalizedWord();
 		String text = "%s...\n\n%s!\n\n%s".formatted(asset.getNormalizedWord(), repeatedWord,
 				punctuated(asset.getNormalizedPhrase()));
 		return new PronunciationScript(asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage(), text,
-				scriptTemplateVersion, metadata.speakerDescription());
+				scriptTemplateVersion, speakerDescription(article));
+	}
+
+	private static String speakerDescription(String article) {
+		return switch (article) {
+			case "der" -> "male german adult speaker";
+			case "die" -> "female german adult speaker";
+			case "das" -> "male german young speaker";
+			case null, default -> "female german young speaker";
+		};
 	}
 
 	private static String punctuated(String value) {
