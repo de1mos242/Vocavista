@@ -76,14 +76,6 @@ class PronunciationService {
 				.orElse(originalVideo);
 	}
 
-	@Transactional
-	PronunciationResponse regenerate(UUID id) {
-		PronunciationAsset asset = pronunciationRepository.findById(id)
-				.orElseThrow(() -> new PronunciationNotFoundException("Pronunciation asset was not found"));
-		userDictionaryService.ensureEntryForCurrentUser(asset.getWordInfoRecord());
-		return requeue(asset);
-	}
-
 	private StoredMedia storeSmallVideo(PronunciationAsset asset, GeneratedVideo smallVideo) {
 		String smallVideoObjectKey = "pronunciations/" + asset.getId() + "/video-small.mp4";
 		mediaStorageService.store(smallVideoObjectKey, smallVideo.contentType(), smallVideo.bytes());

@@ -78,3 +78,4 @@ vocavista:
       model: imagen-4.0-generate-001
       aspect-ratio: "16:9"
       sample-image-size: 1K
+      sample-count: 3

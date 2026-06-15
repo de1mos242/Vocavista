@@ -64,12 +64,32 @@ class PhraseImageService {
 		return mediaStorageService.read(asset.getImageObjectKey());
 	}
 
-	@Transactional
-	PhraseImageResponse regenerate(UUID id) {
+	@Transactional(readOnly = true)
+	StoredMedia getCandidateImage(UUID id, int candidateIndex) {
 		PhraseImageAsset asset = phraseImageRepository.findById(id)
 				.orElseThrow(() -> new PronunciationNotFoundException("Phrase image asset was not found"));
-		userDictionaryService.ensureEntryForCurrentUser(asset.getWordInfoRecord());
-		return requeue(asset);
+		validateCandidateIndex(asset, candidateIndex);
+		return mediaStorageService.read(candidateObjectKey(asset.getId(), candidateIndex));
+	}
+
+	@Transactional
+	PhraseImageResponse selectCandidate(UUID id, int candidateIndex) {
+		PhraseImageAsset asset = phraseImageRepository.findById(id)
+				.orElseThrow(() -> new PronunciationNotFoundException("Phrase image asset was not found"));
+		if (asset.getStatus() == PhraseImageAssetStatus.COMPLETED) {
+			return mediaResponseMapper.toResponse(asset);
+		}
+		if (asset.getStatus() != PhraseImageAssetStatus.AWAITING_SELECTION) {
+			throw new PronunciationNotFoundException("Phrase image candidate was not found");
+		}
+		validateCandidateIndex(asset, candidateIndex);
+		asset.setImageObjectKey(candidateObjectKey(asset.getId(), candidateIndex));
+		asset.setStatus(PhraseImageAssetStatus.COMPLETED);
+		asset.setErrorCode(null);
+		asset.setErrorMessage(null);
+		asset.setCompletedAt(OffsetDateTime.now(clock));
+		asset.setUpdatedAt(asset.getCompletedAt());
+		return mediaResponseMapper.toResponse(phraseImageRepository.save(asset));
 	}
 
 	private PhraseImageResponse createQueuedAsset(NormalizedInput input) {
@@ -101,10 +121,22 @@ class PhraseImageService {
 		asset.setErrorCode(null);
 		asset.setErrorMessage(null);
 		asset.setCompletedAt(null);
+		asset.setImageObjectKey(null);
+		asset.setImageCandidateCount(0);
 		asset.setUpdatedAt(OffsetDateTime.now(clock));
 		PhraseImageAsset savedAsset = phraseImageRepository.save(asset);
 		queueGeneration(savedAsset.getId());
 		return mediaResponseMapper.toResponse(savedAsset);
+	}
+
+	static String candidateObjectKey(UUID id, int candidateIndex) {
+		return "phrase-images/" + id + "/candidates/" + candidateIndex + "/image";
+	}
+
+	private static void validateCandidateIndex(PhraseImageAsset asset, int candidateIndex) {
+		if (candidateIndex < 0 || candidateIndex >= asset.getImageCandidateCount()) {
+			throw new PronunciationNotFoundException("Phrase image candidate was not found");
+		}
 	}
 
 	private void queueGeneration(UUID id) {

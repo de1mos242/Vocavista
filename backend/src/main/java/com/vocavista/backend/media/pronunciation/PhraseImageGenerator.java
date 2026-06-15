@@ -1,6 +1,7 @@
 package com.vocavista.backend.media.pronunciation;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,14 +28,14 @@ class PhraseImageGenerator {
 		this.properties = properties;
 	}
 
-	GeneratedImage generate(PhraseImagePrompt prompt) {
+	List<GeneratedImage> generate(PhraseImagePrompt prompt) {
 		if (!StringUtils.hasText(properties.getApiKey()) || "__missing__".equals(properties.getApiKey())) {
 			throw new MediaGenerationException("image_provider_unavailable", "Google AI API key is not configured");
 		}
 
 		try {
 			JsonNode response = predict(prompt);
-			return extractImage(response);
+			return extractImages(response);
 		}
 		catch (RestClientResponseException ex) {
 			throw new MediaGenerationException("image_provider_error",
@@ -76,12 +77,15 @@ class PhraseImageGenerator {
 				.body(JsonNode.class);
 	}
 
-	private GeneratedImage extractImage(JsonNode response) {
-		JsonNode image = firstImage(response);
-		if (image.isMissingNode()) {
+	private List<GeneratedImage> extractImages(JsonNode response) {
+		List<JsonNode> imageNodes = imageNodes(response);
+		if (imageNodes.isEmpty()) {
 			throw new MediaGenerationException("image_provider_error", "Imagen completed without a generated image");
 		}
+		return imageNodes.stream().map(this::extractImage).toList();
+	}
 
+	private GeneratedImage extractImage(JsonNode image) {
 		String contentType = firstText(image, "mimeType", "mime_type");
 		if (!StringUtils.hasText(contentType)) {
 			contentType = "image/png";
@@ -117,19 +121,23 @@ class PhraseImageGenerator {
 		return Base64.getDecoder().decode(base64);
 	}
 
-	private static JsonNode firstImage(JsonNode response) {
-		for (String pointer : List.of(
-				"/predictions/0/image",
-				"/generatedImages/0/image",
-				"/generated_images/0/image",
-				"/predictions/0",
-				"/images/0")) {
-			JsonNode node = response.at(pointer);
-			if (!node.isMissingNode() && !node.isNull()) {
-				return node;
+	private static List<JsonNode> imageNodes(JsonNode response) {
+		for (String pointer : List.of("/predictions", "/generatedImages", "/generated_images", "/images")) {
+			JsonNode array = response.at(pointer);
+			if (!array.isArray()) {
+				continue;
+			}
+			List<JsonNode> images = new ArrayList<>();
+			for (JsonNode item : array) {
+				JsonNode image = item.path("image");
+				images.add(image.isMissingNode() || image.isNull() ? item : image);
+			}
+			if (!images.isEmpty()) {
+				return images;
 			}
 		}
-		return MissingNode.getInstance();
+		JsonNode singleImage = response.at("/image");
+		return singleImage.isMissingNode() || singleImage.isNull() ? List.of() : List.of(singleImage);
 	}
 
 	private static String text(JsonNode node, String fieldName) {

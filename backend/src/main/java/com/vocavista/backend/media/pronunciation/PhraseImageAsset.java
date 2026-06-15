@@ -52,6 +52,9 @@ public class PhraseImageAsset {
 	@Column(name = "image_object_key")
 	private String imageObjectKey;
 
+	@Column(name = "image_candidate_count", nullable = false)
+	private int imageCandidateCount;
+
 	@Column(name = "image_provider")
 	private String imageProvider;
 
@@ -98,6 +101,7 @@ public class PhraseImageAsset {
 		asset.language = language;
 		asset.promptVersion = promptVersion;
 		asset.status = PhraseImageAssetStatus.QUEUED;
+		asset.imageCandidateCount = 0;
 		asset.createdAt = now;
 		asset.updatedAt = now;
 		return asset;

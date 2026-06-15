@@ -18,7 +18,7 @@ import org.springframework.web.client.RestClient;
 class PhraseImageGeneratorTest {
 
 	@Test
-	void createsCinematicImagenImage() {
+	void createsCinematicImagenImages() {
 		RestClient.Builder restClientBuilder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
 		ImagenProperties properties = properties();
@@ -32,13 +32,18 @@ class PhraseImageGeneratorTest {
 				.andExpect(content().string(not(containsString("Hausaufgabe"))))
 				.andExpect(content().string(not(containsString("Ich mache meine Hausaufgabe."))))
 				.andRespond(withSuccess("""
-						{"predictions":[{"bytesBase64Encoded":"%s","mimeType":"image/png"}]}
-						""".formatted(Base64.getEncoder().encodeToString("image".getBytes())), MediaType.APPLICATION_JSON));
+						{"predictions":[
+						  {"bytesBase64Encoded":"%s","mimeType":"image/png"},
+						  {"bytesBase64Encoded":"%s","mimeType":"image/png"}
+						]}
+						""".formatted(Base64.getEncoder().encodeToString("image-1".getBytes()),
+						Base64.getEncoder().encodeToString("image-2".getBytes())), MediaType.APPLICATION_JSON));
 
-		GeneratedImage image = generator.generate(prompt());
+		var images = generator.generate(prompt());
 
-		assertThat(image.bytes()).isEqualTo("image".getBytes());
-		assertThat(image.contentType()).isEqualTo("image/png");
+		assertThat(images).hasSize(2);
+		assertThat(images.getFirst().bytes()).isEqualTo("image-1".getBytes());
+		assertThat(images.getFirst().contentType()).isEqualTo("image/png");
 		assertThat(generator.providerName()).isEqualTo("google-imagen");
 		assertThat(generator.modelName()).contains("imagen-4.0-generate-001", "16:9", "1K", "prompt-v4");
 		server.verify();

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddDictionaryEntryData, AddDictionaryEntryErrors, AddDictionaryEntryResponses, CreatePhraseImageData, CreatePhraseImageErrors, CreatePhraseImageResponses, CreatePronunciationData, CreatePronunciationErrors, CreatePronunciationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetDictionaryReviewData, GetDictionaryReviewErrors, GetDictionaryReviewResponses, GetDictionaryVideosData, GetDictionaryVideosErrors, GetDictionaryVideosResponses, GetPhraseImageBytesData, GetPhraseImageBytesErrors, GetPhraseImageBytesResponses, GetPhraseImageData, GetPhraseImageErrors, GetPhraseImageResponses, GetPronunciationData, GetPronunciationErrors, GetPronunciationResponses, GetPronunciationVideoData, GetPronunciationVideoErrors, GetPronunciationVideoResponses, GetSmallPronunciationVideoData, GetSmallPronunciationVideoErrors, GetSmallPronunciationVideoResponses, GetWordInfoData, GetWordInfoErrors, GetWordInfoResponses, GetWordSuggestionsData, GetWordSuggestionsErrors, GetWordSuggestionsResponses, ListAdminUsersData, ListAdminUsersErrors, ListAdminUsersResponses, RegeneratePhraseImageData, RegeneratePhraseImageErrors, RegeneratePhraseImageResponses, RegeneratePronunciationData, RegeneratePronunciationErrors, RegeneratePronunciationResponses, SubmitDictionaryReviewData, SubmitDictionaryReviewErrors, SubmitDictionaryReviewResponses, UpdateAdminUserStatusData, UpdateAdminUserStatusErrors, UpdateAdminUserStatusResponses } from './types.gen';
+import type { AddDictionaryEntryData, AddDictionaryEntryErrors, AddDictionaryEntryResponses, CreatePhraseImageData, CreatePhraseImageErrors, CreatePhraseImageResponses, CreatePronunciationData, CreatePronunciationErrors, CreatePronunciationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetDictionaryReviewData, GetDictionaryReviewErrors, GetDictionaryReviewResponses, GetDictionaryVideosData, GetDictionaryVideosErrors, GetDictionaryVideosResponses, GetPhraseImageBytesData, GetPhraseImageBytesErrors, GetPhraseImageBytesResponses, GetPhraseImageCandidateBytesData, GetPhraseImageCandidateBytesErrors, GetPhraseImageCandidateBytesResponses, GetPhraseImageData, GetPhraseImageErrors, GetPhraseImageResponses, GetPronunciationData, GetPronunciationErrors, GetPronunciationResponses, GetPronunciationVideoData, GetPronunciationVideoErrors, GetPronunciationVideoResponses, GetSmallPronunciationVideoData, GetSmallPronunciationVideoErrors, GetSmallPronunciationVideoResponses, GetWordInfoData, GetWordInfoErrors, GetWordInfoResponses, GetWordSuggestionsData, GetWordSuggestionsErrors, GetWordSuggestionsResponses, ListAdminUsersData, ListAdminUsersErrors, ListAdminUsersResponses, SelectPhraseImageCandidateData, SelectPhraseImageCandidateErrors, SelectPhraseImageCandidateResponses, SubmitDictionaryReviewData, SubmitDictionaryReviewErrors, SubmitDictionaryReviewResponses, UpdateAdminUserStatusData, UpdateAdminUserStatusErrors, UpdateAdminUserStatusResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -116,15 +116,6 @@ export const getPronunciation = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
- * Reject and replace a bad pronunciation video
- */
-export const regeneratePronunciation = <ThrowOnError extends boolean = false>(options: Options<RegeneratePronunciationData, ThrowOnError>) => (options.client ?? client).post<RegeneratePronunciationResponses, RegeneratePronunciationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/media/pronunciations/{id}/regenerate',
-    ...options
-});
-
-/**
  * Stream generated pronunciation video
  */
 export const getPronunciationVideo = <ThrowOnError extends boolean = false>(options: Options<GetPronunciationVideoData, ThrowOnError>) => (options.client ?? client).get<GetPronunciationVideoResponses, GetPronunciationVideoErrors, ThrowOnError>({
@@ -165,11 +156,20 @@ export const getPhraseImage = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
- * Reject and replace a bad phrase image
+ * Stream a generated phrase image candidate
  */
-export const regeneratePhraseImage = <ThrowOnError extends boolean = false>(options: Options<RegeneratePhraseImageData, ThrowOnError>) => (options.client ?? client).post<RegeneratePhraseImageResponses, RegeneratePhraseImageErrors, ThrowOnError>({
+export const getPhraseImageCandidateBytes = <ThrowOnError extends boolean = false>(options: Options<GetPhraseImageCandidateBytesData, ThrowOnError>) => (options.client ?? client).get<GetPhraseImageCandidateBytesResponses, GetPhraseImageCandidateBytesErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/media/phrase-images/{id}/regenerate',
+    url: '/api/v1/media/phrase-images/{id}/candidates/{candidateIndex}/image',
+    ...options
+});
+
+/**
+ * Select a generated phrase image candidate as the shared image
+ */
+export const selectPhraseImageCandidate = <ThrowOnError extends boolean = false>(options: Options<SelectPhraseImageCandidateData, ThrowOnError>) => (options.client ?? client).post<SelectPhraseImageCandidateResponses, SelectPhraseImageCandidateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/media/phrase-images/{id}/candidates/{candidateIndex}/select',
     ...options
 });
 

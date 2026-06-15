@@ -109,27 +109,6 @@ class PronunciationServiceTest {
 	}
 
 	@Test
-	void regeneratesExistingAssetInPlace() {
-		PronunciationAsset existingAsset = completedVideoAsset();
-		String originalVideoKey = existingAsset.getVideoObjectKey();
-		when(pronunciationRepository.findById(existingAsset.getId())).thenReturn(Optional.of(existingAsset));
-		when(pronunciationRepository.save(existingAsset)).thenReturn(existingAsset);
-		PronunciationService service = service();
-
-		PronunciationResponse response = service.regenerate(existingAsset.getId());
-
-		assertThat(response.getId()).isEqualTo(existingAsset.getId());
-		assertThat(response.getStatus()).isEqualTo(PronunciationStatus.QUEUED);
-		assertThat(response.getVideoUrl())
-				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/video/small");
-		assertThat(existingAsset.getStatus()).isEqualTo(PronunciationAssetStatus.QUEUED);
-		assertThat(existingAsset.getVideoObjectKey()).isEqualTo(originalVideoKey);
-		assertThat(existingAsset.getCompletedAt()).isNull();
-		verify(pronunciationRepository).save(existingAsset);
-		verify(generationProcessor).process(existingAsset.getId());
-	}
-
-	@Test
 	void startsGenerationAfterCommitWhenTransactionSynchronizationIsActive() {
 		when(pronunciationRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(),
 				"Ich mache meine Hausaufgabe nach dem Abendessen."))
