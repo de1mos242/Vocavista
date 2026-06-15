@@ -376,6 +376,35 @@ small,
   gap: 0.55rem;
 }
 
+.image-candidates {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 0.65rem;
+}
+
+.image-candidate {
+  display: grid;
+  gap: 0.35rem;
+  min-height: auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff9f1;
+  padding: 0.35rem;
+}
+
+.image-candidate img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 0.75rem;
+  object-fit: cover;
+}
+
+.image-candidate span {
+  font-size: 0.78rem;
+}
+
 .placeholder {
   max-width: 24rem;
   padding: 2rem;

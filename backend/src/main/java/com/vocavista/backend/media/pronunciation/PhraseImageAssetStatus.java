@@ -4,6 +4,7 @@ public enum PhraseImageAssetStatus {
 
 	QUEUED,
 	PROCESSING,
+	AWAITING_SELECTION,
 	COMPLETED,
 	FAILED
 

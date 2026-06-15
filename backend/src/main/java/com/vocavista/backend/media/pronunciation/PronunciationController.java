@@ -34,11 +34,6 @@ class PronunciationController implements MediaApi {
 	}
 
 	@Override
-	public ResponseEntity<PronunciationResponse> regeneratePronunciation(UUID id) {
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(pronunciationService.regenerate(id));
-	}
-
-	@Override
 	public ResponseEntity<Resource> getPronunciationVideo(UUID id) {
 		StoredMedia video = pronunciationService.getVideo(id);
 		return ResponseEntity.ok()
@@ -67,17 +62,26 @@ class PronunciationController implements MediaApi {
 	}
 
 	@Override
-	public ResponseEntity<PhraseImageResponse> regeneratePhraseImage(UUID id) {
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(phraseImageService.regenerate(id));
-	}
-
-	@Override
 	public ResponseEntity<Resource> getPhraseImageBytes(UUID id) {
 		StoredMedia image = phraseImageService.getImage(id);
 		return ResponseEntity.ok()
 				.contentType(MediaType.parseMediaType(image.contentType() == null ? "image/png" : image.contentType()))
 				.contentLength(image.bytes().length)
 				.body(new ByteArrayResource(image.bytes()));
+	}
+
+	@Override
+	public ResponseEntity<Resource> getPhraseImageCandidateBytes(UUID id, Integer candidateIndex) {
+		StoredMedia image = phraseImageService.getCandidateImage(id, candidateIndex);
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType(image.contentType() == null ? "image/png" : image.contentType()))
+				.contentLength(image.bytes().length)
+				.body(new ByteArrayResource(image.bytes()));
+	}
+
+	@Override
+	public ResponseEntity<PhraseImageResponse> selectPhraseImageCandidate(UUID id, Integer candidateIndex) {
+		return ResponseEntity.ok(phraseImageService.selectCandidate(id, candidateIndex));
 	}
 
 }

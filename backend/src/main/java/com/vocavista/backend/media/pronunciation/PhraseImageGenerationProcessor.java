@@ -2,6 +2,7 @@ package com.vocavista.backend.media.pronunciation;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,10 +35,11 @@ class PhraseImageGenerationProcessor {
 					asset.getLanguage());
 			PhraseImagePrompt prompt = promptFor(asset, sceneDescription);
 			asset.setPromptText(prompt.text());
-			generateImage(asset, prompt);
-			asset.setStatus(PhraseImageAssetStatus.COMPLETED);
+			generateImages(asset, prompt);
 			asset.setUpdatedAt(OffsetDateTime.now(clock));
-			asset.setCompletedAt(asset.getUpdatedAt());
+			if (asset.getStatus() == PhraseImageAssetStatus.COMPLETED) {
+				asset.setCompletedAt(asset.getUpdatedAt());
+			}
 		}
 		catch (MediaGenerationException ex) {
 			markFailed(asset, ex.getCode(), ex.getMessage(), ex);
@@ -47,13 +49,22 @@ class PhraseImageGenerationProcessor {
 		}
 	}
 
-	private void generateImage(PhraseImageAsset asset, PhraseImagePrompt prompt) {
-		GeneratedImage image = phraseImageGenerator.generate(prompt);
-		String imageObjectKey = "phrase-images/" + asset.getId() + "/image." + extensionFor(image.contentType());
-		mediaStorageService.store(imageObjectKey, image.contentType(), image.bytes());
-		asset.setImageObjectKey(imageObjectKey);
+	private void generateImages(PhraseImageAsset asset, PhraseImagePrompt prompt) {
+		List<GeneratedImage> images = phraseImageGenerator.generate(prompt);
+		for (int i = 0; i < images.size(); i += 1) {
+			GeneratedImage image = images.get(i);
+			mediaStorageService.store(PhraseImageService.candidateObjectKey(asset.getId(), i), image.contentType(), image.bytes());
+		}
+		asset.setImageCandidateCount(images.size());
 		asset.setImageProvider(phraseImageGenerator.providerName());
 		asset.setImageModel(phraseImageGenerator.modelName());
+		if (images.size() == 1) {
+			asset.setImageObjectKey(PhraseImageService.candidateObjectKey(asset.getId(), 0));
+			asset.setStatus(PhraseImageAssetStatus.COMPLETED);
+			return;
+		}
+		asset.setImageObjectKey(null);
+		asset.setStatus(PhraseImageAssetStatus.AWAITING_SELECTION);
 	}
 
 	private void markFailed(PhraseImageAsset asset, String code, String message, RuntimeException ex) {
@@ -72,15 +83,6 @@ class PhraseImageGenerationProcessor {
 				Create a high-quality 16:9 image of this scene: %s.
 				""".formatted(cleanSceneDescription).replaceAll("\\s+", " ").trim();
 		return new PhraseImagePrompt(word, phrase, asset.getLanguage(), text, asset.getPromptVersion());
-	}
-
-	private static String extensionFor(String contentType) {
-		return switch (contentType) {
-			case "image/jpeg" -> "jpg";
-			case "image/webp" -> "webp";
-			case "image/png" -> "png";
-			default -> "bin";
-		};
 	}
 
 }

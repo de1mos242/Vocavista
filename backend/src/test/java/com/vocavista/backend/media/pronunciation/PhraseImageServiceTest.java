@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.vocavista.backend.api.model.PhraseImageRequest;
@@ -69,21 +70,38 @@ class PhraseImageServiceTest {
 	}
 
 	@Test
-	void regeneratesExistingImageInPlace() {
+	void selectsGeneratedCandidate() {
 		PhraseImageAsset asset = completedImageAsset();
-		String originalImageKey = asset.getImageObjectKey();
+		asset.setStatus(PhraseImageAssetStatus.AWAITING_SELECTION);
+		asset.setImageObjectKey(null);
+		asset.setImageCandidateCount(3);
 		when(phraseImageRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
 		when(phraseImageRepository.save(asset)).thenReturn(asset);
 
-		var response = service().regenerate(asset.getId());
+		var response = service().selectCandidate(asset.getId(), 1);
 
-		assertThat(asset.getStatus()).isEqualTo(PhraseImageAssetStatus.QUEUED);
-		assertThat(asset.getImageObjectKey()).isEqualTo(originalImageKey);
-		assertThat(asset.getCompletedAt()).isNull();
-		assertThat(response.getStatus()).isEqualTo(PhraseImageStatus.QUEUED);
+		assertThat(asset.getStatus()).isEqualTo(PhraseImageAssetStatus.COMPLETED);
+		assertThat(asset.getImageObjectKey()).endsWith("/candidates/1/image");
+		assertThat(asset.getCompletedAt()).isNotNull();
+		assertThat(response.getStatus()).isEqualTo(PhraseImageStatus.COMPLETED);
 		assertThat(response.getImageUrl()).hasToString("/api/v1/media/phrase-images/" + asset.getId() + "/image");
 		verify(phraseImageRepository).save(asset);
-		verify(generationProcessor).process(response.getId());
+	}
+
+	@Test
+	void doesNotChangeAlreadySelectedImage() {
+		PhraseImageAsset asset = completedImageAsset();
+		String selectedImageKey = asset.getImageObjectKey();
+		asset.setImageCandidateCount(3);
+		when(phraseImageRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
+
+		var response = service().selectCandidate(asset.getId(), 1);
+
+		assertThat(asset.getStatus()).isEqualTo(PhraseImageAssetStatus.COMPLETED);
+		assertThat(asset.getImageObjectKey()).isEqualTo(selectedImageKey);
+		assertThat(response.getStatus()).isEqualTo(PhraseImageStatus.COMPLETED);
+		verify(phraseImageRepository).findById(asset.getId());
+		verifyNoMoreInteractions(phraseImageRepository);
 	}
 
 	@Test

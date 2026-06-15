@@ -305,41 +305,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/media/pronunciations/{id}/regenerate:
-    post:
-      tags:
-        - Media
-      operationId: regeneratePronunciation
-      summary: Reject and replace a bad pronunciation video
-      security:
-        - GoogleOAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Pronunciation asset identifier.
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '202':
-          description: Replacement pronunciation video generation was queued.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PronunciationResponse'
-        '403':
-          description: Account is not approved to use app features.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Pronunciation asset was not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/media/pronunciations/{id}/video:
     get:
       tags:
@@ -480,12 +445,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/media/phrase-images/{id}/regenerate:
-    post:
+  /api/v1/media/phrase-images/{id}/candidates/{candidateIndex}/image:
+    get:
       tags:
         - Media
-      operationId: regeneratePhraseImage
-      summary: Reject and replace a bad phrase image
+      operationId: getPhraseImageCandidateBytes
+      summary: Stream a generated phrase image candidate
       security:
         - GoogleOAuth: []
       parameters:
@@ -496,9 +461,67 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: candidateIndex
+          in: path
+          required: true
+          description: Zero-based phrase image candidate index.
+          schema:
+            type: integer
+            minimum: 0
       responses:
-        '202':
-          description: Replacement image generation was queued.
+        '200':
+          description: Generated phrase image candidate bytes.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Phrase image candidate was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/media/phrase-images/{id}/candidates/{candidateIndex}/select:
+    post:
+      tags:
+        - Media
+      operationId: selectPhraseImageCandidate
+      summary: Select a generated phrase image candidate as the shared image
+      security:
+        - GoogleOAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Phrase image asset identifier.
+          schema:
+            type: string
+            format: uuid
+        - name: candidateIndex
+          in: path
+          required: true
+          description: Zero-based phrase image candidate index.
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Phrase image candidate was selected.
           content:
             application/json:
               schema:
@@ -510,7 +533,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Phrase image asset was not found.
+          description: Phrase image candidate was not found.
           content:
             application/json:
               schema:
@@ -951,7 +974,6 @@ components:
         - processing
         - completed
         - failed
-        - rejected
     PhraseImageRequest:
       type: object
       required:
@@ -1000,6 +1022,11 @@ components:
           type: string
           format: uri
           nullable: true
+        candidateImageUrls:
+          type: array
+          items:
+            type: string
+            format: uri
         errorCode:
           type: string
           nullable: true
@@ -1011,9 +1038,9 @@ components:
       enum:
         - queued
         - processing
+        - awaiting_selection
         - completed
         - failed
-        - rejected
     WordInfoResponse:
       type: object
       required:

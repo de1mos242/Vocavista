@@ -108,7 +108,7 @@ export type PronunciationResponse = {
     errorMessage?: string | null;
 };
 
-export type PronunciationStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'rejected';
+export type PronunciationStatus = 'queued' | 'processing' | 'completed' | 'failed';
 
 export type PhraseImageRequest = {
     wordInfoId: string;
@@ -124,11 +124,12 @@ export type PhraseImageResponse = {
     word?: string | null;
     phrase?: string | null;
     imageUrl?: string | null;
+    candidateImageUrls?: Array<string>;
     errorCode?: string | null;
     errorMessage?: string | null;
 };
 
-export type PhraseImageStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'rejected';
+export type PhraseImageStatus = 'queued' | 'processing' | 'awaiting_selection' | 'completed' | 'failed';
 
 export type WordInfoResponse = {
     id: string;
@@ -479,40 +480,6 @@ export type GetPronunciationResponses = {
 
 export type GetPronunciationResponse = GetPronunciationResponses[keyof GetPronunciationResponses];
 
-export type RegeneratePronunciationData = {
-    body?: never;
-    path: {
-        /**
-         * Pronunciation asset identifier.
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/media/pronunciations/{id}/regenerate';
-};
-
-export type RegeneratePronunciationErrors = {
-    /**
-     * Account is not approved to use app features.
-     */
-    403: ErrorResponse;
-    /**
-     * Pronunciation asset was not found.
-     */
-    404: ErrorResponse;
-};
-
-export type RegeneratePronunciationError = RegeneratePronunciationErrors[keyof RegeneratePronunciationErrors];
-
-export type RegeneratePronunciationResponses = {
-    /**
-     * Replacement pronunciation video generation was queued.
-     */
-    202: PronunciationResponse;
-};
-
-export type RegeneratePronunciationResponse = RegeneratePronunciationResponses[keyof RegeneratePronunciationResponses];
-
 export type GetPronunciationVideoData = {
     body?: never;
     path: {
@@ -644,39 +611,81 @@ export type GetPhraseImageResponses = {
 
 export type GetPhraseImageResponse = GetPhraseImageResponses[keyof GetPhraseImageResponses];
 
-export type RegeneratePhraseImageData = {
+export type GetPhraseImageCandidateBytesData = {
     body?: never;
     path: {
         /**
          * Phrase image asset identifier.
          */
         id: string;
+        /**
+         * Zero-based phrase image candidate index.
+         */
+        candidateIndex: number;
     };
     query?: never;
-    url: '/api/v1/media/phrase-images/{id}/regenerate';
+    url: '/api/v1/media/phrase-images/{id}/candidates/{candidateIndex}/image';
 };
 
-export type RegeneratePhraseImageErrors = {
+export type GetPhraseImageCandidateBytesErrors = {
     /**
      * Account is not approved to use app features.
      */
     403: ErrorResponse;
     /**
-     * Phrase image asset was not found.
+     * Phrase image candidate was not found.
      */
     404: ErrorResponse;
 };
 
-export type RegeneratePhraseImageError = RegeneratePhraseImageErrors[keyof RegeneratePhraseImageErrors];
+export type GetPhraseImageCandidateBytesError = GetPhraseImageCandidateBytesErrors[keyof GetPhraseImageCandidateBytesErrors];
 
-export type RegeneratePhraseImageResponses = {
+export type GetPhraseImageCandidateBytesResponses = {
     /**
-     * Replacement image generation was queued.
+     * Generated phrase image candidate bytes.
      */
-    202: PhraseImageResponse;
+    200: Blob | File;
 };
 
-export type RegeneratePhraseImageResponse = RegeneratePhraseImageResponses[keyof RegeneratePhraseImageResponses];
+export type GetPhraseImageCandidateBytesResponse = GetPhraseImageCandidateBytesResponses[keyof GetPhraseImageCandidateBytesResponses];
+
+export type SelectPhraseImageCandidateData = {
+    body?: never;
+    path: {
+        /**
+         * Phrase image asset identifier.
+         */
+        id: string;
+        /**
+         * Zero-based phrase image candidate index.
+         */
+        candidateIndex: number;
+    };
+    query?: never;
+    url: '/api/v1/media/phrase-images/{id}/candidates/{candidateIndex}/select';
+};
+
+export type SelectPhraseImageCandidateErrors = {
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+    /**
+     * Phrase image candidate was not found.
+     */
+    404: ErrorResponse;
+};
+
+export type SelectPhraseImageCandidateError = SelectPhraseImageCandidateErrors[keyof SelectPhraseImageCandidateErrors];
+
+export type SelectPhraseImageCandidateResponses = {
+    /**
+     * Phrase image candidate was selected.
+     */
+    200: PhraseImageResponse;
+};
+
+export type SelectPhraseImageCandidateResponse = SelectPhraseImageCandidateResponses[keyof SelectPhraseImageCandidateResponses];
 
 export type GetPhraseImageBytesData = {
     body?: never;

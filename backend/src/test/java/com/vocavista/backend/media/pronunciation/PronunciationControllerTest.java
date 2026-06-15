@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vocavista.backend.api.model.PhraseImageResponse;
+import com.vocavista.backend.api.model.PhraseImageStatus;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
 import com.vocavista.backend.auth.AuthErrorHandler;
@@ -141,6 +143,34 @@ class PronunciationControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(content().contentType("video/mp4"))
 				.andExpect(content().bytes("small".getBytes()));
+	}
+
+	@Test
+	@WithMockUser
+	void returnsPhraseImageCandidateBytes() throws Exception {
+		UUID id = UUID.randomUUID();
+		when(phraseImageService.getCandidateImage(id, 1)).thenReturn(new StoredMedia("image/png", "image".getBytes()));
+
+		mockMvc.perform(get("/api/v1/media/phrase-images/{id}/candidates/{candidateIndex}/image", id, 1))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType("image/png"))
+				.andExpect(content().bytes("image".getBytes()));
+	}
+
+	@Test
+	@WithMockUser
+	void selectsPhraseImageCandidate() throws Exception {
+		UUID id = UUID.randomUUID();
+		UUID wordInfoId = UUID.randomUUID();
+		when(phraseImageService.selectCandidate(id, 1))
+				.thenReturn(new PhraseImageResponse(id, wordInfoId, PhraseImageStatus.COMPLETED)
+						.imageUrl(URI.create("/api/v1/media/phrase-images/%s/image".formatted(id))));
+
+		mockMvc.perform(post("/api/v1/media/phrase-images/{id}/candidates/{candidateIndex}/select", id, 1))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(id.toString()))
+				.andExpect(jsonPath("$.status").value("completed"))
+				.andExpect(jsonPath("$.imageUrl").exists());
 	}
 
 	@Test
