@@ -31,7 +31,7 @@ class PhraseImageGenerationProcessor {
 			asset.setStatus(PhraseImageAssetStatus.PROCESSING);
 			asset.setUpdatedAt(now);
 
-			String sceneDescription = phraseImageSceneDescriber.describe(asset.getNormalizedWord(), asset.getNormalizedPhrase(),
+			String sceneDescription = phraseImageSceneDescriber.describe(asset.getInputWord(), asset.getInputPhrase(),
 					asset.getLanguage());
 			PhraseImagePrompt prompt = promptFor(asset, sceneDescription);
 			asset.setPromptText(prompt.text());
@@ -76,8 +76,8 @@ class PhraseImageGenerationProcessor {
 	}
 
 	static PhraseImagePrompt promptFor(PhraseImageAsset asset, String sceneDescription) {
-		String phrase = asset.getNormalizedPhrase().replaceAll("\\s+", " ").trim();
-		String word = asset.getNormalizedWord().replaceAll("\\s+", " ").trim();
+		String phrase = asset.getInputPhrase().replaceAll("\\s+", " ").trim();
+		String word = asset.getInputWord().replaceAll("\\s+", " ").trim();
 		String cleanSceneDescription = sceneDescription.replaceAll("\\s+", " ").trim();
 		String text = """
 				Create a high-quality 16:9 image of this scene: %s.

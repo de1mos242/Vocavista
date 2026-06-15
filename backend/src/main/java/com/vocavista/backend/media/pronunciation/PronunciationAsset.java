@@ -1,6 +1,6 @@
 package com.vocavista.backend.media.pronunciation;
 
-import com.vocavista.backend.wordinfo.WordInfoRecord;
+import com.vocavista.backend.vocabulary.VocabularyItem;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -27,14 +27,8 @@ public class PronunciationAsset {
 	private UUID id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "word_info_record_id", nullable = false)
-	private WordInfoRecord wordInfoRecord;
-
-	@Column(name = "normalized_word", nullable = false)
-	private String normalizedWord;
-
-	@Column(name = "normalized_phrase", nullable = false)
-	private String normalizedPhrase;
+	@JoinColumn(name = "vocabulary_item_id", nullable = false)
+	private VocabularyItem vocabularyItem;
 
 	@Column(name = "input_word", nullable = false)
 	private String inputWord;
@@ -77,20 +71,16 @@ public class PronunciationAsset {
 	private OffsetDateTime completedAt;
 
 	static PronunciationAsset queued(
-			WordInfoRecord wordInfoRecord,
+			VocabularyItem vocabularyItem,
 			String inputWord,
 			String inputPhrase,
-			String normalizedWord,
-			String normalizedPhrase,
 			String language,
 			OffsetDateTime now) {
 		PronunciationAsset asset = new PronunciationAsset();
 		asset.id = UUID.randomUUID();
-		asset.wordInfoRecord = wordInfoRecord;
+		asset.vocabularyItem = vocabularyItem;
 		asset.inputWord = inputWord;
 		asset.inputPhrase = inputPhrase;
-		asset.normalizedWord = normalizedWord;
-		asset.normalizedPhrase = normalizedPhrase;
 		asset.language = language;
 		asset.status = PronunciationAssetStatus.QUEUED;
 		asset.createdAt = now;

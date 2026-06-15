@@ -14,6 +14,7 @@ import {
   getWordInfo,
   getWordSuggestions,
   listAdminUsers,
+  saveVocabularyItem,
   selectPhraseImageCandidate,
   submitDictionaryReview,
   updateAdminUserStatus
@@ -26,6 +27,7 @@ import type {
   DictionaryReviewSubmitResponse,
   PhraseImageResponse,
   UserStatus,
+  VocabularyItemDto,
   WordInfoResponse,
   WordSuggestion
 } from "./api/generated/types.gen";
@@ -231,10 +233,11 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
       setStatus("Loading word info...");
       const info = await unwrap(getWordInfo({ query: { word: trimmedWord } }));
       setWordInfo(info);
-      setWordInfoId(info.id);
-      setWord(info.normalizedWord);
+      setWordInfoId(undefined);
+      setWord(info.canonicalWord);
+      setPhrase(info.proposedItem.phrase);
       resetAssets();
-      setStatus("Choose an example phrase, then generate assets.");
+      setStatus("Review existing meanings or save the proposed context.");
     }
     catch (error) {
       onAuthError(error);
@@ -265,18 +268,34 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     setStatus(savedWord ? `Selected phrase and saved ${savedWord} to your revise list. Generate assets when ready.` : "Selected existing entry. Search word info or generate a new video when ready.");
   }
 
-  async function selectWordInfoPhrase(sentence: string) {
-    setWord(wordInfo?.normalizedWord ?? word);
-    setWordInfoId(wordInfo?.id);
-    setPhrase(sentence);
+  async function selectVocabularyItem(item: VocabularyItemDto) {
+    setWord(item.word);
+    setPhrase(item.phrase);
     resetAssets();
-    if (!wordInfo?.id) {
-      setStatus("Phrase selected. Search word info before generating assets.");
-      return;
+    let itemId = item.id ?? undefined;
+    if (!itemId) {
+      setSaveBusy(true);
+      try {
+        setStatus("Saving proposed vocabulary item...");
+		const saved = await unwrap(saveVocabularyItem({ body: { item } }));
+		itemId = saved.item.id ?? undefined;
+		if (!itemId) {
+		  throw new Error("Saved vocabulary item did not include an id.");
+		}
+      }
+      catch (error) {
+        onAuthError(error);
+        setStatus(error instanceof Error ? error.message : "Could not save proposed vocabulary item.");
+        return;
+      }
+      finally {
+        setSaveBusy(false);
+      }
     }
 
-    const savedWord = await saveWordToReviseList(wordInfo.id);
-    setStatus(savedWord ? `Phrase selected and saved ${savedWord} to your revise list. Generate assets when ready.` : `Phrase selected for ${wordInfo.normalizedWord}.`);
+    setWordInfoId(itemId);
+    const savedWord = await saveWordToReviseList(itemId);
+    setStatus(savedWord ? `Phrase selected and saved ${savedWord} to your revise list. Generate assets when ready.` : `Phrase selected for ${item.word}.`);
   }
 
   async function generateAssets() {
@@ -444,7 +463,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
         <button type="button" className="secondary" disabled={!canUseFeatures || searchBusy} onClick={loadWordInfo}>Search word</button>
 
-        {wordInfo ? <WordInfoPanel info={wordInfo} onUseWord={() => { setWord(wordInfo.normalizedWord); setWordInfoId(wordInfo.id); resetAssets(); setStatus(`Using normalized word: ${wordInfo.normalizedWord}`); }} onUsePhrase={(sentence) => void selectWordInfoPhrase(sentence)} /> : null}
+        {wordInfo ? <WordInfoPanel info={wordInfo} onUseItem={(item) => void selectVocabularyItem(item)} /> : null}
 
         <label>
           Phrase
@@ -662,23 +681,41 @@ type PageProps = {
   onAuthError: (error: unknown) => void;
 };
 
-function WordInfoPanel({ info, onUseWord, onUsePhrase }: { info: WordInfoResponse; onUseWord: () => void; onUsePhrase: (sentence: string) => void }) {
+function WordInfoPanel({ info, onUseItem }: { info: WordInfoResponse; onUseItem: (item: VocabularyItemDto) => void }) {
+  const items = [info.proposedItem, ...info.existingItems];
   return (
     <div className="word-info">
-      <button type="button" className="soft-list-button" onClick={onUseWord}>
-        <strong>{info.normalizedWord}</strong>
-        <small>{[info.article, info.partOfSpeech, info.frequency].filter(Boolean).join(" · ")}</small>
-        <small>{joinText(info.translations.en)} · {joinText(info.translations.ru)}</small>
-        <small>{joinText(info.shortNote.en)} · {joinText(info.shortNote.ru)}</small>
-      </button>
-      {info.examples.map((example) => (
-        <button key={example.sentence} type="button" className="soft-list-button" onClick={() => onUsePhrase(example.sentence)}>
-          <strong>{example.sentence}</strong>
-          <small>{joinText(example.translations.en)} · {joinText(example.translations.ru)}</small>
+      <small>Canonical word: {info.canonicalWord}</small>
+      {items.map((item, index) => (
+        <button key={`${item.id ?? "proposed"}-${item.phrase}`} type="button" className="soft-list-button" onClick={() => onUseItem(item)}>
+          <strong>{item.id ? item.word : `Proposed: ${item.word}`}</strong>
+          <small>{[articleForGender(item.gender), item.partOfSpeech, item.frequency].filter(Boolean).join(" · ")}</small>
+          <small>{item.phrase}</small>
+          <small>{describeVocabularyTranslations(item)}</small>
+          {index === 0 && info.existingItems.length > 0 ? <small>Saved alternatives are listed below.</small> : null}
         </button>
       ))}
     </div>
   );
+}
+
+function articleForGender(gender?: VocabularyItemDto["gender"]) {
+  if (gender === "masculine") {
+    return "der";
+  }
+  if (gender === "feminine") {
+    return "die";
+  }
+  if (gender === "neuter") {
+    return "das";
+  }
+  return "";
+}
+
+function describeVocabularyTranslations(item: VocabularyItemDto) {
+  return item.translations
+    .map((translation) => `${translation.language}: ${translation.wordTranslation} · ${translation.phraseTranslation}`)
+    .join(" | ");
 }
 
 function PhraseImageCard({ image, status, busy, canGenerate, onSelectCandidate }: { image?: PhraseImageResponse; status: string; busy: boolean; canGenerate: boolean; onSelectCandidate: (candidateIndex: number) => void }) {

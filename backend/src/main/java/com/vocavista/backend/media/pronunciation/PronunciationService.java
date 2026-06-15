@@ -3,8 +3,8 @@ package com.vocavista.backend.media.pronunciation;
 import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.dictionary.UserDictionaryService;
-import com.vocavista.backend.wordinfo.WordInfoRecord;
-import com.vocavista.backend.wordinfo.WordInfoRepository;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -28,7 +28,7 @@ class PronunciationService {
 	private final PronunciationGenerationProcessor generationProcessor;
 	private final PronunciationVideoCompressor pronunciationVideoCompressor;
 	private final MediaStorageService mediaStorageService;
-	private final WordInfoRepository wordInfoRepository;
+	private final VocabularyItemRepository vocabularyItemRepository;
 	private final UserDictionaryService userDictionaryService;
 	private final MediaResponseMapper mediaResponseMapper;
 	private final Clock clock = Clock.systemUTC();
@@ -36,10 +36,10 @@ class PronunciationService {
 	@Transactional
 	PronunciationResponse create(PronunciationRequest request) {
 		NormalizedInput input = normalize(request);
-		userDictionaryService.ensureEntryForCurrentUser(input.wordInfoRecord());
+		userDictionaryService.ensureEntryForCurrentUser(input.vocabularyItem());
 
 		return pronunciationRepository
-				.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
+				.findByVocabularyItemIdAndPhraseIgnoreCase(input.vocabularyItem().getId(), input.phrase())
 				.map(this::reuseOrRetry)
 				.orElseGet(() -> createQueuedAsset(input));
 	}
@@ -86,8 +86,8 @@ class PronunciationService {
 	}
 
 	private PronunciationResponse createQueuedAsset(NormalizedInput input) {
-		PronunciationAsset asset = PronunciationAsset.queued(input.wordInfoRecord(), input.word(), input.phrase(), input.normalizedWord(),
-				input.normalizedPhrase(), input.language(), OffsetDateTime.now(clock));
+		PronunciationAsset asset = PronunciationAsset.queued(input.vocabularyItem(), input.word(), input.phrase(), input.language(),
+				OffsetDateTime.now(clock));
 		try {
 			PronunciationAsset savedAsset = pronunciationRepository.save(asset);
 			queueGeneration(savedAsset.getId());
@@ -95,7 +95,7 @@ class PronunciationService {
 		}
 		catch (DataIntegrityViolationException ex) {
 			return pronunciationRepository
-					.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
+					.findByVocabularyItemIdAndPhraseIgnoreCase(input.vocabularyItem().getId(), input.phrase())
 					.map(this::reuseOrRetry)
 					.orElseThrow(() -> ex);
 		}
@@ -160,17 +160,16 @@ class PronunciationService {
 		if (!SUPPORTED_LANGUAGE.equals(language)) {
 			throw new PronunciationValidationException("only German language code de is supported");
 		}
-		WordInfoRecord wordInfoRecord = wordInfoRepository.findById(wordInfoId)
-				.orElseThrow(() -> new PronunciationValidationException("wordInfoId must reference an existing word info record"));
-		return new NormalizedInput(wordInfoRecord, request.getWord(), request.getPhrase(), word, phrase, language);
+		VocabularyItem vocabularyItem = vocabularyItemRepository.findById(wordInfoId)
+				.orElseThrow(() -> new PronunciationValidationException("wordInfoId must reference an existing vocabulary item"));
+		return new NormalizedInput(vocabularyItem, word, phrase, language);
 	}
 
 	private static String trimAndCollapse(String value) {
 		return value == null ? "" : value.trim().replaceAll("\\s+", " ");
 	}
 
-	private record NormalizedInput(WordInfoRecord wordInfoRecord, String word, String phrase, String normalizedWord, String normalizedPhrase,
-			String language) {
+	private record NormalizedInput(VocabularyItem vocabularyItem, String word, String phrase, String language) {
 	}
 
 }

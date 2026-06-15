@@ -24,24 +24,24 @@ public class MediaAssetQueryService {
 
 	@Transactional(readOnly = true)
 	public List<PronunciationSuggestion> findPronunciationSuggestions(String query) {
-		return pronunciationRepository.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc(query)
+		return pronunciationRepository.findTop10ByInputWordContainingIgnoreCaseOrderByUpdatedAtDesc(query)
 				.stream()
 				.map(mediaAssetMapper::toPronunciationSuggestion)
 				.toList();
 	}
 
 	@Transactional(readOnly = true)
-	public Optional<CompletedPronunciation> latestCompletedPronunciation(UUID wordInfoRecordId) {
+	public Optional<CompletedPronunciation> latestCompletedPronunciation(UUID vocabularyItemId) {
 		return pronunciationRepository
-				.findFirstByWordInfoRecordIdAndStatusOrderByUpdatedAtDesc(wordInfoRecordId, PronunciationAssetStatus.COMPLETED)
+				.findFirstByVocabularyItemIdAndStatusOrderByUpdatedAtDesc(vocabularyItemId, PronunciationAssetStatus.COMPLETED)
 				.map(mediaAssetMapper::toCompletedPronunciation);
 	}
 
 	@Transactional(readOnly = true)
-	public Optional<CompletedPhraseImage> latestCompletedPhraseImage(UUID wordInfoRecordId, String normalizedPhrase) {
+	public Optional<CompletedPhraseImage> latestCompletedPhraseImage(UUID vocabularyItemId, String phrase) {
 		return phraseImageRepository
-				.findFirstByWordInfoRecordIdAndNormalizedPhraseAndStatusOrderByUpdatedAtDesc(wordInfoRecordId,
-						normalizedPhrase, PhraseImageAssetStatus.COMPLETED)
+				.findFirstByVocabularyItemIdAndInputPhraseIgnoreCaseAndStatusOrderByUpdatedAtDesc(vocabularyItemId,
+						phrase, PhraseImageAssetStatus.COMPLETED)
 				.map(mediaAssetMapper::toCompletedPhraseImage);
 	}
 

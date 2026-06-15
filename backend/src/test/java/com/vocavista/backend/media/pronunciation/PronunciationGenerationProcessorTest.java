@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.vocavista.backend.wordinfo.WordInfoArticleReader;
-import com.vocavista.backend.wordinfo.WordInfoRecord;
+import com.vocavista.backend.vocabulary.VocabularyItem;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,7 +34,7 @@ class PronunciationGenerationProcessorTest {
 
 	@Test
 	void completesGenerationWithVeoVideo() {
-		PronunciationAsset asset = queuedAsset(nounWordInfoJson("feminine", "die"));
+		PronunciationAsset asset = queuedAsset("feminine");
 		when(pronunciationRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
 		when(pronunciationVideoGenerator.generate(any())).thenReturn(new GeneratedVideo("video".getBytes(), "video/mp4"));
 		when(pronunciationVideoCompressor.compress(any())).thenReturn(Optional.of(new GeneratedVideo("small".getBytes(), "video/mp4")));
@@ -79,27 +79,24 @@ class PronunciationGenerationProcessorTest {
 	}
 
 	private static PronunciationAsset queuedAsset() {
-		return queuedAsset("{}");
+		return queuedAsset(null);
 	}
 
-	private static PronunciationAsset queuedAsset(String responseJson) {
-		WordInfoRecord wordInfoRecord = new WordInfoRecord();
-		wordInfoRecord.setId(UUID.randomUUID());
-		wordInfoRecord.setResponseJson(responseJson);
-		return PronunciationAsset.queued(wordInfoRecord, "Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.",
-				"Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.", "de", OffsetDateTime.now());
-	}
-
-	private static String nounWordInfoJson(String gender, String article) {
-		return """
-				{
-				  "normalizedWord": "Hausaufgabe",
-				  "language": "de",
-				  "partOfSpeech": "noun",
-				  "gender": "%s",
-				  "article": "%s"
-				}
-				""".formatted(gender, article);
+	private static PronunciationAsset queuedAsset(String gender) {
+		VocabularyItem item = new VocabularyItem();
+		item.setId(UUID.randomUUID());
+		item.setLanguage("de");
+		item.setWord("Hausaufgabe");
+		item.setPhrase("Ich mache meine Hausaufgabe nach dem Abendessen.");
+		item.setPartOfSpeech("noun");
+		item.setGender(gender);
+		item.setPlural("Hausaufgaben");
+		item.setFrequency("common");
+		item.setCompound(true);
+		item.setCreatedAt(OffsetDateTime.now());
+		item.setUpdatedAt(OffsetDateTime.now());
+		return PronunciationAsset.queued(item, "Hausaufgabe", "Ich mache meine Hausaufgabe nach dem Abendessen.", "de",
+				OffsetDateTime.now());
 	}
 
 }

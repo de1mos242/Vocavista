@@ -12,8 +12,9 @@ import com.vocavista.backend.auth.UserAccount;
 import com.vocavista.backend.media.MediaAssetQueryService;
 import com.vocavista.backend.media.pronunciation.PronunciationAsset;
 import com.vocavista.backend.media.pronunciation.PronunciationAssetStatus;
-import com.vocavista.backend.wordinfo.WordInfoRecord;
-import com.vocavista.backend.wordinfo.WordInfoRepository;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import com.vocavista.backend.vocabulary.VocabularyItemTranslation;
+import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -39,18 +40,18 @@ class UserDictionaryServiceTest {
 	private MediaAssetQueryService mediaAssetQueryService;
 
 	@Mock
-	private WordInfoRepository wordInfoRepository;
+	private VocabularyItemRepository vocabularyItemRepository;
 
 	@Test
 	void createsEntryForCurrentUserWhenMissing() {
 		UserAccount userAccount = userAccount();
-		WordInfoRecord wordInfoRecord = wordInfoRecord("Hausaufgabe");
+		VocabularyItem vocabularyItem = vocabularyItem("Hausaufgabe");
 		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
-		when(entryRepository.findByUserAccountIdAndNormalizedWord(userAccount.getId(), "Hausaufgabe"))
+		when(entryRepository.findByUserAccountIdAndVocabularyItemId(userAccount.getId(), vocabularyItem.getId()))
 				.thenReturn(Optional.empty());
 		when(entryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-		service().ensureEntryForCurrentUser(wordInfoRecord);
+		service().ensureEntryForCurrentUser(vocabularyItem);
 
 		verify(entryRepository).save(any(UserDictionaryEntry.class));
 	}
@@ -58,16 +59,17 @@ class UserDictionaryServiceTest {
 	@Test
 	void updatesExistingEntryWithoutResettingReviewState() {
 		UserAccount userAccount = userAccount();
-		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord("Hausaufgabe"), OffsetDateTime.now());
+		VocabularyItem vocabularyItem = vocabularyItem("Hausaufgabe");
+		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, vocabularyItem, OffsetDateTime.now());
 		entry.setCorrectStreak(2);
-		WordInfoRecord refreshedRecord = wordInfoRecord("Hausaufgabe");
+		VocabularyItem refreshedItem = vocabularyItem("Hausaufgabe");
 		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
-		when(entryRepository.findByUserAccountIdAndNormalizedWord(userAccount.getId(), "Hausaufgabe"))
+		when(entryRepository.findByUserAccountIdAndVocabularyItemId(userAccount.getId(), refreshedItem.getId()))
 				.thenReturn(Optional.of(entry));
 
-		service().ensureEntryForCurrentUser(refreshedRecord);
+		service().ensureEntryForCurrentUser(refreshedItem);
 
-		assertThat(entry.getWordInfoRecord()).isEqualTo(refreshedRecord);
+		assertThat(entry.getVocabularyItem()).isEqualTo(refreshedItem);
 		assertThat(entry.getCorrectStreak()).isEqualTo(2);
 		verify(entryRepository, never()).save(any());
 	}
@@ -75,32 +77,32 @@ class UserDictionaryServiceTest {
 	@Test
 	void reviewItemsIncludeCompletedPronunciationAssetId() {
 		UserAccount userAccount = userAccount();
-		WordInfoRecord wordInfoRecord = wordInfoRecord("Hausaufgabe");
-		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord, OffsetDateTime.now());
-		PronunciationAsset asset = pronunciationAsset(wordInfoRecord);
+		VocabularyItem vocabularyItem = vocabularyItem("Hausaufgabe");
+		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, vocabularyItem, OffsetDateTime.now());
+		PronunciationAsset asset = pronunciationAsset(vocabularyItem);
 		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
 		when(entryRepository.findByUserAccountIdAndDueAtLessThanEqualOrderByDueAtAsc(
 				any(UUID.class), any(OffsetDateTime.class), any(Pageable.class))).thenReturn(List.of(entry));
-		when(mediaAssetQueryService.latestCompletedPronunciation(wordInfoRecord.getId()))
+		when(mediaAssetQueryService.latestCompletedPronunciation(vocabularyItem.getId()))
 				.thenReturn(Optional.of(completedPronunciation(asset)));
-		when(mediaAssetQueryService.latestCompletedPhraseImage(wordInfoRecord.getId(), asset.getNormalizedPhrase()))
+		when(mediaAssetQueryService.latestCompletedPhraseImage(vocabularyItem.getId(), asset.getInputPhrase()))
 				.thenReturn(Optional.empty());
 
 		var response = service().getReviewItems(10, false);
 
 		assertThat(response.getItems().getFirst().getPronunciationAssetId()).isEqualTo(asset.getId());
-		assertThat(response.getItems().getFirst().getPhrase()).isEqualTo(asset.getNormalizedPhrase());
+		assertThat(response.getItems().getFirst().getPhrase()).isEqualTo(asset.getInputPhrase());
 	}
 
 	@Test
 	void videoManifestIncludesLatestCompletedDictionaryPronunciation() {
 		UserAccount userAccount = userAccount();
-		WordInfoRecord wordInfoRecord = wordInfoRecord("Hausaufgabe");
-		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord, OffsetDateTime.now());
-		PronunciationAsset asset = pronunciationAsset(wordInfoRecord);
+		VocabularyItem vocabularyItem = vocabularyItem("Hausaufgabe");
+		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, vocabularyItem, OffsetDateTime.now());
+		PronunciationAsset asset = pronunciationAsset(vocabularyItem);
 		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
-		when(entryRepository.findByUserAccountIdOrderByNormalizedWordAsc(userAccount.getId())).thenReturn(List.of(entry));
-		when(mediaAssetQueryService.latestCompletedPronunciation(wordInfoRecord.getId()))
+		when(entryRepository.findByUserAccountIdOrderByVocabularyItemWordAsc(userAccount.getId())).thenReturn(List.of(entry));
+		when(mediaAssetQueryService.latestCompletedPronunciation(vocabularyItem.getId()))
 				.thenReturn(Optional.of(completedPronunciation(asset)));
 
 		var response = service().getVideoManifest();
@@ -116,7 +118,7 @@ class UserDictionaryServiceTest {
 	@Test
 	void correctReviewUpdatesSrsStateAndReturnsExpectedAnswer() {
 		UserAccount userAccount = userAccount();
-		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord("Hausaufgabe"), OffsetDateTime.now());
+		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, vocabularyItem("Hausaufgabe"), OffsetDateTime.now());
 		DictionaryReviewSubmitRequest request = new DictionaryReviewSubmitRequest(true);
 		when(currentUserService.getCurrentUserAccount()).thenReturn(userAccount);
 		when(entryRepository.findByIdAndUserAccountId(entry.getId(), userAccount.getId())).thenReturn(Optional.of(entry));
@@ -135,7 +137,7 @@ class UserDictionaryServiceTest {
 	@Test
 	void incorrectReviewResetsStreakAndIncrementsLapses() {
 		UserAccount userAccount = userAccount();
-		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, wordInfoRecord("Hausaufgabe"), OffsetDateTime.now());
+		UserDictionaryEntry entry = UserDictionaryEntry.create(userAccount, vocabularyItem("Hausaufgabe"), OffsetDateTime.now());
 		entry.setCorrectStreak(3);
 		entry.setIntervalDays(10);
 		DictionaryReviewSubmitRequest request = new DictionaryReviewSubmitRequest(false);
@@ -151,23 +153,21 @@ class UserDictionaryServiceTest {
 	}
 
 	private UserDictionaryService service() {
-		return new UserDictionaryService(entryRepository, currentUserService, mediaAssetQueryService, wordInfoRepository,
-				new DictionaryMapperImpl());
+		return new UserDictionaryService(entryRepository, currentUserService, mediaAssetQueryService, vocabularyItemRepository,
+				new DictionaryMapper());
 	}
 
 	private static MediaAssetQueryService.CompletedPronunciation completedPronunciation(PronunciationAsset asset) {
-		return new MediaAssetQueryService.CompletedPronunciation(asset.getId(), asset.getWordInfoRecord().getId(),
-				asset.getNormalizedPhrase(), URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video/small"),
+		return new MediaAssetQueryService.CompletedPronunciation(asset.getId(), asset.getVocabularyItem().getId(),
+				asset.getInputPhrase(), URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video/small"),
 				URI.create("/api/v1/media/pronunciations/" + asset.getId() + "/video"), asset.getUpdatedAt());
 	}
 
-	private static PronunciationAsset pronunciationAsset(WordInfoRecord wordInfoRecord) {
+	private static PronunciationAsset pronunciationAsset(VocabularyItem vocabularyItem) {
 		PronunciationAsset asset = new PronunciationAsset();
 		asset.setId(UUID.randomUUID());
-		asset.setWordInfoRecord(wordInfoRecord);
-		asset.setNormalizedWord(wordInfoRecord.getNormalizedWord());
-		asset.setNormalizedPhrase("Ich mache meine Hausaufgabe.");
-		asset.setInputWord(wordInfoRecord.getNormalizedWord());
+		asset.setVocabularyItem(vocabularyItem);
+		asset.setInputWord(vocabularyItem.getWord());
 		asset.setInputPhrase("Ich mache meine Hausaufgabe.");
 		asset.setLanguage("de");
 		asset.setStatus(PronunciationAssetStatus.COMPLETED);
@@ -190,38 +190,36 @@ class UserDictionaryServiceTest {
 		return account;
 	}
 
-	private static WordInfoRecord wordInfoRecord(String normalizedWord) {
-		WordInfoRecord record = new WordInfoRecord();
-		record.setId(UUID.randomUUID());
-		record.setNormalizedQuery(normalizedWord.toLowerCase());
-		record.setNormalizedWord(normalizedWord);
-		record.setLanguage("de");
-		record.setResponseJson("""
-				{
-				  "id": "%s",
-				  "normalizedWord": "%s",
-				  "language": "de",
-				  "translations": {
-				    "en": ["homework"],
-				    "ru": ["домашнее задание"]
-				  },
-				  "partOfSpeech": "noun",
-				  "gender": "feminine",
-				  "article": "die",
-				  "plural": "Hausaufgaben",
-				  "frequency": "common",
-				  "isCompound": true,
-				  "compoundParts": [],
-				  "shortNote": {
-				    "en": ["A common word for school homework."],
-				    "ru": ["Обычное слово для домашнего задания."]
-				  },
-				  "examples": []
-				}
-				""".formatted(record.getId(), normalizedWord));
-		record.setCreatedAt(OffsetDateTime.now());
-		record.setUpdatedAt(OffsetDateTime.now());
-		return record;
+	private static VocabularyItem vocabularyItem(String word) {
+		VocabularyItem item = new VocabularyItem();
+		OffsetDateTime now = OffsetDateTime.now();
+		item.setId(UUID.randomUUID());
+		item.setLanguage("de");
+		item.setWord(word);
+		item.setPhrase("Ich mache meine Hausaufgabe.");
+		item.setPartOfSpeech("noun");
+		item.setGender("feminine");
+		item.setPlural("Hausaufgaben");
+		item.setFrequency("common");
+		item.setCompound(true);
+		item.setCreatedAt(now);
+		item.setUpdatedAt(now);
+		item.getTranslations().add(translation(item, "en", "homework", "I do my homework."));
+		item.getTranslations().add(translation(item, "ru", "домашнее задание", "Я делаю домашнее задание."));
+		return item;
+	}
+
+	private static VocabularyItemTranslation translation(VocabularyItem item, String language, String word, String phrase) {
+		VocabularyItemTranslation translation = new VocabularyItemTranslation();
+		OffsetDateTime now = OffsetDateTime.now();
+		translation.setId(UUID.randomUUID());
+		translation.setVocabularyItem(item);
+		translation.setLanguage(language);
+		translation.setWordTranslation(word);
+		translation.setPhraseTranslation(phrase);
+		translation.setCreatedAt(now);
+		translation.setUpdatedAt(now);
+		return translation;
 	}
 
 }

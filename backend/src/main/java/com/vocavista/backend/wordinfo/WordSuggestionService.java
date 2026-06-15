@@ -3,8 +3,11 @@ package com.vocavista.backend.wordinfo;
 import com.vocavista.backend.api.model.WordSuggestion;
 import com.vocavista.backend.api.model.WordSuggestionsResponse;
 import com.vocavista.backend.media.MediaAssetQueryService;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import java.util.LinkedHashMap;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -14,7 +17,9 @@ class WordSuggestionService {
 
 	private static final int MAX_QUERY_LENGTH = 80;
 
-	private final WordInfoRepository wordInfoRepository;
+	private static final String SOURCE_LANGUAGE = "de";
+
+	private final VocabularyItemRepository vocabularyItemRepository;
 	private final MediaAssetQueryService mediaAssetQueryService;
 	private final WordSuggestionMapper wordSuggestionMapper;
 
@@ -22,10 +27,10 @@ class WordSuggestionService {
 		String normalizedQuery = trimAndValidate(query);
 		LinkedHashMap<String, WordSuggestion> suggestions = new LinkedHashMap<>();
 
-		for (WordInfoRecord record : wordInfoRepository
-				.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc(normalizedQuery)) {
-			WordSuggestion suggestion = wordSuggestionMapper.toWordInfoSuggestion(record);
-			suggestions.putIfAbsent(key(record.getNormalizedWord(), null), suggestion);
+		for (VocabularyItem item : vocabularyItemRepository
+				.findTop10ByLanguageAndWordContainingIgnoreCase(SOURCE_LANGUAGE, normalizedQuery, PageRequest.of(0, 10))) {
+			WordSuggestion suggestion = wordSuggestionMapper.toVocabularyItemSuggestion(item);
+			suggestions.putIfAbsent(key(item.getWord(), item.getPhrase()), suggestion);
 		}
 
 		for (MediaAssetQueryService.PronunciationSuggestion pronunciation : mediaAssetQueryService

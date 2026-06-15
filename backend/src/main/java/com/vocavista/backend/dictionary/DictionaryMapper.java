@@ -2,29 +2,49 @@ package com.vocavista.backend.dictionary;
 
 import com.vocavista.backend.api.model.DictionaryReviewItem;
 import com.vocavista.backend.api.model.DictionaryVideoManifestItem;
-import com.vocavista.backend.api.model.WordInfoResponse;
+import com.vocavista.backend.api.model.GermanArticle;
+import com.vocavista.backend.api.model.PartOfSpeech;
 import com.vocavista.backend.media.MediaAssetQueryService;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import java.util.List;
+import java.util.Map;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-interface DictionaryMapper {
+@Component
+class DictionaryMapper {
 
-	@Mapping(target = "entryId", source = "entry.id")
-	@Mapping(target = "wordInfoId", source = "entry.wordInfoRecord.id")
-	@Mapping(target = "normalizedWord", source = "entry.normalizedWord")
-	@Mapping(target = "expectedAnswer", source = "expectedAnswer")
-	@Mapping(target = "translations", source = "wordInfo.translations")
-	@Mapping(target = "partOfSpeech", source = "wordInfo.partOfSpeech")
-	@Mapping(target = "dueAt", source = "entry.dueAt")
-	@Mapping(target = "article", source = "wordInfo.article")
-	@Mapping(target = "pronunciationAssetId", ignore = true)
-	@Mapping(target = "phrase", ignore = true)
-	@Mapping(target = "phraseImageId", ignore = true)
-	@Mapping(target = "phraseImageUrl", ignore = true)
-	DictionaryReviewItem toReviewItem(UserDictionaryEntry entry, WordInfoResponse wordInfo, String expectedAnswer);
+	DictionaryReviewItem toReviewItem(UserDictionaryEntry entry, String expectedAnswer) {
+		VocabularyItem item = entry.getVocabularyItem();
+		DictionaryReviewItem reviewItem = new DictionaryReviewItem(entry.getId(), item.getId(), item.getWord(),
+				expectedAnswer, translations(item), PartOfSpeech.fromValue(item.getPartOfSpeech()), entry.getDueAt());
+		reviewItem.setArticle(articleFor(item));
+		reviewItem.setPhrase(item.getPhrase());
+		return reviewItem;
+	}
 
-	@Mapping(target = "pronunciationAssetId", source = "id")
-	DictionaryVideoManifestItem toVideoManifestItem(MediaAssetQueryService.CompletedPronunciation pronunciation);
+	DictionaryVideoManifestItem toVideoManifestItem(MediaAssetQueryService.CompletedPronunciation pronunciation) {
+		return new DictionaryVideoManifestItem(pronunciation.id(), pronunciation.wordInfoId(), pronunciation.videoUrl(),
+				pronunciation.fullVideoUrl(), pronunciation.updatedAt());
+	}
+
+	private static Map<String, List<String>> translations(VocabularyItem item) {
+		return item.getTranslations().stream()
+				.collect(java.util.stream.Collectors.toMap(
+						translation -> translation.getLanguage(),
+						translation -> List.of(translation.getWordTranslation()),
+						(first, ignored) -> first));
+	}
+
+	private static GermanArticle articleFor(VocabularyItem item) {
+		if (!"noun".equals(item.getPartOfSpeech()) || item.getGender() == null) {
+			return null;
+		}
+		return switch (item.getGender()) {
+			case "masculine" -> GermanArticle.DER;
+			case "feminine" -> GermanArticle.DIE;
+			case "neuter" -> GermanArticle.DAS;
+			default -> null;
+		};
+	}
 
 }
