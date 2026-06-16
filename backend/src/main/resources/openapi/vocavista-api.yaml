@@ -1168,6 +1168,11 @@ components:
             $ref: '#/components/schemas/VocabularyItemDto'
         proposedItem:
           $ref: '#/components/schemas/VocabularyItemDto'
+        proposedItems:
+          type: array
+          description: Generated contextual vocabulary item proposals, one per example phrase.
+          items:
+            $ref: '#/components/schemas/VocabularyItemDto'
     WordSuggestionsResponse:
       type: object
       required:

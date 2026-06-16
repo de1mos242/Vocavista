@@ -163,6 +163,10 @@ export type WordInfoResponse = {
     canonicalWord: string;
     existingItems: Array<VocabularyItemDto>;
     proposedItem: VocabularyItemDto;
+    /**
+     * Generated contextual vocabulary item proposals, one per example phrase.
+     */
+    proposedItems?: Array<VocabularyItemDto>;
 };
 
 export type WordSuggestionsResponse = {

@@ -172,6 +172,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   const [status, setStatus] = useState("Sign in with Google to use this page.");
   const [suggestions, setSuggestions] = useState<WordSuggestion[]>([]);
   const [wordInfo, setWordInfo] = useState<WordInfoResponse>();
+  const [selectedVocabularyItem, setSelectedVocabularyItem] = useState<VocabularyItemDto>();
   const [wordInfoId, setWordInfoId] = useState<string>();
   const [videoUrl, setVideoUrl] = useState<string>();
   const [phraseImage, setPhraseImage] = useState<PhraseImageResponse>();
@@ -232,12 +233,14 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     try {
       setStatus("Loading word info...");
       const info = await unwrap(getWordInfo({ query: { word: trimmedWord } }));
+      const proposedItem = firstVisibleVocabularyItem(info);
       setWordInfo(info);
-      setWordInfoId(undefined);
+      setSelectedVocabularyItem(proposedItem);
+      setWordInfoId(proposedItem.id ?? undefined);
       setWord(info.canonicalWord);
-      setPhrase(info.proposedItem.phrase);
+      setPhrase(proposedItem.phrase);
       resetAssets();
-      setStatus("Review existing meanings or save the proposed context.");
+      setStatus("Choose an example phrase, then save and generate assets.");
     }
     catch (error) {
       onAuthError(error);
@@ -250,52 +253,28 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
   async function selectSuggestion(suggestion: WordSuggestion) {
     setSuggestions([]);
+    setSelectedVocabularyItem(undefined);
     setWord(suggestion.word);
     setWordInfoId(suggestion.wordInfoId ?? undefined);
     resetAssets();
     if (suggestion.phrase) {
       setPhrase(suggestion.phrase);
     }
-    let savedWord = "";
-    if (suggestion.wordInfoId) {
-      savedWord = await saveWordToReviseList(suggestion.wordInfoId);
-    }
     if (suggestion.videoUrl) {
       setVideoUrl(suggestion.videoUrl);
-      setStatus(savedWord ? `Selected existing pronunciation video and saved ${savedWord} to your revise list.` : "Selected an existing pronunciation video. Generate will reuse it.");
+      setStatus("Selected an existing pronunciation video. Use Save and generate assets when ready.");
       return;
     }
-    setStatus(savedWord ? `Selected phrase and saved ${savedWord} to your revise list. Generate assets when ready.` : "Selected existing entry. Search word info or generate a new video when ready.");
+    setStatus("Selected existing entry. Use Save and generate assets when ready.");
   }
 
   async function selectVocabularyItem(item: VocabularyItemDto) {
     setWord(item.word);
     setPhrase(item.phrase);
+    setSelectedVocabularyItem(item);
+    setWordInfoId(item.id ?? undefined);
     resetAssets();
-    let itemId = item.id ?? undefined;
-    if (!itemId) {
-      setSaveBusy(true);
-      try {
-        setStatus("Saving proposed vocabulary item...");
-		const saved = await unwrap(saveVocabularyItem({ body: { item } }));
-		itemId = saved.item.id ?? undefined;
-		if (!itemId) {
-		  throw new Error("Saved vocabulary item did not include an id.");
-		}
-      }
-      catch (error) {
-        onAuthError(error);
-        setStatus(error instanceof Error ? error.message : "Could not save proposed vocabulary item.");
-        return;
-      }
-      finally {
-        setSaveBusy(false);
-      }
-    }
-
-    setWordInfoId(itemId);
-    const savedWord = await saveWordToReviseList(itemId);
-    setStatus(savedWord ? `Phrase selected and saved ${savedWord} to your revise list. Generate assets when ready.` : `Phrase selected for ${item.word}.`);
+    setStatus(`Phrase selected for ${item.word}. Use Save and generate assets when ready.`);
   }
 
   async function generateAssets() {
@@ -303,35 +282,67 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
       setStatus(user ? accountRestrictionMessage(user.status) : "Sign in with Google to use this page.");
       return;
     }
-    if (!wordInfoId) {
-      setStatus("Search word info before generating assets.");
-      return;
-    }
     if (!phrase.trim()) {
       setStatus("Choose a phrase before generating assets.");
       return;
     }
-    const savedWord = await saveWordToReviseList(wordInfoId);
+    const targetWordInfoId = await ensureSelectedVocabularyItemSaved();
+    if (!targetWordInfoId) {
+      setStatus("Search word info before generating assets.");
+      return;
+    }
+    const savedWord = await saveWordToReviseList(targetWordInfoId);
     if (!savedWord) {
       return;
     }
     resetAssets();
-    await Promise.allSettled([generateVideo(), generateImage()]);
+    await Promise.allSettled([generateVideo(targetWordInfoId), generateImage(targetWordInfoId)]);
   }
 
-  async function generateVideo() {
+  async function ensureSelectedVocabularyItemSaved() {
+    if (wordInfoId) {
+      return wordInfoId;
+    }
+    if (!selectedVocabularyItem) {
+      return "";
+    }
+    setSaveBusy(true);
+    try {
+      setStatus("Saving selected vocabulary item...");
+      const itemToSave = { ...selectedVocabularyItem, word, phrase };
+      const saved = await unwrap(saveVocabularyItem({ body: { item: itemToSave } }));
+      const savedItemId = saved.item.id ?? undefined;
+      if (!savedItemId) {
+        throw new Error("Saved vocabulary item did not include an id.");
+      }
+      setSelectedVocabularyItem(saved.item);
+      setWordInfoId(savedItemId);
+      setWordInfo((current) => current ? replaceProposedItem(current, selectedVocabularyItem, saved.item) : current);
+      return savedItemId;
+    }
+    catch (error) {
+      onAuthError(error);
+      setStatus(error instanceof Error ? error.message : "Could not save selected vocabulary item.");
+      return "";
+    }
+    finally {
+      setSaveBusy(false);
+    }
+  }
+
+  async function generateVideo(targetWordInfoId: string) {
     if (!canUseFeatures) {
       setStatus(user ? accountRestrictionMessage(user.status) : "Sign in with Google to use this page.");
       return;
     }
-    if (!wordInfoId) {
+    if (!targetWordInfoId) {
       setStatus("Search word info before generating video.");
       return;
     }
     setGenerateBusy(true);
     try {
       setStatus("Queueing video generation...");
-      const queued = await unwrap(createPronunciation({ body: { wordInfoId, word, phrase, language: "de" } }));
+      const queued = await unwrap(createPronunciation({ body: { wordInfoId: targetWordInfoId, word, phrase, language: "de" } }));
       const completed = await pollPronunciation(queued.id, setStatus);
       if (completed.status === "failed") {
         throw new Error(`${completed.errorCode ?? "generation_failed"}: ${completed.errorMessage ?? "Video generation failed."}`);
@@ -352,12 +363,12 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     }
   }
 
-  async function generateImage() {
+  async function generateImage(targetWordInfoId: string) {
     if (!canUseFeatures) {
       setImageStatus(user ? accountRestrictionMessage(user.status) : "Sign in with Google to use this page.");
       return;
     }
-    if (!wordInfoId) {
+    if (!targetWordInfoId) {
       setImageStatus("Search word info before generating an image.");
       return;
     }
@@ -368,7 +379,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     setImageBusy(true);
     try {
       setImageStatus("Queueing cinematic image...");
-      const queued = await unwrap(createPhraseImage({ body: { wordInfoId, word, phrase, language: "de" } }));
+      const queued = await unwrap(createPhraseImage({ body: { wordInfoId: targetWordInfoId, word, phrase, language: "de" } }));
       setPhraseImage(queued);
       const completed = await pollPhraseImage(queued.id, setImageStatus);
       setPhraseImage(completed);
@@ -441,7 +452,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
           Word
           <input
             value={word}
-            onChange={(event) => { setWordInfoId(undefined); setWord(event.target.value); resetAssets(); }}
+            onChange={(event) => { setWordInfoId(undefined); setSelectedVocabularyItem(undefined); setWord(event.target.value); resetAssets(); }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
@@ -463,7 +474,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
         <button type="button" className="secondary" disabled={!canUseFeatures || searchBusy} onClick={loadWordInfo}>Search word</button>
 
-        {wordInfo ? <WordInfoPanel info={wordInfo} onUseItem={(item) => void selectVocabularyItem(item)} /> : null}
+        {wordInfo ? <WordInfoPanel info={wordInfo} selectedItem={selectedVocabularyItem} onUseItem={(item) => void selectVocabularyItem(item)} /> : null}
 
         <label>
           Phrase
@@ -681,22 +692,96 @@ type PageProps = {
   onAuthError: (error: unknown) => void;
 };
 
-function WordInfoPanel({ info, onUseItem }: { info: WordInfoResponse; onUseItem: (item: VocabularyItemDto) => void }) {
-  const items = [info.proposedItem, ...info.existingItems];
+function WordInfoPanel({ info, selectedItem, onUseItem }: { info: WordInfoResponse; selectedItem?: VocabularyItemDto; onUseItem: (item: VocabularyItemDto) => void }) {
+  const proposedItems = visibleProposedVocabularyItems(info);
   return (
     <div className="word-info">
       <small>Canonical word: {info.canonicalWord}</small>
-      {items.map((item, index) => (
-        <button key={`${item.id ?? "proposed"}-${item.phrase}`} type="button" className="soft-list-button" onClick={() => onUseItem(item)}>
-          <strong>{item.id ? item.word : `Proposed: ${item.word}`}</strong>
-          <small>{[articleForGender(item.gender), item.partOfSpeech, item.frequency].filter(Boolean).join(" · ")}</small>
-          <small>{item.phrase}</small>
-          <small>{describeVocabularyTranslations(item)}</small>
-          {index === 0 && info.existingItems.length > 0 ? <small>Saved alternatives are listed below.</small> : null}
-        </button>
+      {proposedItems.map((item, index) => (
+        <VocabularyItemCard key={`${item.id ?? "proposed"}-${item.phrase}`} item={item} label={`Generated option ${index + 1}`} selected={sameVocabularyOption(item, selectedItem)} onUse={() => onUseItem(item)} />
+      ))}
+      {info.existingItems.length > 0 ? <div className="word-info-divider">Saved alternatives are listed below.</div> : null}
+      {info.existingItems.map((item) => (
+        <VocabularyItemCard key={`${item.id ?? "saved"}-${item.phrase}`} item={item} label="Saved" selected={sameVocabularyOption(item, selectedItem)} onUse={() => onUseItem(item)} />
       ))}
     </div>
   );
+}
+
+function VocabularyItemCard({ item, label, selected, onUse }: { item: VocabularyItemDto; label: string; selected: boolean; onUse: () => void }) {
+  return (
+    <article className="soft-list-button word-info-card">
+      <div className="word-info-card-word">
+        <strong>{item.word}</strong>
+        <small>{describeWordTranslations(item) || "No word translation"}</small>
+      </div>
+      <small className="word-info-card-meta">{[label, articleForGender(item.gender), item.partOfSpeech, item.frequency].filter(Boolean).join(" · ")}</small>
+      <div className="word-info-card-phrase">
+        <strong>{item.phrase}</strong>
+        <small>{describePhraseTranslations(item) || "No phrase translation"}</small>
+      </div>
+      <button type="button" className="secondary small" onClick={onUse}>{selected ? "Selected" : "Use phrase"}</button>
+    </article>
+  );
+}
+
+function proposedVocabularyItems(info: WordInfoResponse) {
+  return info.proposedItems && info.proposedItems.length > 0 ? info.proposedItems : [info.proposedItem];
+}
+
+function firstProposedItem(info: WordInfoResponse) {
+  return proposedVocabularyItems(info)[0];
+}
+
+function firstVisibleVocabularyItem(info: WordInfoResponse) {
+  return visibleProposedVocabularyItems(info)[0] ?? info.existingItems[0] ?? firstProposedItem(info);
+}
+
+function visibleProposedVocabularyItems(info: WordInfoResponse) {
+  const existingPhraseKeys = new Set(info.existingItems.map(phraseKey));
+  const proposedPhraseKeys = new Set<string>();
+  return proposedVocabularyItems(info).filter((item) => {
+    const key = phraseKey(item);
+    if (existingPhraseKeys.has(key) || proposedPhraseKeys.has(key)) {
+      return false;
+    }
+    proposedPhraseKeys.add(key);
+    return true;
+  });
+}
+
+function phraseKey(item: VocabularyItemDto) {
+  return item.phrase.trim().toLowerCase();
+}
+
+function replaceProposedItem(info: WordInfoResponse, previousItem: VocabularyItemDto, nextItem: VocabularyItemDto) {
+  return {
+    ...info,
+    proposedItem: sameVocabularyOption(info.proposedItem, previousItem) ? nextItem : info.proposedItem,
+    proposedItems: proposedVocabularyItems(info).map((item) => sameVocabularyOption(item, previousItem) ? nextItem : item)
+  };
+}
+
+function sameVocabularyOption(item?: VocabularyItemDto, selectedItem?: VocabularyItemDto) {
+  if (!item || !selectedItem) {
+    return false;
+  }
+  if (item.id && selectedItem.id) {
+    return item.id === selectedItem.id;
+  }
+  return !item.id && !selectedItem.id && item.word === selectedItem.word && item.phrase === selectedItem.phrase;
+}
+
+function describeWordTranslations(item: VocabularyItemDto) {
+  return item.translations
+    .map((translation) => `${translation.language}: ${translation.wordTranslation}`)
+    .join(" · ");
+}
+
+function describePhraseTranslations(item: VocabularyItemDto) {
+  return item.translations
+    .map((translation) => `${translation.language}: ${translation.phraseTranslation}`)
+    .join(" · ");
 }
 
 function articleForGender(gender?: VocabularyItemDto["gender"]) {
@@ -712,24 +797,37 @@ function articleForGender(gender?: VocabularyItemDto["gender"]) {
   return "";
 }
 
-function describeVocabularyTranslations(item: VocabularyItemDto) {
-  return item.translations
-    .map((translation) => `${translation.language}: ${translation.wordTranslation} · ${translation.phraseTranslation}`)
-    .join(" | ");
-}
-
 function PhraseImageCard({ image, status, busy, canGenerate, onSelectCandidate }: { image?: PhraseImageResponse; status: string; busy: boolean; canGenerate: boolean; onSelectCandidate: (candidateIndex: number) => void }) {
   const imageUrl = image?.status === "completed" ? image.imageUrl ?? undefined : undefined;
   const candidateUrls = image?.status === "awaiting_selection" ? image.candidateImageUrls ?? [] : [];
+  const [selectedCandidateIndex, setSelectedCandidateIndex] = useState<number>();
+  const selectedCandidateUrl = selectedCandidateIndex === undefined ? undefined : candidateUrls[selectedCandidateIndex];
+  const previewUrl = selectedCandidateUrl ?? imageUrl;
+
+  useEffect(() => {
+    setSelectedCandidateIndex(undefined);
+  }, [image?.id, image?.status]);
+
+  function confirmCandidate() {
+    if (selectedCandidateIndex !== undefined) {
+      onSelectCandidate(selectedCandidateIndex);
+    }
+  }
+
   return (
     <article className="phrase-image-card">
       <div className="phrase-image-frame">
-        {imageUrl ? <img src={imageUrl} alt={image?.phrase ? `Generated scene for ${image.phrase}` : "Generated vocabulary scene"} /> : <div className="placeholder">Cinematic Imagen scene will appear here.</div>}
+        {previewUrl ? <img src={previewUrl} alt={image?.phrase ? `Generated scene for ${image.phrase}` : "Generated vocabulary scene"} /> : <div className="placeholder">{candidateUrls.length > 0 ? "Choose a candidate below to preview it here." : "Cinematic Imagen scene will appear here."}</div>}
       </div>
-      {candidateUrls.length > 0 ? <ImageCandidatePicker urls={candidateUrls} busy={!canGenerate || busy} onSelect={onSelectCandidate} /> : null}
+      {candidateUrls.length > 0 ? <ImageCandidatePicker urls={candidateUrls} busy={!canUseCandidatePicker(canGenerate, busy)} selectedIndex={selectedCandidateIndex} onPreview={setSelectedCandidateIndex} /> : null}
+      {candidateUrls.length > 0 ? <div className="phrase-image-actions"><button type="button" className="secondary small" disabled={!canUseCandidatePicker(canGenerate, busy) || selectedCandidateIndex === undefined} onClick={confirmCandidate}>Confirm selected image</button></div> : null}
       {status ? <small>{status}</small> : null}
     </article>
   );
+}
+
+function canUseCandidatePicker(canGenerate: boolean, busy: boolean) {
+  return canGenerate && !busy;
 }
 
 function PronunciationVideoCard({ videoUrl, status, busy, canGenerate, videoRef }: { videoUrl?: string; status: string; busy: boolean; canGenerate: boolean; videoRef: RefObject<HTMLVideoElement | null> }) {
@@ -742,13 +840,13 @@ function PronunciationVideoCard({ videoUrl, status, busy, canGenerate, videoRef 
   );
 }
 
-function ImageCandidatePicker({ urls, busy, onSelect }: { urls: string[]; busy: boolean; onSelect: (candidateIndex: number) => void }) {
+function ImageCandidatePicker({ urls, busy, selectedIndex, onPreview }: { urls: string[]; busy: boolean; selectedIndex?: number; onPreview: (candidateIndex: number) => void }) {
   return (
     <div className="image-candidates" aria-label="Phrase image candidates">
       {urls.map((url, index) => (
-        <button key={url} type="button" className="image-candidate" disabled={busy} onClick={() => onSelect(index)}>
+        <button key={url} type="button" className={`image-candidate${selectedIndex === index ? " selected" : ""}`} disabled={busy} onClick={() => onPreview(index)}>
           <img src={url} alt={`Generated image candidate ${index + 1}`} />
-          <span>Choose {index + 1}</span>
+          <span>{selectedIndex === index ? `Previewing ${index + 1}` : `Preview ${index + 1}`}</span>
         </button>
       ))}
     </div>
@@ -759,6 +857,7 @@ function ReviewPhraseImage({ item, onAuthError }: { item: DictionaryReviewItem; 
   const [imageId, setImageId] = useState(item.phraseImageId ?? undefined);
   const [imageUrl, setImageUrl] = useState(item.phraseImageUrl ?? undefined);
   const [candidateUrls, setCandidateUrls] = useState<string[]>([]);
+  const [selectedCandidateIndex, setSelectedCandidateIndex] = useState<number>();
   const [status, setStatus] = useState(item.phraseImageUrl ? "" : "Loading image...");
   const [busy, setBusy] = useState(false);
 
@@ -766,6 +865,7 @@ function ReviewPhraseImage({ item, onAuthError }: { item: DictionaryReviewItem; 
     setImageId(item.phraseImageId ?? undefined);
     setImageUrl(item.phraseImageUrl ?? undefined);
     setCandidateUrls([]);
+    setSelectedCandidateIndex(undefined);
     setStatus(item.phraseImageUrl ? "" : "Loading image...");
     if (!item.phrase) {
       return;
@@ -794,6 +894,7 @@ function ReviewPhraseImage({ item, onAuthError }: { item: DictionaryReviewItem; 
       setImageId(completed.id);
       if (completed.status === "awaiting_selection") {
         setCandidateUrls(completed.candidateImageUrls ?? []);
+        setSelectedCandidateIndex(undefined);
         setStatus("Choose the best visual association image.");
         return;
       }
@@ -820,6 +921,7 @@ function ReviewPhraseImage({ item, onAuthError }: { item: DictionaryReviewItem; 
       const selected = await unwrap(selectPhraseImageCandidate({ path: { id: imageId, candidateIndex } }));
       setImageUrl(selected.imageUrl ?? undefined);
       setCandidateUrls([]);
+      setSelectedCandidateIndex(undefined);
       setStatus("");
     }
     catch (error) {
@@ -831,10 +933,20 @@ function ReviewPhraseImage({ item, onAuthError }: { item: DictionaryReviewItem; 
     }
   }
 
+  function confirmReviewImageCandidate() {
+    if (selectedCandidateIndex !== undefined) {
+      void selectReviewImageCandidate(selectedCandidateIndex);
+    }
+  }
+
+  const selectedCandidateUrl = selectedCandidateIndex === undefined ? undefined : candidateUrls[selectedCandidateIndex];
+  const previewUrl = selectedCandidateUrl ?? imageUrl;
+
   return (
     <div className="review-image-block">
-      {imageUrl ? <img src={imageUrl} alt={`Generated scene for ${item.phrase}`} /> : <div className="placeholder">Visual association image is loading.</div>}
-      {candidateUrls.length > 0 ? <ImageCandidatePicker urls={candidateUrls} busy={busy} onSelect={(candidateIndex) => void selectReviewImageCandidate(candidateIndex)} /> : null}
+      {previewUrl ? <img src={previewUrl} alt={`Generated scene for ${item.phrase}`} /> : <div className="placeholder">{candidateUrls.length > 0 ? "Choose a candidate below to preview it here." : "Visual association image is loading."}</div>}
+      {candidateUrls.length > 0 ? <ImageCandidatePicker urls={candidateUrls} busy={busy} selectedIndex={selectedCandidateIndex} onPreview={setSelectedCandidateIndex} /> : null}
+      {candidateUrls.length > 0 ? <div className="phrase-image-actions"><button type="button" className="secondary small" disabled={busy || selectedCandidateIndex === undefined} onClick={confirmReviewImageCandidate}>Confirm selected image</button></div> : null}
       {status ? <small>{status}</small> : null}
     </div>
   );

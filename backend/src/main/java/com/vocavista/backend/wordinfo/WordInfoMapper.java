@@ -15,8 +15,18 @@ import org.springframework.util.StringUtils;
 @Component
 class WordInfoMapper {
 
+	List<VocabularyItemDto> toProposedItems(ProviderWordInfo wordInfo) {
+		return wordInfo.examples().stream()
+				.limit(3)
+				.map(example -> toProposedItem(wordInfo, example))
+				.toList();
+	}
+
 	VocabularyItemDto toProposedItem(ProviderWordInfo wordInfo) {
-		ProviderWordInfo.WordExample example = wordInfo.examples().getFirst();
+		return toProposedItem(wordInfo, wordInfo.examples().getFirst());
+	}
+
+	private VocabularyItemDto toProposedItem(ProviderWordInfo wordInfo, ProviderWordInfo.WordExample example) {
 		return new VocabularyItemDto(
 				trim(wordInfo.normalizedWord()),
 				trim(example.sentence()),

@@ -1,6 +1,7 @@
 package com.vocavista.backend.vocabulary;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -18,6 +19,10 @@ public interface VocabularyItemRepository extends JpaRepository<VocabularyItem, 
 			order by item.updatedAt desc
 			""")
 	List<VocabularyItem> findByLanguageAndWordIgnoreCase(@Param("language") String language, @Param("word") String word);
+
+	@EntityGraph(attributePaths = "translations")
+	Optional<VocabularyItem> findFirstByLanguageAndWordIgnoreCaseAndPhraseIgnoreCase(String language, String word,
+			String phrase);
 
 	@EntityGraph(attributePaths = "translations")
 	@Query("""

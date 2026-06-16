@@ -28,10 +28,11 @@ class PronunciationVideoGeneratorTest {
 				.andExpect(header("x-goog-api-key", "test-key"))
 				.andExpect(content().string(containsString("\"aspectRatio\":\"9:16\"")))
 				.andExpect(content().string(containsString("\"resolution\":\"720p\"")))
-				.andExpect(content().string(containsString("\"durationSeconds\":6")))
+				.andExpect(content().string(containsString("\"durationSeconds\":4")))
 				.andExpect(content().string(not(containsString("personGeneration"))))
 				.andExpect(content().string(containsString("female german adult speaker")))
-				.andExpect(content().string(containsString("Match mouth movements to the quoted German words")))
+				.andExpect(content().string(containsString("Close-up talking head")))
+				.andExpect(content().string(containsString("says exactly")))
 				.andRespond(withSuccess("""
 						{"name":"models/veo-3.1-lite-generate-preview/operations/abc"}
 						""", MediaType.APPLICATION_JSON));
@@ -49,7 +50,7 @@ class PronunciationVideoGeneratorTest {
 		assertThat(video.bytes()).isEqualTo("video".getBytes());
 		assertThat(video.contentType()).isEqualTo("video/mp4");
 		assertThat(generator.providerName()).isEqualTo("google-veo");
-		assertThat(generator.modelName()).contains("veo-3.1-lite-generate-preview", "9:16", "720p", "6s", "prompt-v4");
+		assertThat(generator.modelName()).contains("veo-3.1-lite-generate-preview", "9:16", "720p", "4-6s", "prompt-v6");
 		server.verify();
 	}
 
@@ -62,6 +63,31 @@ class PronunciationVideoGeneratorTest {
 		assertThatThrownBy(() -> generator.generate(script()))
 				.isInstanceOf(MediaGenerationException.class)
 				.hasMessage("Google AI API key is not configured");
+	}
+
+	@Test
+	void requestsFourSecondVideoForSevenWordPhrase() {
+		RestClient.Builder restClientBuilder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
+		VeoProperties properties = properties();
+		PronunciationVideoGenerator generator = new PronunciationVideoGenerator(restClientBuilder, properties);
+
+		server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning"))
+				.andExpect(content().string(containsString("\"durationSeconds\":4")))
+				.andExpect(content().string(containsString("Bitte erklären Sie mir den genauen Vorgang.")))
+				.andRespond(withSuccess("""
+						{"name":"models/veo-3.1-lite-generate-preview/operations/abc"}
+						""", MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-lite-generate-preview/operations/abc"))
+				.andRespond(withSuccess("""
+						{"done":true,"response":{"generateVideoResponse":{"generatedSamples":[{"video":{"bytes":"dmlkZW8=","mimeType":"video/mp4"}}]}}}
+						""", MediaType.APPLICATION_JSON));
+
+		generator.generate(new PronunciationScript("Vorgang", "Bitte erklären Sie mir den genauen Vorgang.", "de",
+				"Vorgang...\n\nder Vorgang!\n\nBitte erklären Sie mir den genauen Vorgang.", "v6",
+				"male german adult speaker"));
+
+		server.verify();
 	}
 
 	private static VeoProperties properties() {

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -43,13 +44,15 @@ class WordInfoService {
 					providerResult.rawResponse());
 		}
 
-		VocabularyItemDto proposedItem = wordInfoMapper.toProposedItem(keepFirstExample(providerWordInfo));
+		List<VocabularyItemDto> proposedItems = wordInfoMapper.toProposedItems(providerWordInfo);
+		VocabularyItemDto proposedItem = proposedItems.getFirst();
 		List<VocabularyItemDto> existingItems = vocabularyItemRepository
 				.findByLanguageAndWordIgnoreCase(proposedItem.getLanguage(), proposedItem.getWord())
 				.stream()
 				.map(wordInfoMapper::toApiItem)
 				.toList();
-		return new WordInfoResponse(trimmedWord, proposedItem.getWord(), existingItems, proposedItem);
+		return new WordInfoResponse(trimmedWord, proposedItem.getWord(), existingItems, proposedItem)
+				.proposedItems(proposedItems);
 	}
 
 	@Transactional
@@ -58,21 +61,25 @@ class WordInfoService {
 			throw new WordInfoValidationException("item is required");
 		}
 		VocabularyItemDto item = request.getItem();
+		Optional<VocabularyItem> existingItem = vocabularyItemRepository
+				.findFirstByLanguageAndWordIgnoreCaseAndPhraseIgnoreCase(item.getLanguage(), item.getWord(), item.getPhrase());
+		if (existingItem.isPresent()) {
+			return new SaveVocabularyItemResponse(wordInfoMapper.toApiItem(existingItem.get()));
+		}
 
 		OffsetDateTime now = OffsetDateTime.now(clock);
 		VocabularyItem saved = vocabularyItemMapper.toEntity(item, UUID.randomUUID(), now);
 
-		return new SaveVocabularyItemResponse(wordInfoMapper.toApiItem(vocabularyItemRepository.save(saved)));
-	}
-
-	private static ProviderWordInfo keepFirstExample(ProviderWordInfo wordInfo) {
-		if (wordInfo == null || wordInfo.examples() == null || wordInfo.examples().size() <= 1) {
-			return wordInfo;
+		try {
+			return new SaveVocabularyItemResponse(wordInfoMapper.toApiItem(vocabularyItemRepository.save(saved)));
 		}
-		return new ProviderWordInfo(wordInfo.normalizedWord(), wordInfo.language(), wordInfo.translations(),
-				wordInfo.partOfSpeech(), wordInfo.gender(), wordInfo.article(), wordInfo.plural(), wordInfo.frequency(),
-				wordInfo.isCompound(), wordInfo.compoundParts(), wordInfo.shortNote(),
-				List.copyOf(wordInfo.examples().subList(0, 1)));
+		catch (DataIntegrityViolationException ex) {
+			return vocabularyItemRepository
+					.findFirstByLanguageAndWordIgnoreCaseAndPhraseIgnoreCase(item.getLanguage(), item.getWord(), item.getPhrase())
+					.map(wordInfoMapper::toApiItem)
+					.map(SaveVocabularyItemResponse::new)
+					.orElseThrow(() -> ex);
+		}
 	}
 
 	private static ProviderWordInfo normalizeProviderWordInfo(ProviderWordInfo wordInfo) {

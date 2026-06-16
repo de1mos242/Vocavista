@@ -80,7 +80,9 @@ class WordInfoControllerTest {
 				.andExpect(jsonPath("$.canonicalWord").value("Hausaufgabe"))
 				.andExpect(jsonPath("$.proposedItem.word").value("Hausaufgabe"))
 				.andExpect(jsonPath("$.proposedItem.partOfSpeech").value("noun"))
-				.andExpect(jsonPath("$.proposedItem.phrase").value("Ich mache meine Hausaufgabe nach dem Abendessen."));
+				.andExpect(jsonPath("$.proposedItem.phrase").value("Ich mache meine Hausaufgabe nach dem Abendessen."))
+				.andExpect(jsonPath("$.proposedItems.length()").value(3))
+				.andExpect(jsonPath("$.proposedItems[1].phrase").value("Die Hausaufgabe ist heute leicht."));
 
 		verify(aiWordInfoProvider).generate("Hausaufgabe");
 	}

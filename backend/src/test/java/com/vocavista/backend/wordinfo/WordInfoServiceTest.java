@@ -2,15 +2,23 @@ package com.vocavista.backend.wordinfo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.vocavista.backend.api.model.SaveVocabularyItemRequest;
+import com.vocavista.backend.api.model.SaveVocabularyItemResponse;
 import com.vocavista.backend.api.model.PartOfSpeech;
+import com.vocavista.backend.api.model.VocabularyItemDto;
 import com.vocavista.backend.api.model.WordInfoResponse;
+import com.vocavista.backend.vocabulary.VocabularyItem;
 import com.vocavista.backend.vocabulary.VocabularyItemMapper;
 import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class WordInfoServiceTest {
@@ -33,6 +41,10 @@ class WordInfoServiceTest {
 		assertThat(response.getExistingItems()).isEmpty();
 		assertThat(response.getProposedItem().getPartOfSpeech()).isEqualTo(PartOfSpeech.NOUN);
 		assertThat(response.getProposedItem().getPhrase()).isEqualTo("Ich mache meine Hausaufgabe nach dem Abendessen.");
+		assertThat(response.getProposedItems()).hasSize(3);
+		assertThat(response.getProposedItems()).extracting("phrase")
+				.containsExactly("Ich mache meine Hausaufgabe nach dem Abendessen.",
+						"Die Hausaufgabe ist heute leicht.", "Hast du die Hausaufgabe schon fertig?");
 	}
 
 	@Test
@@ -67,7 +79,7 @@ class WordInfoServiceTest {
 	}
 
 	@Test
-	void usesFirstExampleAsProposedPhraseWhenProviderReturnsMore() {
+	void usesFirstThreeExamplesAsProposedPhrasesWhenProviderReturnsMore() {
 		ProviderWordInfo wordInfo = withExtraExample(SampleWordInfos.nounInfo());
 		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(wordInfo, SampleWordInfos.nounInfoJson()),
 				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());
@@ -75,6 +87,8 @@ class WordInfoServiceTest {
 		WordInfoResponse response = service.getWordInfo("Hausaufgabe");
 
 		assertThat(response.getProposedItem().getPhrase()).isEqualTo("Ich mache meine Hausaufgabe nach dem Abendessen.");
+		assertThat(response.getProposedItems()).hasSize(3);
+		assertThat(response.getProposedItems()).extracting("phrase").doesNotContain("Extra sentence that should be ignored.");
 	}
 
 	@Test
@@ -87,6 +101,23 @@ class WordInfoServiceTest {
 		WordInfoResponse response = service.getWordInfo("Aufwand");
 
 		assertThat(response.getProposedItem().getGender()).isNotNull();
+	}
+
+	@Test
+	void returnsExistingVocabularyItemWhenSavingSameWordAndPhrase() {
+		VocabularyItemDto proposal = wordInfoMapper.toProposedItem(SampleWordInfos.nounInfo());
+		VocabularyItem existingItem = vocabularyItemMapper.toEntity(proposal, UUID.randomUUID(), java.time.OffsetDateTime.now());
+		VocabularyItemRepository vocabularyItemRepository = mock(VocabularyItemRepository.class);
+		when(vocabularyItemRepository.findFirstByLanguageAndWordIgnoreCaseAndPhraseIgnoreCase(
+				proposal.getLanguage(), proposal.getWord(), proposal.getPhrase()))
+				.thenReturn(Optional.of(existingItem));
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(SampleWordInfos.nounInfo(), "{}"),
+				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, vocabularyItemRepository);
+
+		SaveVocabularyItemResponse response = service.saveVocabularyItem(new SaveVocabularyItemRequest(proposal));
+
+		assertThat(response.getItem().getId()).isEqualTo(existingItem.getId());
+		verify(vocabularyItemRepository, never()).save(any());
 	}
 
 	private static ProviderWordInfo withExtraExample(ProviderWordInfo wordInfo) {
