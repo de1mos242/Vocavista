@@ -1,59 +1,90 @@
 package com.vocavista.backend.wordinfo;
 
-import com.vocavista.backend.api.model.CompoundPart;
 import com.vocavista.backend.api.model.Gender;
-import com.vocavista.backend.api.model.GermanArticle;
 import com.vocavista.backend.api.model.PartOfSpeech;
-import com.vocavista.backend.api.model.WordExample;
+import com.vocavista.backend.api.model.VocabularyItemDto;
+import com.vocavista.backend.api.model.VocabularyItemTranslation;
 import com.vocavista.backend.api.model.WordFrequency;
-import com.vocavista.backend.api.model.WordInfoResponse;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-@Mapper(componentModel = "spring")
-interface WordInfoMapper {
+@Component
+class WordInfoMapper {
 
-	@Mapping(target = "id", ignore = true)
-	WordInfoResponse toApiResponse(ProviderWordInfo wordInfo);
-
-	CompoundPart toApiCompoundPart(ProviderWordInfo.CompoundPart compoundPart);
-
-	WordExample toApiExample(ProviderWordInfo.WordExample example);
-
-	default String mapString(String value) {
-		return StringUtils.hasText(value) ? value.trim() : null;
+	List<VocabularyItemDto> toProposedItems(ProviderWordInfo wordInfo) {
+		return wordInfo.examples().stream()
+				.limit(3)
+				.map(example -> toProposedItem(wordInfo, example))
+				.toList();
 	}
 
-	default Map<String, List<String>> mapLocalizedText(ProviderWordInfo.LocalizedText value) {
-		return value == null ? null : Map.of("en", value.en(), "ru", value.ru());
+	VocabularyItemDto toProposedItem(ProviderWordInfo wordInfo) {
+		return toProposedItem(wordInfo, wordInfo.examples().getFirst());
 	}
 
-	default WordInfoResponse.LanguageEnum mapLanguage(ProviderWordInfo.Language value) {
-		return value == null ? null : WordInfoResponse.LanguageEnum.fromValue(value.name());
+	private VocabularyItemDto toProposedItem(ProviderWordInfo wordInfo, ProviderWordInfo.WordExample example) {
+		return new VocabularyItemDto(
+				trim(wordInfo.normalizedWord()),
+				trim(example.sentence()),
+				wordInfo.language().name(),
+				translations(wordInfo.translations(), example.translations()),
+				PartOfSpeech.fromValue(wordInfo.partOfSpeech().name()),
+				WordFrequency.fromValue(wordInfo.frequency().name()),
+				Boolean.TRUE.equals(wordInfo.isCompound()))
+				.gender(gender(wordInfo.gender()))
+				.plural(optionalString(wordInfo.plural()));
 	}
 
-	default PartOfSpeech mapPartOfSpeech(ProviderWordInfo.ProviderPartOfSpeech value) {
-		return value == null ? null : PartOfSpeech.fromValue(value.name());
+	VocabularyItemDto toApiItem(VocabularyItem item) {
+		return new VocabularyItemDto(
+				item.getWord(),
+				item.getPhrase(),
+				item.getLanguage(),
+				item.getTranslations().stream()
+						.map(translation -> new VocabularyItemTranslation(translation.getLanguage(),
+								translation.getWordTranslation(), translation.getPhraseTranslation()))
+						.toList(),
+				PartOfSpeech.fromValue(item.getPartOfSpeech()),
+				WordFrequency.fromValue(item.getFrequency()),
+				item.isCompound())
+				.id(item.getId())
+				.gender(item.getGender() == null ? null : Gender.fromValue(item.getGender()))
+				.plural(item.getPlural());
 	}
 
-	default WordFrequency mapWordFrequency(ProviderWordInfo.ProviderFrequency value) {
-		return value == null ? null : WordFrequency.fromValue(value.name());
+	private static List<VocabularyItemTranslation> translations(
+			ProviderWordInfo.LocalizedText wordTranslations,
+			ProviderWordInfo.LocalizedText phraseTranslations) {
+		List<VocabularyItemTranslation> values = new ArrayList<>();
+		addTranslation(values, "en", first(wordTranslations.en()), first(phraseTranslations.en()));
+		addTranslation(values, "ru", first(wordTranslations.ru()), first(phraseTranslations.ru()));
+		return values;
 	}
 
-	default Gender mapGender(Optional<ProviderWordInfo.ProviderGender> value) {
+	private static void addTranslation(List<VocabularyItemTranslation> values, String language, String word, String phrase) {
+		if (StringUtils.hasText(word) && StringUtils.hasText(phrase)) {
+			values.add(new VocabularyItemTranslation(language, trim(word), trim(phrase)));
+		}
+	}
+
+	private static String first(List<String> values) {
+		return values == null || values.isEmpty() ? null : values.getFirst();
+	}
+
+	private static Gender gender(Optional<ProviderWordInfo.ProviderGender> value) {
 		return value == null || value.isEmpty() ? null : Gender.fromValue(value.get().name());
 	}
 
-	default GermanArticle mapGermanArticle(Optional<ProviderWordInfo.ProviderArticle> value) {
-		return value == null || value.isEmpty() ? null : GermanArticle.fromValue(value.get().name());
+	private static String optionalString(Optional<String> value) {
+		return value == null || value.isEmpty() ? null : trim(value.get());
 	}
 
-	default String mapOptionalString(Optional<String> value) {
-		return value == null || value.isEmpty() ? null : mapString(value.get());
+	private static String trim(String value) {
+		return value == null ? null : value.trim();
 	}
 
 }

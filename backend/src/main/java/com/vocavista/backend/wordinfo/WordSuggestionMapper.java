@@ -3,28 +3,26 @@ package com.vocavista.backend.wordinfo;
 import com.vocavista.backend.api.model.PronunciationStatus;
 import com.vocavista.backend.api.model.WordSuggestion;
 import com.vocavista.backend.media.MediaAssetQueryService;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-interface WordSuggestionMapper {
+@Component
+class WordSuggestionMapper {
 
-	@Mapping(target = "word", source = "normalizedWord")
-	@Mapping(target = "source", expression = "java(com.vocavista.backend.api.model.WordSuggestion.SourceEnum.WORD_INFO)")
-	@Mapping(target = "wordInfoId", source = "id")
-	@Mapping(target = "phrase", ignore = true)
-	@Mapping(target = "pronunciationId", ignore = true)
-	@Mapping(target = "status", ignore = true)
-	@Mapping(target = "videoUrl", ignore = true)
-	@Mapping(target = "fullVideoUrl", ignore = true)
-	WordSuggestion toWordInfoSuggestion(WordInfoRecord record);
+	WordSuggestion toVocabularyItemSuggestion(VocabularyItem item) {
+		return new WordSuggestion(item.getWord(), WordSuggestion.SourceEnum.WORD_INFO)
+				.phrase(item.getPhrase())
+				.wordInfoId(item.getId());
+	}
 
-	@Mapping(target = "source", expression = "java(com.vocavista.backend.api.model.WordSuggestion.SourceEnum.PRONUNCIATION)")
-	@Mapping(target = "status", source = "status")
-	WordSuggestion toPronunciationSuggestion(MediaAssetQueryService.PronunciationSuggestion pronunciation);
-
-	default PronunciationStatus mapStatus(String status) {
-		return status == null ? null : PronunciationStatus.fromValue(status);
+	WordSuggestion toPronunciationSuggestion(MediaAssetQueryService.PronunciationSuggestion pronunciation) {
+		return new WordSuggestion(pronunciation.word(), WordSuggestion.SourceEnum.PRONUNCIATION)
+				.phrase(pronunciation.phrase())
+				.wordInfoId(pronunciation.wordInfoId())
+				.pronunciationId(pronunciation.pronunciationId())
+				.status(pronunciation.status() == null ? null : PronunciationStatus.fromValue(pronunciation.status()))
+				.videoUrl(pronunciation.videoUrl())
+				.fullVideoUrl(pronunciation.fullVideoUrl());
 	}
 
 }

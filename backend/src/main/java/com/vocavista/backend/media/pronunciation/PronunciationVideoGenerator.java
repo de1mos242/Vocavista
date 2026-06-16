@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -15,7 +16,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.MissingNode;
 
 @Component
+@Slf4j
 class PronunciationVideoGenerator {
+
+	private static final int SHORT_SCRIPT_DURATION_SECONDS = 4;
+	private static final int SHORT_PHRASE_WORD_LIMIT = 10;
 
 	private final RestClient restClient;
 	private final VeoProperties properties;
@@ -59,14 +64,17 @@ class PronunciationVideoGenerator {
 	}
 
 	String modelName() {
-		return "%s:%s:%s:%ss:%s".formatted(properties.getModel(), properties.getAspectRatio(),
-				properties.getResolution(), properties.getDurationSeconds(), "prompt-v4");
+		return "%s:%s:%s:%s:%s".formatted(properties.getModel(), properties.getAspectRatio(),
+				properties.getResolution(), durationLabel(), "prompt-v6");
 	}
 
 	private JsonNode startOperation(PronunciationScript script) {
+		int durationSeconds = durationSecondsFor(script);
+		String prompt = promptFor(script);
+
 		Map<String, Object> parameters = new LinkedHashMap<>();
 		parameters.put("sampleCount", properties.getSampleCount());
-		parameters.put("durationSeconds", properties.getDurationSeconds());
+		parameters.put("durationSeconds", durationSeconds);
 		parameters.put("aspectRatio", properties.getAspectRatio());
 		if (StringUtils.hasText(properties.getResolution())) {
 			parameters.put("resolution", properties.getResolution());
@@ -76,8 +84,11 @@ class PronunciationVideoGenerator {
 		}
 
 		Map<String, Object> request = Map.of(
-				"instances", List.of(Map.of("prompt", promptFor(script))),
+				"instances", List.of(Map.of("prompt", prompt)),
 				"parameters", parameters);
+
+		log.info("Starting Veo pronunciation generation: durationSeconds={}, phraseWordCount={}, prompt={}",
+				durationSeconds, wordCount(script.phrase()), prompt);
 
 		return restClient.post()
 				.uri("/v1beta/models/{model}:predictLongRunning", properties.getModel())
@@ -176,11 +187,29 @@ class PronunciationVideoGenerator {
 	private static String promptFor(PronunciationScript script) {
 		String spokenText = script.text().replaceAll("\\s+", " ").trim();
 		return """
-				Create a vertical close-up lip-sync video of one %s.
-				The complete audio transcript must be exactly this German script and nothing else: "%s".
-				Match mouth movements to the quoted German words.
-				Use a simple neutral background.
+				Close-up talking head, neutral background.
+				One %s says exactly: "%s"
 				""".formatted(script.speakerDescription(), spokenText).replaceAll("\\s+", " ").trim();
+	}
+
+	private int durationSecondsFor(PronunciationScript script) {
+		if (properties.getDurationSeconds() > SHORT_SCRIPT_DURATION_SECONDS
+				&& wordCount(script.phrase()) <= SHORT_PHRASE_WORD_LIMIT) {
+			return SHORT_SCRIPT_DURATION_SECONDS;
+		}
+		return properties.getDurationSeconds();
+	}
+
+	private String durationLabel() {
+		if (properties.getDurationSeconds() > SHORT_SCRIPT_DURATION_SECONDS) {
+			return SHORT_SCRIPT_DURATION_SECONDS + "-" + properties.getDurationSeconds() + "s";
+		}
+		return properties.getDurationSeconds() + "s";
+	}
+
+	private static int wordCount(String value) {
+		String trimmed = value == null ? "" : value.trim();
+		return StringUtils.hasText(trimmed) ? trimmed.split("\\s+").length : 0;
 	}
 
 	private static String text(JsonNode node, String fieldName) {

@@ -16,7 +16,7 @@ import org.springframework.util.StringUtils;
 @Mapper(componentModel = "spring")
 interface MediaResponseMapper {
 
-	@Mapping(target = "wordInfoId", source = "wordInfoRecord.id")
+	@Mapping(target = "wordInfoId", source = "vocabularyItem.id")
 	@Mapping(target = "status", source = "status")
 	@Mapping(target = "videoUrl", source = ".", qualifiedByName = "smallVideoUriIfPresent")
 	@Mapping(target = "fullVideoUrl", source = ".", qualifiedByName = "fullVideoUriIfPresent")
@@ -24,10 +24,10 @@ interface MediaResponseMapper {
 	@Mapping(target = "errorMessage", source = ".", qualifiedByName = "pronunciationErrorMessage")
 	PronunciationResponse toResponse(PronunciationAsset asset);
 
-	@Mapping(target = "wordInfoId", source = "wordInfoRecord.id")
+	@Mapping(target = "wordInfoId", source = "vocabularyItem.id")
 	@Mapping(target = "status", source = "status")
-	@Mapping(target = "word", source = "normalizedWord")
-	@Mapping(target = "phrase", source = "normalizedPhrase")
+	@Mapping(target = "word", source = "inputWord")
+	@Mapping(target = "phrase", source = "inputPhrase")
 	@Mapping(target = "imageUrl", source = ".", qualifiedByName = "imageUriIfPresent")
 	@Mapping(target = "candidateImageUrls", source = ".", qualifiedByName = "candidateUrisIfPresent")
 	@Mapping(target = "errorCode", source = ".", qualifiedByName = "phraseImageErrorCode")

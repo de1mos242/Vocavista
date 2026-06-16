@@ -16,6 +16,9 @@ import com.vocavista.backend.auth.FunctionalAccessWebConfig;
 import com.vocavista.backend.auth.GoogleOidcUserService;
 import com.vocavista.backend.auth.UserAccessService;
 import com.vocavista.backend.media.MediaAssetQueryService;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import com.vocavista.backend.vocabulary.VocabularyItemMapperImpl;
+import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,10 +33,11 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 
 @WebMvcTest(value = WordInfoController.class, excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class)
-@Import({ WordInfoService.class, WordSuggestionService.class, ProviderWordInfoValidator.class, WordInfoMapperImpl.class,
-		WordSuggestionMapperImpl.class, WordInfoErrorHandler.class, AuthErrorHandler.class, FunctionalAccessInterceptor.class,
+@Import({ WordInfoService.class, WordSuggestionService.class, ProviderWordInfoValidator.class, WordInfoMapper.class,
+		VocabularyItemMapperImpl.class, WordSuggestionMapper.class, WordInfoErrorHandler.class, AuthErrorHandler.class, FunctionalAccessInterceptor.class,
 		FunctionalAccessWebConfig.class })
 class WordInfoControllerTest {
 
@@ -44,7 +48,7 @@ class WordInfoControllerTest {
 	private AiWordInfoProvider aiWordInfoProvider;
 
 	@MockitoBean
-	private WordInfoRepository wordInfoRepository;
+	private VocabularyItemRepository vocabularyItemRepository;
 
 	@MockitoBean
 	private MediaAssetQueryService mediaAssetQueryService;
@@ -60,7 +64,9 @@ class WordInfoControllerTest {
 
 	@BeforeEach
 	void setUp() {
-		when(wordInfoRepository.findByNormalizedQuery(anyString())).thenReturn(Optional.empty());
+		when(vocabularyItemRepository.findByLanguageAndWordIgnoreCase(anyString(), anyString())).thenReturn(List.of());
+		when(vocabularyItemRepository.findTop10ByLanguageAndWordContainingIgnoreCase(anyString(), anyString(), any(Pageable.class)))
+				.thenReturn(List.of());
 		when(mediaAssetQueryService.findPronunciationSuggestions(anyString())).thenReturn(List.of());
 	}
 
@@ -71,10 +77,12 @@ class WordInfoControllerTest {
 
 		mockMvc.perform(get("/api/v1/words/info").param("word", " Hausaufgabe "))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.id").exists())
-				.andExpect(jsonPath("$.normalizedWord").value("Hausaufgabe"))
-				.andExpect(jsonPath("$.partOfSpeech").value("noun"))
-				.andExpect(jsonPath("$.examples.length()").value(3));
+				.andExpect(jsonPath("$.canonicalWord").value("Hausaufgabe"))
+				.andExpect(jsonPath("$.proposedItem.word").value("Hausaufgabe"))
+				.andExpect(jsonPath("$.proposedItem.partOfSpeech").value("noun"))
+				.andExpect(jsonPath("$.proposedItem.phrase").value("Ich mache meine Hausaufgabe nach dem Abendessen."))
+				.andExpect(jsonPath("$.proposedItems.length()").value(3))
+				.andExpect(jsonPath("$.proposedItems[1].phrase").value("Die Hausaufgabe ist heute leicht."));
 
 		verify(aiWordInfoProvider).generate("Hausaufgabe");
 	}
@@ -93,16 +101,30 @@ class WordInfoControllerTest {
 	@Test
 	@WithMockUser
 	void returnsWordSuggestionsForValidQuery() throws Exception {
-		UUID wordInfoId = UUID.randomUUID();
-		WordInfoRecord record = WordInfoRecord.create(wordInfoId, "hausaufgabe", "Hausaufgabe", "de", "{}",
-				OffsetDateTime.now());
-		when(wordInfoRepository.findTop10ByNormalizedWordContainingIgnoreCaseOrderByUpdatedAtDesc("haus"))
-				.thenReturn(List.of(record));
+		VocabularyItem item = vocabularyItem();
+		when(vocabularyItemRepository.findTop10ByLanguageAndWordContainingIgnoreCase(anyString(), anyString(), any(Pageable.class)))
+				.thenReturn(List.of(item));
 		mockMvc.perform(get("/api/v1/words/suggestions").param("query", "haus"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items[0].word").value("Hausaufgabe"))
-				.andExpect(jsonPath("$.items[0].wordInfoId").value(wordInfoId.toString()))
+				.andExpect(jsonPath("$.items[0].wordInfoId").value(item.getId().toString()))
 				.andExpect(jsonPath("$.items[0].source").value("word_info"));
+	}
+
+	private static VocabularyItem vocabularyItem() {
+		VocabularyItem item = new VocabularyItem();
+		item.setId(UUID.randomUUID());
+		item.setLanguage("de");
+		item.setWord("Hausaufgabe");
+		item.setPhrase("Ich mache meine Hausaufgabe.");
+		item.setPartOfSpeech("noun");
+		item.setGender("feminine");
+		item.setPlural("Hausaufgaben");
+		item.setFrequency("common");
+		item.setCompound(true);
+		item.setCreatedAt(OffsetDateTime.now());
+		item.setUpdatedAt(OffsetDateTime.now());
+		return item;
 	}
 
 	@Test

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddDictionaryEntryData, AddDictionaryEntryErrors, AddDictionaryEntryResponses, CreatePhraseImageData, CreatePhraseImageErrors, CreatePhraseImageResponses, CreatePronunciationData, CreatePronunciationErrors, CreatePronunciationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetDictionaryReviewData, GetDictionaryReviewErrors, GetDictionaryReviewResponses, GetDictionaryVideosData, GetDictionaryVideosErrors, GetDictionaryVideosResponses, GetPhraseImageBytesData, GetPhraseImageBytesErrors, GetPhraseImageBytesResponses, GetPhraseImageCandidateBytesData, GetPhraseImageCandidateBytesErrors, GetPhraseImageCandidateBytesResponses, GetPhraseImageData, GetPhraseImageErrors, GetPhraseImageResponses, GetPronunciationData, GetPronunciationErrors, GetPronunciationResponses, GetPronunciationVideoData, GetPronunciationVideoErrors, GetPronunciationVideoResponses, GetSmallPronunciationVideoData, GetSmallPronunciationVideoErrors, GetSmallPronunciationVideoResponses, GetWordInfoData, GetWordInfoErrors, GetWordInfoResponses, GetWordSuggestionsData, GetWordSuggestionsErrors, GetWordSuggestionsResponses, ListAdminUsersData, ListAdminUsersErrors, ListAdminUsersResponses, SelectPhraseImageCandidateData, SelectPhraseImageCandidateErrors, SelectPhraseImageCandidateResponses, SubmitDictionaryReviewData, SubmitDictionaryReviewErrors, SubmitDictionaryReviewResponses, UpdateAdminUserStatusData, UpdateAdminUserStatusErrors, UpdateAdminUserStatusResponses } from './types.gen';
+import type { AddDictionaryEntryData, AddDictionaryEntryErrors, AddDictionaryEntryResponses, CreatePhraseImageData, CreatePhraseImageErrors, CreatePhraseImageResponses, CreatePronunciationData, CreatePronunciationErrors, CreatePronunciationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetDictionaryReviewData, GetDictionaryReviewErrors, GetDictionaryReviewResponses, GetDictionaryVideosData, GetDictionaryVideosErrors, GetDictionaryVideosResponses, GetPhraseImageBytesData, GetPhraseImageBytesErrors, GetPhraseImageBytesResponses, GetPhraseImageCandidateBytesData, GetPhraseImageCandidateBytesErrors, GetPhraseImageCandidateBytesResponses, GetPhraseImageData, GetPhraseImageErrors, GetPhraseImageResponses, GetPronunciationData, GetPronunciationErrors, GetPronunciationResponses, GetPronunciationVideoData, GetPronunciationVideoErrors, GetPronunciationVideoResponses, GetSmallPronunciationVideoData, GetSmallPronunciationVideoErrors, GetSmallPronunciationVideoResponses, GetWordInfoData, GetWordInfoErrors, GetWordInfoResponses, GetWordSuggestionsData, GetWordSuggestionsErrors, GetWordSuggestionsResponses, ListAdminUsersData, ListAdminUsersErrors, ListAdminUsersResponses, SaveVocabularyItemData, SaveVocabularyItemErrors, SaveVocabularyItemResponses, SelectPhraseImageCandidateData, SelectPhraseImageCandidateErrors, SelectPhraseImageCandidateResponses, SubmitDictionaryReviewData, SubmitDictionaryReviewErrors, SubmitDictionaryReviewResponses, UpdateAdminUserStatusData, UpdateAdminUserStatusErrors, UpdateAdminUserStatusResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -183,7 +183,7 @@ export const getPhraseImageBytes = <ThrowOnError extends boolean = false>(option
 });
 
 /**
- * Get compact German word information
+ * Generate a contextual vocabulary item proposal
  */
 export const getWordInfo = <ThrowOnError extends boolean = false>(options: Options<GetWordInfoData, ThrowOnError>) => (options.client ?? client).get<GetWordInfoResponses, GetWordInfoErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -192,7 +192,20 @@ export const getWordInfo = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
- * Search cached words and generated pronunciations for autocomplete
+ * Save a generated contextual vocabulary item
+ */
+export const saveVocabularyItem = <ThrowOnError extends boolean = false>(options: Options<SaveVocabularyItemData, ThrowOnError>) => (options.client ?? client).post<SaveVocabularyItemResponses, SaveVocabularyItemErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/words/items',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Search saved vocabulary items and generated pronunciations for autocomplete
  */
 export const getWordSuggestions = <ThrowOnError extends boolean = false>(options: Options<GetWordSuggestionsData, ThrowOnError>) => (options.client ?? client).get<GetWordSuggestionsResponses, GetWordSuggestionsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

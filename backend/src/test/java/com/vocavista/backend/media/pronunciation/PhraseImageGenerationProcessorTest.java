@@ -2,7 +2,7 @@ package com.vocavista.backend.media.pronunciation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.vocavista.backend.wordinfo.WordInfoRecord;
+import com.vocavista.backend.vocabulary.VocabularyItem;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -28,20 +28,24 @@ class PhraseImageGenerationProcessorTest {
 	}
 
 	private static PhraseImageAsset asset() {
-		return PhraseImageAsset.queued(wordInfoRecord(), "Hausaufgabe", "Ich mache meine Hausaufgabe.", "Hausaufgabe",
-				"Ich mache meine Hausaufgabe.", "de", "v4", OffsetDateTime.now());
+		return PhraseImageAsset.queued(vocabularyItem(), "Hausaufgabe", "Ich mache meine Hausaufgabe.", "de", "v4",
+				OffsetDateTime.now());
 	}
 
-	private static WordInfoRecord wordInfoRecord() {
-		WordInfoRecord record = new WordInfoRecord();
-		record.setId(UUID.fromString("11111111-1111-1111-1111-111111111111"));
-		record.setNormalizedQuery("hausaufgabe");
-		record.setNormalizedWord("Hausaufgabe");
-		record.setLanguage("de");
-		record.setResponseJson("{}");
-		record.setCreatedAt(OffsetDateTime.now());
-		record.setUpdatedAt(OffsetDateTime.now());
-		return record;
+	private static VocabularyItem vocabularyItem() {
+		VocabularyItem item = new VocabularyItem();
+		item.setId(UUID.fromString("11111111-1111-1111-1111-111111111111"));
+		item.setLanguage("de");
+		item.setWord("Hausaufgabe");
+		item.setPhrase("Ich mache meine Hausaufgabe.");
+		item.setPartOfSpeech("noun");
+		item.setGender("feminine");
+		item.setPlural("Hausaufgaben");
+		item.setFrequency("common");
+		item.setCompound(true);
+		item.setCreatedAt(OffsetDateTime.now());
+		item.setUpdatedAt(OffsetDateTime.now());
+		return item;
 	}
 
 }

@@ -16,17 +16,17 @@ import org.springframework.util.StringUtils;
 @Mapper(componentModel = "spring")
 interface MediaAssetMapper {
 
-	@Mapping(target = "word", source = "normalizedWord")
-	@Mapping(target = "phrase", source = "normalizedPhrase")
-	@Mapping(target = "wordInfoId", source = "wordInfoRecord.id")
+	@Mapping(target = "word", source = "inputWord")
+	@Mapping(target = "phrase", source = "inputPhrase")
+	@Mapping(target = "wordInfoId", source = "vocabularyItem.id")
 	@Mapping(target = "pronunciationId", source = "id")
 	@Mapping(target = "status", source = "status", qualifiedByName = "pronunciationStatus")
 	@Mapping(target = "videoUrl", source = ".", qualifiedByName = "smallVideoUriIfCompleted")
 	@Mapping(target = "fullVideoUrl", source = ".", qualifiedByName = "fullVideoUriIfCompleted")
 	PronunciationSuggestion toPronunciationSuggestion(PronunciationAsset asset);
 
-	@Mapping(target = "wordInfoId", source = "wordInfoRecord.id")
-	@Mapping(target = "phrase", source = "normalizedPhrase")
+	@Mapping(target = "wordInfoId", source = "vocabularyItem.id")
+	@Mapping(target = "phrase", source = "inputPhrase")
 	@Mapping(target = "videoUrl", source = "id", qualifiedByName = "smallVideoUri")
 	@Mapping(target = "fullVideoUrl", source = "id", qualifiedByName = "fullVideoUri")
 	CompletedPronunciation toCompletedPronunciation(PronunciationAsset asset);

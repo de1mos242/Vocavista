@@ -3,44 +3,54 @@ package com.vocavista.backend.wordinfo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.vocavista.backend.api.model.GermanArticle;
+import com.vocavista.backend.api.model.SaveVocabularyItemRequest;
+import com.vocavista.backend.api.model.SaveVocabularyItemResponse;
 import com.vocavista.backend.api.model.PartOfSpeech;
+import com.vocavista.backend.api.model.VocabularyItemDto;
 import com.vocavista.backend.api.model.WordInfoResponse;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import com.vocavista.backend.vocabulary.VocabularyItemMapper;
+import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class WordInfoServiceTest {
 
-	private final WordInfoMapper wordInfoMapper = new WordInfoMapperImpl();
+	private final WordInfoMapper wordInfoMapper = new WordInfoMapper();
+	private final VocabularyItemMapper vocabularyItemMapper = new com.vocavista.backend.vocabulary.VocabularyItemMapperImpl();
 	private final ProviderWordInfoValidator providerWordInfoValidator = new ProviderWordInfoValidator();
 
 	@Test
 	void trimsWordAndMapsProviderResponse() {
-		WordInfoRepository wordInfoRepository = emptyRepository();
+		VocabularyItemRepository vocabularyItemRepository = emptyRepository();
 		WordInfoService service = new WordInfoService(word -> {
 			assertThat(word).isEqualTo("Hausaufgabe");
 			return new AiWordInfoResult(SampleWordInfos.nounInfo(), SampleWordInfos.nounInfoJson());
-		}, providerWordInfoValidator, wordInfoMapper, wordInfoRepository);
+		}, providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, vocabularyItemRepository);
 
 		WordInfoResponse response = service.getWordInfo("  Hausaufgabe  ");
 
-		assertThat(response.getId()).isNotNull();
-		assertThat(response.getNormalizedWord()).isEqualTo("Hausaufgabe");
-		assertThat(response.getPartOfSpeech()).isEqualTo(PartOfSpeech.NOUN);
-		assertThat(response.getExamples()).hasSize(3);
-		verify(wordInfoRepository).save(any());
+		assertThat(response.getCanonicalWord()).isEqualTo("Hausaufgabe");
+		assertThat(response.getExistingItems()).isEmpty();
+		assertThat(response.getProposedItem().getPartOfSpeech()).isEqualTo(PartOfSpeech.NOUN);
+		assertThat(response.getProposedItem().getPhrase()).isEqualTo("Ich mache meine Hausaufgabe nach dem Abendessen.");
+		assertThat(response.getProposedItems()).hasSize(3);
+		assertThat(response.getProposedItems()).extracting("phrase")
+				.containsExactly("Ich mache meine Hausaufgabe nach dem Abendessen.",
+						"Die Hausaufgabe ist heute leicht.", "Hast du die Hausaufgabe schon fertig?");
 	}
 
 	@Test
 	void rejectsBlankWordAfterTrimming() {
 		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(SampleWordInfos.nounInfo(), "{}"),
-				providerWordInfoValidator, wordInfoMapper, emptyRepository());
+				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());
 
 		assertThatThrownBy(() -> service.getWordInfo("   ")).isInstanceOf(WordInfoValidationException.class);
 	}
@@ -58,7 +68,7 @@ class WordInfoServiceTest {
 								List.of("Я делаю домашнее задание.")))));
 		String rawResponse = "{\"examples\":[{\"sentence\":\"Ich mache meine Hausaufgabe.\"}]}";
 		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(malformedInfo, rawResponse),
-				providerWordInfoValidator, wordInfoMapper, emptyRepository());
+				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());
 
 		assertThatThrownBy(() -> service.getWordInfo("Hausaufgabe"))
 				.isInstanceOf(AiProviderBadGatewayException.class)
@@ -69,17 +79,16 @@ class WordInfoServiceTest {
 	}
 
 	@Test
-	void keepsFirstThreeExamplesWhenProviderReturnsMore() {
+	void usesFirstThreeExamplesAsProposedPhrasesWhenProviderReturnsMore() {
 		ProviderWordInfo wordInfo = withExtraExample(SampleWordInfos.nounInfo());
 		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(wordInfo, SampleWordInfos.nounInfoJson()),
-				providerWordInfoValidator, wordInfoMapper, emptyRepository());
+				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());
 
 		WordInfoResponse response = service.getWordInfo("Hausaufgabe");
 
-		assertThat(response.getExamples()).hasSize(3);
-		assertThat(response.getExamples())
-				.extracting(example -> example.getSentence())
-				.doesNotContain("Extra sentence that should be ignored.");
+		assertThat(response.getProposedItem().getPhrase()).isEqualTo("Ich mache meine Hausaufgabe nach dem Abendessen.");
+		assertThat(response.getProposedItems()).hasSize(3);
+		assertThat(response.getProposedItems()).extracting("phrase").doesNotContain("Extra sentence that should be ignored.");
 	}
 
 	@Test
@@ -87,12 +96,28 @@ class WordInfoServiceTest {
 		ProviderWordInfo wordInfo = withArticle(SampleWordInfos.nounInfo(), Optional.empty(),
 				Optional.of(ProviderWordInfo.ProviderGender.masculine));
 		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(wordInfo, SampleWordInfos.nounInfoJson()),
-				providerWordInfoValidator, wordInfoMapper, emptyRepository());
+				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());
 
 		WordInfoResponse response = service.getWordInfo("Aufwand");
 
-		assertThat(response.getGender()).isNotNull();
-		assertThat(response.getArticle()).isEqualTo(GermanArticle.DER);
+		assertThat(response.getProposedItem().getGender()).isNotNull();
+	}
+
+	@Test
+	void returnsExistingVocabularyItemWhenSavingSameWordAndPhrase() {
+		VocabularyItemDto proposal = wordInfoMapper.toProposedItem(SampleWordInfos.nounInfo());
+		VocabularyItem existingItem = vocabularyItemMapper.toEntity(proposal, UUID.randomUUID(), java.time.OffsetDateTime.now());
+		VocabularyItemRepository vocabularyItemRepository = mock(VocabularyItemRepository.class);
+		when(vocabularyItemRepository.findFirstByLanguageAndWordIgnoreCaseAndPhraseIgnoreCase(
+				proposal.getLanguage(), proposal.getWord(), proposal.getPhrase()))
+				.thenReturn(Optional.of(existingItem));
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(SampleWordInfos.nounInfo(), "{}"),
+				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, vocabularyItemRepository);
+
+		SaveVocabularyItemResponse response = service.saveVocabularyItem(new SaveVocabularyItemRequest(proposal));
+
+		assertThat(response.getItem().getId()).isEqualTo(existingItem.getId());
+		verify(vocabularyItemRepository, never()).save(any());
 	}
 
 	private static ProviderWordInfo withExtraExample(ProviderWordInfo wordInfo) {
@@ -112,10 +137,10 @@ class WordInfoServiceTest {
 				wordInfo.compoundParts(), wordInfo.shortNote(), wordInfo.examples());
 	}
 
-	private static WordInfoRepository emptyRepository() {
-		WordInfoRepository wordInfoRepository = mock(WordInfoRepository.class);
-		when(wordInfoRepository.findByNormalizedQuery(anyString())).thenReturn(Optional.empty());
-		return wordInfoRepository;
+	private static VocabularyItemRepository emptyRepository() {
+		VocabularyItemRepository vocabularyItemRepository = mock(VocabularyItemRepository.class);
+		when(vocabularyItemRepository.findByLanguageAndWordIgnoreCase("de", "Hausaufgabe")).thenReturn(List.of());
+		return vocabularyItemRepository;
 	}
 
 }

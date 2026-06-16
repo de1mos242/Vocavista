@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface UserDictionaryEntryRepository extends JpaRepository<UserDictionaryEntry, UUID> {
 
-	Optional<UserDictionaryEntry> findByUserAccountIdAndNormalizedWord(UUID userAccountId, String normalizedWord);
+	Optional<UserDictionaryEntry> findByUserAccountIdAndVocabularyItemId(UUID userAccountId, UUID vocabularyItemId);
 
 	Optional<UserDictionaryEntry> findByIdAndUserAccountId(UUID id, UUID userAccountId);
 
@@ -18,6 +18,6 @@ interface UserDictionaryEntryRepository extends JpaRepository<UserDictionaryEntr
 
 	List<UserDictionaryEntry> findByUserAccountIdOrderByDueAtAsc(UUID userAccountId, Pageable pageable);
 
-	List<UserDictionaryEntry> findByUserAccountIdOrderByNormalizedWordAsc(UUID userAccountId);
+	List<UserDictionaryEntry> findByUserAccountIdOrderByVocabularyItemWordAsc(UUID userAccountId);
 
 }

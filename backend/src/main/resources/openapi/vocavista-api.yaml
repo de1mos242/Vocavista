@@ -587,21 +587,21 @@ paths:
       tags:
         - Words
       operationId: getWordInfo
-      summary: Get compact German word information
+      summary: Generate a contextual vocabulary item proposal
       security:
         - GoogleOAuth: []
       parameters:
         - name: word
           in: query
           required: true
-          description: German word or fixed expression to explain.
+          description: Word or fixed expression to explain.
           schema:
             type: string
             minLength: 1
             maxLength: 80
       responses:
         '200':
-          description: Word information generated for the requested word.
+          description: Generated proposal plus existing saved items for the canonical word.
           content:
             application/json:
               schema:
@@ -630,12 +630,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/words/items:
+    post:
+      tags:
+        - Words
+      operationId: saveVocabularyItem
+      summary: Save a generated contextual vocabulary item
+      security:
+        - GoogleOAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveVocabularyItemRequest'
+      responses:
+        '200':
+          description: Saved vocabulary item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveVocabularyItemResponse'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account is not approved to use app features.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/words/suggestions:
     get:
       tags:
         - Words
       operationId: getWordSuggestions
-      summary: Search cached words and generated pronunciations for autocomplete
+      summary: Search saved vocabulary items and generated pronunciations for autocomplete
       security:
         - GoogleOAuth: []
       parameters:
@@ -649,7 +682,7 @@ paths:
             maxLength: 80
       responses:
         '200':
-          description: Matching cached words and generated pronunciations.
+          description: Matching saved vocabulary items and generated pronunciations.
           content:
             application/json:
               schema:
@@ -1041,40 +1074,73 @@ components:
         - awaiting_selection
         - completed
         - failed
-    WordInfoResponse:
+    SaveVocabularyItemRequest:
       type: object
       required:
-        - normalizedWord
-        - id
+        - item
+      properties:
+        item:
+          $ref: '#/components/schemas/VocabularyItemDto'
+    SaveVocabularyItemResponse:
+      type: object
+      required:
+        - item
+      properties:
+        item:
+          $ref: '#/components/schemas/VocabularyItemDto'
+    VocabularyItemTranslation:
+      type: object
+      required:
+        - language
+        - wordTranslation
+        - phraseTranslation
+      properties:
+        language:
+          type: string
+          minLength: 2
+          maxLength: 16
+        wordTranslation:
+          type: string
+          minLength: 1
+        phraseTranslation:
+          type: string
+          minLength: 1
+    VocabularyItemDto:
+      type: object
+      required:
+        - word
+        - phrase
         - language
         - translations
         - partOfSpeech
         - frequency
         - isCompound
-        - compoundParts
-        - shortNote
-        - examples
       properties:
         id:
           type: string
           format: uuid
-        normalizedWord:
+          nullable: true
+        word:
           type: string
           minLength: 1
+          maxLength: 80
+        phrase:
+          type: string
+          minLength: 1
+          maxLength: 240
         language:
           type: string
-          enum:
-            - de
+          minLength: 2
+          maxLength: 16
         translations:
-          $ref: '#/components/schemas/LanguageTextMap'
+          type: array
+          items:
+            $ref: '#/components/schemas/VocabularyItemTranslation'
         partOfSpeech:
           $ref: '#/components/schemas/PartOfSpeech'
         gender:
           nullable: true
           $ref: '#/components/schemas/Gender'
-        article:
-          nullable: true
-          $ref: '#/components/schemas/GermanArticle'
         plural:
           type: string
           nullable: true
@@ -1082,18 +1148,31 @@ components:
           $ref: '#/components/schemas/WordFrequency'
         isCompound:
           type: boolean
-        compoundParts:
+    WordInfoResponse:
+      type: object
+      required:
+        - query
+        - canonicalWord
+        - existingItems
+        - proposedItem
+      properties:
+        query:
+          type: string
+          minLength: 1
+        canonicalWord:
+          type: string
+          minLength: 1
+        existingItems:
           type: array
           items:
-            $ref: '#/components/schemas/CompoundPart'
-        shortNote:
-          $ref: '#/components/schemas/LanguageTextMap'
-        examples:
+            $ref: '#/components/schemas/VocabularyItemDto'
+        proposedItem:
+          $ref: '#/components/schemas/VocabularyItemDto'
+        proposedItems:
           type: array
-          minItems: 3
-          maxItems: 3
+          description: Generated contextual vocabulary item proposals, one per example phrase.
           items:
-            $ref: '#/components/schemas/WordExample'
+            $ref: '#/components/schemas/VocabularyItemDto'
     WordSuggestionsResponse:
       type: object
       required:

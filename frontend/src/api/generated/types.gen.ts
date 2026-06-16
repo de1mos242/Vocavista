@@ -131,24 +131,42 @@ export type PhraseImageResponse = {
 
 export type PhraseImageStatus = 'queued' | 'processing' | 'awaiting_selection' | 'completed' | 'failed';
 
-export type WordInfoResponse = {
-    id: string;
-    normalizedWord: string;
-    language: 'de';
-    translations: LanguageTextMap;
+export type SaveVocabularyItemRequest = {
+    item: VocabularyItemDto;
+};
+
+export type SaveVocabularyItemResponse = {
+    item: VocabularyItemDto;
+};
+
+export type VocabularyItemTranslation = {
+    language: string;
+    wordTranslation: string;
+    phraseTranslation: string;
+};
+
+export type VocabularyItemDto = {
+    id?: string | null;
+    word: string;
+    phrase: string;
+    language: string;
+    translations: Array<VocabularyItemTranslation>;
     partOfSpeech: PartOfSpeech;
     gender?: Gender;
-    article?: GermanArticle;
     plural?: string | null;
     frequency: WordFrequency;
     isCompound: boolean;
-    compoundParts: Array<CompoundPart>;
-    shortNote: LanguageTextMap;
-    examples: [
-        WordExample,
-        WordExample,
-        WordExample
-    ];
+};
+
+export type WordInfoResponse = {
+    query: string;
+    canonicalWord: string;
+    existingItems: Array<VocabularyItemDto>;
+    proposedItem: VocabularyItemDto;
+    /**
+     * Generated contextual vocabulary item proposals, one per example phrase.
+     */
+    proposedItems?: Array<VocabularyItemDto>;
 };
 
 export type WordSuggestionsResponse = {
@@ -726,7 +744,7 @@ export type GetWordInfoData = {
     path?: never;
     query: {
         /**
-         * German word or fixed expression to explain.
+         * Word or fixed expression to explain.
          */
         word: string;
     };
@@ -756,12 +774,41 @@ export type GetWordInfoError = GetWordInfoErrors[keyof GetWordInfoErrors];
 
 export type GetWordInfoResponses = {
     /**
-     * Word information generated for the requested word.
+     * Generated proposal plus existing saved items for the canonical word.
      */
     200: WordInfoResponse;
 };
 
 export type GetWordInfoResponse = GetWordInfoResponses[keyof GetWordInfoResponses];
+
+export type SaveVocabularyItemData = {
+    body: SaveVocabularyItemRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/words/items';
+};
+
+export type SaveVocabularyItemErrors = {
+    /**
+     * Invalid request.
+     */
+    400: ErrorResponse;
+    /**
+     * Account is not approved to use app features.
+     */
+    403: ErrorResponse;
+};
+
+export type SaveVocabularyItemError = SaveVocabularyItemErrors[keyof SaveVocabularyItemErrors];
+
+export type SaveVocabularyItemResponses = {
+    /**
+     * Saved vocabulary item.
+     */
+    200: SaveVocabularyItemResponse;
+};
+
+export type SaveVocabularyItemResponse2 = SaveVocabularyItemResponses[keyof SaveVocabularyItemResponses];
 
 export type GetWordSuggestionsData = {
     body?: never;
@@ -790,7 +837,7 @@ export type GetWordSuggestionsError = GetWordSuggestionsErrors[keyof GetWordSugg
 
 export type GetWordSuggestionsResponses = {
     /**
-     * Matching cached words and generated pronunciations.
+     * Matching saved vocabulary items and generated pronunciations.
      */
     200: WordSuggestionsResponse;
 };

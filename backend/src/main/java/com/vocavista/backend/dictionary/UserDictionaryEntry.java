@@ -1,7 +1,7 @@
 package com.vocavista.backend.dictionary;
 
 import com.vocavista.backend.auth.UserAccount;
-import com.vocavista.backend.wordinfo.WordInfoRecord;
+import com.vocavista.backend.vocabulary.VocabularyItem;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,11 +32,8 @@ class UserDictionaryEntry {
 	private UserAccount userAccount;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "word_info_record_id", nullable = false)
-	private WordInfoRecord wordInfoRecord;
-
-	@Column(name = "normalized_word", nullable = false)
-	private String normalizedWord;
+	@JoinColumn(name = "vocabulary_item_id", nullable = false)
+	private VocabularyItem vocabularyItem;
 
 	@Column(name = "due_at", nullable = false)
 	private OffsetDateTime dueAt;
@@ -69,12 +66,11 @@ class UserDictionaryEntry {
 	@Column(name = "updated_at", nullable = false)
 	private OffsetDateTime updatedAt;
 
-	static UserDictionaryEntry create(UserAccount userAccount, WordInfoRecord wordInfoRecord, OffsetDateTime now) {
+	static UserDictionaryEntry create(UserAccount userAccount, VocabularyItem vocabularyItem, OffsetDateTime now) {
 		UserDictionaryEntry entry = new UserDictionaryEntry();
 		entry.id = UUID.randomUUID();
 		entry.userAccount = userAccount;
-		entry.wordInfoRecord = wordInfoRecord;
-		entry.normalizedWord = wordInfoRecord.getNormalizedWord();
+		entry.vocabularyItem = vocabularyItem;
 		entry.dueAt = now;
 		entry.repetitionCount = 0;
 		entry.correctStreak = 0;
@@ -86,8 +82,8 @@ class UserDictionaryEntry {
 		return entry;
 	}
 
-	void refreshWordInfoRecord(WordInfoRecord wordInfoRecord, OffsetDateTime now) {
-		this.wordInfoRecord = wordInfoRecord;
+	void refreshVocabularyItem(VocabularyItem vocabularyItem, OffsetDateTime now) {
+		this.vocabularyItem = vocabularyItem;
 		this.updatedAt = now;
 	}
 

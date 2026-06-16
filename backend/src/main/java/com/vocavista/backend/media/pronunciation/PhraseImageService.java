@@ -3,8 +3,8 @@ package com.vocavista.backend.media.pronunciation;
 import com.vocavista.backend.api.model.PhraseImageRequest;
 import com.vocavista.backend.api.model.PhraseImageResponse;
 import com.vocavista.backend.dictionary.UserDictionaryService;
-import com.vocavista.backend.wordinfo.WordInfoRecord;
-import com.vocavista.backend.wordinfo.WordInfoRepository;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -28,7 +28,7 @@ class PhraseImageService {
 	private final PhraseImageRepository phraseImageRepository;
 	private final PhraseImageGenerationProcessor generationProcessor;
 	private final MediaStorageService mediaStorageService;
-	private final WordInfoRepository wordInfoRepository;
+	private final VocabularyItemRepository vocabularyItemRepository;
 	private final UserDictionaryService userDictionaryService;
 	private final MediaResponseMapper mediaResponseMapper;
 	private final Clock clock = Clock.systemUTC();
@@ -39,10 +39,10 @@ class PhraseImageService {
 	@Transactional
 	PhraseImageResponse create(PhraseImageRequest request) {
 		NormalizedInput input = normalize(request);
-		userDictionaryService.ensureEntryForCurrentUser(input.wordInfoRecord());
+		userDictionaryService.ensureEntryForCurrentUser(input.vocabularyItem());
 
 		return phraseImageRepository
-				.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
+				.findByVocabularyItemIdAndPhraseIgnoreCase(input.vocabularyItem().getId(), input.phrase())
 				.map(this::reuseOrRetry)
 				.orElseGet(() -> createQueuedAsset(input));
 	}
@@ -93,8 +93,8 @@ class PhraseImageService {
 	}
 
 	private PhraseImageResponse createQueuedAsset(NormalizedInput input) {
-		PhraseImageAsset asset = PhraseImageAsset.queued(input.wordInfoRecord(), input.word(), input.phrase(),
-				input.normalizedWord(), input.normalizedPhrase(), input.language(), promptVersion, OffsetDateTime.now(clock));
+		PhraseImageAsset asset = PhraseImageAsset.queued(input.vocabularyItem(), input.word(), input.phrase(), input.language(),
+				promptVersion, OffsetDateTime.now(clock));
 		try {
 			PhraseImageAsset savedAsset = phraseImageRepository.save(asset);
 			queueGeneration(savedAsset.getId());
@@ -102,7 +102,7 @@ class PhraseImageService {
 		}
 		catch (DataIntegrityViolationException ex) {
 			return phraseImageRepository
-					.findByWordInfoRecordIdAndNormalizedPhrase(input.wordInfoRecord().getId(), input.normalizedPhrase())
+					.findByVocabularyItemIdAndPhraseIgnoreCase(input.vocabularyItem().getId(), input.phrase())
 					.map(this::reuseOrRetry)
 					.orElseThrow(() -> ex);
 		}
@@ -180,17 +180,16 @@ class PhraseImageService {
 		if (!SUPPORTED_LANGUAGE.equals(language)) {
 			throw new PronunciationValidationException("only German language code de is supported");
 		}
-		WordInfoRecord wordInfoRecord = wordInfoRepository.findById(wordInfoId)
-				.orElseThrow(() -> new PronunciationValidationException("wordInfoId must reference an existing word info record"));
-		return new NormalizedInput(wordInfoRecord, request.getWord(), request.getPhrase(), word, phrase, language);
+		VocabularyItem vocabularyItem = vocabularyItemRepository.findById(wordInfoId)
+				.orElseThrow(() -> new PronunciationValidationException("wordInfoId must reference an existing vocabulary item"));
+		return new NormalizedInput(vocabularyItem, word, phrase, language);
 	}
 
 	private static String trimAndCollapse(String value) {
 		return value == null ? "" : value.trim().replaceAll("\\s+", " ");
 	}
 
-	private record NormalizedInput(WordInfoRecord wordInfoRecord, String word, String phrase, String normalizedWord,
-			String normalizedPhrase, String language) {
+	private record NormalizedInput(VocabularyItem vocabularyItem, String word, String phrase, String language) {
 	}
 
 }

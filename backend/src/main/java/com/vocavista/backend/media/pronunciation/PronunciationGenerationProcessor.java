@@ -74,13 +74,13 @@ class PronunciationGenerationProcessor {
 	}
 
 	private PronunciationScript scriptFor(PronunciationAsset asset) {
-		String article = wordInfoArticleReader.nounArticle(asset.getWordInfoRecord());
+		String article = wordInfoArticleReader.nounArticle(asset.getVocabularyItem());
 		String repeatedWord = article == null
-				? asset.getNormalizedWord()
-				: article + " " + asset.getNormalizedWord();
-		String text = "%s...\n\n%s!\n\n%s".formatted(asset.getNormalizedWord(), repeatedWord,
-				punctuated(asset.getNormalizedPhrase()));
-		return new PronunciationScript(asset.getNormalizedWord(), asset.getNormalizedPhrase(), asset.getLanguage(), text,
+				? asset.getInputWord()
+				: article + " " + asset.getInputWord();
+		String text = "%s...\n\n%s!\n\n%s".formatted(asset.getInputWord(), repeatedWord,
+				punctuated(asset.getInputPhrase()));
+		return new PronunciationScript(asset.getInputWord(), asset.getInputPhrase(), asset.getLanguage(), text,
 				scriptTemplateVersion, speakerDescription(article));
 	}
 

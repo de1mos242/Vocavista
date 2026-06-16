@@ -393,6 +393,12 @@ small,
   padding: 0.35rem;
 }
 
+.image-candidate.selected {
+  border-color: rgba(255, 211, 109, 0.8);
+  background: rgba(255, 211, 109, 0.16);
+  box-shadow: 0 0 0 2px rgba(255, 211, 109, 0.16);
+}
+
 .image-candidate img {
   display: block;
   width: 100%;
@@ -432,6 +438,51 @@ small,
 .soft-list-button small {
   display: block;
   overflow-wrap: anywhere;
+}
+
+.word-info-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  padding-top: 0.7rem;
+  color: #c9bdae;
+  font-size: 0.78rem;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.word-info-card {
+  gap: 0.65rem;
+}
+
+.word-info-card-word {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.word-info-card-word strong {
+  color: #fff3d5;
+  font-size: 1.18rem;
+  line-height: 1.1;
+}
+
+.word-info-card-word small,
+.word-info-card-phrase small {
+  color: #d7ccbf;
+}
+
+.word-info-card-meta {
+  color: #bcae9f;
+}
+
+.word-info-card-phrase {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.word-info-card-phrase strong {
+  color: #fff9f1;
+  font-size: 0.98rem;
+  line-height: 1.25;
 }
 
 .status-box {

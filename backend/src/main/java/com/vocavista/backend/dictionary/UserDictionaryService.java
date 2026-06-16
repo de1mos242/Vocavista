@@ -1,22 +1,17 @@
 package com.vocavista.backend.dictionary;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vocavista.backend.api.model.AddDictionaryEntryRequest;
 import com.vocavista.backend.api.model.AddDictionaryEntryResponse;
 import com.vocavista.backend.api.model.DictionaryReviewItem;
 import com.vocavista.backend.api.model.DictionaryReviewResponse;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitRequest;
 import com.vocavista.backend.api.model.DictionaryReviewSubmitResponse;
-import com.vocavista.backend.api.model.DictionaryVideoManifestItem;
 import com.vocavista.backend.api.model.DictionaryVideoManifestResponse;
-import com.vocavista.backend.api.model.PartOfSpeech;
-import com.vocavista.backend.api.model.WordInfoResponse;
 import com.vocavista.backend.auth.CurrentUserService;
 import com.vocavista.backend.auth.UserAccount;
 import com.vocavista.backend.media.MediaAssetQueryService;
-import com.vocavista.backend.wordinfo.WordInfoRecord;
-import com.vocavista.backend.wordinfo.WordInfoRepository;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import java.time.Clock;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -42,15 +37,14 @@ public class UserDictionaryService {
 	private final UserDictionaryEntryRepository entryRepository;
 	private final CurrentUserService currentUserService;
 	private final MediaAssetQueryService mediaAssetQueryService;
-	private final WordInfoRepository wordInfoRepository;
+	private final VocabularyItemRepository vocabularyItemRepository;
 	private final DictionaryMapper dictionaryMapper;
-	private final ObjectMapper objectMapper = new ObjectMapper();
 	private final Clock clock = Clock.systemUTC();
 
 	@Transactional
-	public void ensureEntryForCurrentUser(WordInfoRecord wordInfoRecord) {
+	public void ensureEntryForCurrentUser(VocabularyItem vocabularyItem) {
 		UserAccount userAccount = currentUserService.getCurrentUserAccount();
-		ensureEntry(userAccount, wordInfoRecord);
+		ensureEntry(userAccount, vocabularyItem);
 	}
 
 	@Transactional
@@ -60,10 +54,10 @@ public class UserDictionaryService {
 		}
 
 		UserAccount userAccount = currentUserService.getCurrentUserAccount();
-		WordInfoRecord wordInfoRecord = wordInfoRepository.findById(request.getWordInfoId())
-				.orElseThrow(() -> new DictionaryNotFoundException("Word info record was not found"));
-		UserDictionaryEntry entry = ensureEntry(userAccount, wordInfoRecord);
-		return new AddDictionaryEntryResponse(entry.getId(), entry.getWordInfoRecord().getId(), entry.getNormalizedWord(),
+		VocabularyItem vocabularyItem = vocabularyItemRepository.findById(request.getWordInfoId())
+				.orElseThrow(() -> new DictionaryNotFoundException("Vocabulary item was not found"));
+		UserDictionaryEntry entry = ensureEntry(userAccount, vocabularyItem);
+		return new AddDictionaryEntryResponse(entry.getId(), entry.getVocabularyItem().getId(), entry.getVocabularyItem().getWord(),
 				entry.getDueAt());
 	}
 
@@ -81,11 +75,11 @@ public class UserDictionaryService {
 	@Transactional(readOnly = true)
 	DictionaryVideoManifestResponse getVideoManifest() {
 		UserAccount userAccount = currentUserService.getCurrentUserAccount();
-		List<DictionaryVideoManifestItem> items = entryRepository
-				.findByUserAccountIdOrderByNormalizedWordAsc(userAccount.getId())
+		List<com.vocavista.backend.api.model.DictionaryVideoManifestItem> items = entryRepository
+				.findByUserAccountIdOrderByVocabularyItemWordAsc(userAccount.getId())
 				.stream()
-				.map(UserDictionaryEntry::getWordInfoRecord)
-				.map(wordInfoRecord -> mediaAssetQueryService.latestCompletedPronunciation(wordInfoRecord.getId()))
+				.map(UserDictionaryEntry::getVocabularyItem)
+				.map(vocabularyItem -> mediaAssetQueryService.latestCompletedPronunciation(vocabularyItem.getId()))
 				.flatMap(Optional::stream)
 				.map(dictionaryMapper::toVideoManifestItem)
 				.toList();
@@ -101,8 +95,7 @@ public class UserDictionaryService {
 		UserAccount userAccount = currentUserService.getCurrentUserAccount();
 		UserDictionaryEntry entry = entryRepository.findByIdAndUserAccountId(entryId, userAccount.getId())
 				.orElseThrow(() -> new DictionaryNotFoundException("Dictionary entry was not found"));
-		WordInfoResponse wordInfo = readWordInfo(entry.getWordInfoRecord());
-		String expectedAnswer = expectedAnswer(wordInfo);
+		String expectedAnswer = expectedAnswer(entry.getVocabularyItem());
 		OffsetDateTime now = now();
 
 		entry.setRepetitionCount(entry.getRepetitionCount() + 1);
@@ -127,24 +120,24 @@ public class UserDictionaryService {
 				entry.getIntervalDays(), entry.getCorrectStreak(), entry.getRepetitionCount(), entry.getLapseCount());
 	}
 
-	private UserDictionaryEntry ensureEntry(UserAccount userAccount, WordInfoRecord wordInfoRecord) {
+	private UserDictionaryEntry ensureEntry(UserAccount userAccount, VocabularyItem vocabularyItem) {
 		OffsetDateTime now = now();
-		return entryRepository.findByUserAccountIdAndNormalizedWord(userAccount.getId(), wordInfoRecord.getNormalizedWord())
+		return entryRepository.findByUserAccountIdAndVocabularyItemId(userAccount.getId(), vocabularyItem.getId())
 				.map(entry -> {
-					entry.refreshWordInfoRecord(wordInfoRecord, now);
+					entry.refreshVocabularyItem(vocabularyItem, now);
 					return entry;
 				})
-				.orElseGet(() -> createEntry(userAccount, wordInfoRecord, now));
+				.orElseGet(() -> createEntry(userAccount, vocabularyItem, now));
 	}
 
-	private UserDictionaryEntry createEntry(UserAccount userAccount, WordInfoRecord wordInfoRecord, OffsetDateTime now) {
+	private UserDictionaryEntry createEntry(UserAccount userAccount, VocabularyItem vocabularyItem, OffsetDateTime now) {
 		try {
-			return entryRepository.save(UserDictionaryEntry.create(userAccount, wordInfoRecord, now));
+			return entryRepository.save(UserDictionaryEntry.create(userAccount, vocabularyItem, now));
 		}
 		catch (DataIntegrityViolationException ex) {
-			return entryRepository.findByUserAccountIdAndNormalizedWord(userAccount.getId(), wordInfoRecord.getNormalizedWord())
+			return entryRepository.findByUserAccountIdAndVocabularyItemId(userAccount.getId(), vocabularyItem.getId())
 					.map(entry -> {
-						entry.refreshWordInfoRecord(wordInfoRecord, now);
+						entry.refreshVocabularyItem(vocabularyItem, now);
 						return entry;
 					})
 					.orElseThrow(() -> ex);
@@ -152,12 +145,11 @@ public class UserDictionaryService {
 	}
 
 	private DictionaryReviewItem toReviewItem(UserDictionaryEntry entry) {
-		WordInfoResponse wordInfo = readWordInfo(entry.getWordInfoRecord());
-		DictionaryReviewItem item = dictionaryMapper.toReviewItem(entry, wordInfo, expectedAnswer(wordInfo));
-		mediaAssetQueryService.latestCompletedPronunciation(entry.getWordInfoRecord().getId()).ifPresent(pronunciation -> {
+		DictionaryReviewItem item = dictionaryMapper.toReviewItem(entry, expectedAnswer(entry.getVocabularyItem()));
+		mediaAssetQueryService.latestCompletedPronunciation(entry.getVocabularyItem().getId()).ifPresent(pronunciation -> {
 			item.setPronunciationAssetId(pronunciation.id());
 			item.setPhrase(pronunciation.phrase());
-			mediaAssetQueryService.latestCompletedPhraseImage(entry.getWordInfoRecord().getId(), pronunciation.phrase()).ifPresent(image -> {
+			mediaAssetQueryService.latestCompletedPhraseImage(entry.getVocabularyItem().getId(), pronunciation.phrase()).ifPresent(image -> {
 				item.setPhraseImageId(image.id());
 				item.setPhraseImageUrl(image.imageUrl());
 			});
@@ -165,22 +157,21 @@ public class UserDictionaryService {
 		return item;
 	}
 
-	private WordInfoResponse readWordInfo(WordInfoRecord record) {
-		try {
-			WordInfoResponse response = objectMapper.readValue(record.getResponseJson(), WordInfoResponse.class);
-			response.setId(record.getId());
-			return response;
-		}
-		catch (JsonProcessingException ex) {
-			throw new IllegalStateException("Could not read stored word info response", ex);
-		}
+	private static String expectedAnswer(VocabularyItem item) {
+		String article = articleFor(item);
+		return article == null ? item.getWord() : article + " " + item.getWord();
 	}
 
-	private static String expectedAnswer(WordInfoResponse wordInfo) {
-		if (wordInfo.getPartOfSpeech() == PartOfSpeech.NOUN && wordInfo.getArticle() != null) {
-			return wordInfo.getArticle().getValue() + " " + wordInfo.getNormalizedWord();
+	private static String articleFor(VocabularyItem item) {
+		if (!"noun".equals(item.getPartOfSpeech()) || item.getGender() == null) {
+			return null;
 		}
-		return wordInfo.getNormalizedWord();
+		return switch (item.getGender()) {
+			case "masculine" -> "der";
+			case "feminine" -> "die";
+			case "neuter" -> "das";
+			default -> null;
+		};
 	}
 
 	private static int nextCorrectInterval(UserDictionaryEntry entry) {

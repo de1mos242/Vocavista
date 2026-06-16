@@ -11,8 +11,8 @@ import com.vocavista.backend.api.model.PronunciationRequest;
 import com.vocavista.backend.api.model.PronunciationResponse;
 import com.vocavista.backend.api.model.PronunciationStatus;
 import com.vocavista.backend.dictionary.UserDictionaryService;
-import com.vocavista.backend.wordinfo.WordInfoRecord;
-import com.vocavista.backend.wordinfo.WordInfoRepository;
+import com.vocavista.backend.vocabulary.VocabularyItem;
+import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,17 +38,17 @@ class PronunciationServiceTest {
 	private MediaStorageService mediaStorageService;
 
 	@Mock
-	private WordInfoRepository wordInfoRepository;
+	private VocabularyItemRepository vocabularyItemRepository;
 
 	@Mock
 	private UserDictionaryService userDictionaryService;
 
 	@Test
 	void createsQueuedAssetAndStartsGeneration() {
-		when(pronunciationRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(),
+		when(pronunciationRepository.findByVocabularyItemIdAndPhraseIgnoreCase(wordInfoId(),
 				"Ich mache meine Hausaufgabe nach dem Abendessen."))
 				.thenReturn(Optional.empty());
-		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
+		when(vocabularyItemRepository.findById(wordInfoId())).thenReturn(Optional.of(vocabularyItem()));
 		when(pronunciationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 		PronunciationService service = service();
 
@@ -57,17 +57,17 @@ class PronunciationServiceTest {
 
 		assertThat(response.getId()).isNotNull();
 		assertThat(response.getStatus()).isEqualTo(PronunciationStatus.QUEUED);
-		verify(userDictionaryService).ensureEntryForCurrentUser(any(WordInfoRecord.class));
+		verify(userDictionaryService).ensureEntryForCurrentUser(any(VocabularyItem.class));
 		verify(generationProcessor).process(response.getId());
 	}
 
 	@Test
 	void reusesExistingCachedVideoAsset() {
 		PronunciationAsset existingAsset = completedVideoAsset();
-		when(pronunciationRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(),
+		when(pronunciationRepository.findByVocabularyItemIdAndPhraseIgnoreCase(wordInfoId(),
 				"Ich mache meine Hausaufgabe nach dem Abendessen."))
 				.thenReturn(Optional.of(existingAsset));
-		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
+		when(vocabularyItemRepository.findById(wordInfoId())).thenReturn(Optional.of(vocabularyItem()));
 		PronunciationService service = service();
 
 		PronunciationResponse response = service.create(request("Hausaufgabe",
@@ -79,7 +79,7 @@ class PronunciationServiceTest {
 				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/video/small");
 		assertThat(response.getFullVideoUrl())
 				.hasToString("/api/v1/media/pronunciations/" + existingAsset.getId() + "/video");
-		verify(userDictionaryService).ensureEntryForCurrentUser(any(WordInfoRecord.class));
+		verify(userDictionaryService).ensureEntryForCurrentUser(any(VocabularyItem.class));
 		verify(pronunciationRepository, never()).save(any());
 		verify(generationProcessor, never()).process(any());
 	}
@@ -87,10 +87,10 @@ class PronunciationServiceTest {
 	@Test
 	void retriesExistingFailedAsset() {
 		PronunciationAsset existingAsset = failedAsset();
-		when(pronunciationRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(),
+		when(pronunciationRepository.findByVocabularyItemIdAndPhraseIgnoreCase(wordInfoId(),
 				"Ich mache meine Hausaufgabe nach dem Abendessen."))
 				.thenReturn(Optional.of(existingAsset));
-		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
+		when(vocabularyItemRepository.findById(wordInfoId())).thenReturn(Optional.of(vocabularyItem()));
 		when(pronunciationRepository.save(existingAsset)).thenReturn(existingAsset);
 		PronunciationService service = service();
 
@@ -110,10 +110,10 @@ class PronunciationServiceTest {
 
 	@Test
 	void startsGenerationAfterCommitWhenTransactionSynchronizationIsActive() {
-		when(pronunciationRepository.findByWordInfoRecordIdAndNormalizedPhrase(wordInfoId(),
+		when(pronunciationRepository.findByVocabularyItemIdAndPhraseIgnoreCase(wordInfoId(),
 				"Ich mache meine Hausaufgabe nach dem Abendessen."))
 				.thenReturn(Optional.empty());
-		when(wordInfoRepository.findById(wordInfoId())).thenReturn(Optional.of(wordInfoRecord()));
+		when(vocabularyItemRepository.findById(wordInfoId())).thenReturn(Optional.of(vocabularyItem()));
 		when(pronunciationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 		PronunciationService service = service();
 		TransactionSynchronizationManager.initSynchronization();
@@ -158,7 +158,7 @@ class PronunciationServiceTest {
 
 	private PronunciationService service() {
 		return new PronunciationService(pronunciationRepository, generationProcessor, pronunciationVideoCompressor,
-				mediaStorageService, wordInfoRepository, userDictionaryService, new MediaResponseMapperImpl());
+				mediaStorageService, vocabularyItemRepository, userDictionaryService, new MediaResponseMapperImpl());
 	}
 
 	private static PronunciationRequest request(String word, String phrase) {
@@ -166,8 +166,7 @@ class PronunciationServiceTest {
 	}
 
 	private static PronunciationAsset completedVideoAsset() {
-		PronunciationAsset asset = PronunciationAsset.queued(wordInfoRecord(), "Hausaufgabe",
-				"Ich mache meine Hausaufgabe nach dem Abendessen.", "Hausaufgabe",
+		PronunciationAsset asset = PronunciationAsset.queued(vocabularyItem(), "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", OffsetDateTime.now());
 		asset.setId(UUID.randomUUID());
 		asset.setStatus(PronunciationAssetStatus.COMPLETED);
@@ -177,8 +176,7 @@ class PronunciationServiceTest {
 	}
 
 	private static PronunciationAsset failedAsset() {
-		PronunciationAsset asset = PronunciationAsset.queued(wordInfoRecord(), "Hausaufgabe",
-				"Ich mache meine Hausaufgabe nach dem Abendessen.", "Hausaufgabe",
+		PronunciationAsset asset = PronunciationAsset.queued(vocabularyItem(), "Hausaufgabe",
 				"Ich mache meine Hausaufgabe nach dem Abendessen.", "de", OffsetDateTime.now());
 		asset.setId(UUID.randomUUID());
 		asset.setStatus(PronunciationAssetStatus.FAILED);
@@ -192,16 +190,20 @@ class PronunciationServiceTest {
 		return UUID.fromString("11111111-1111-1111-1111-111111111111");
 	}
 
-	private static WordInfoRecord wordInfoRecord() {
-		WordInfoRecord record = new WordInfoRecord();
-		record.setId(wordInfoId());
-		record.setNormalizedQuery("hausaufgabe");
-		record.setNormalizedWord("Hausaufgabe");
-		record.setLanguage("de");
-		record.setResponseJson("{}");
-		record.setCreatedAt(OffsetDateTime.now());
-		record.setUpdatedAt(OffsetDateTime.now());
-		return record;
+	private static VocabularyItem vocabularyItem() {
+		VocabularyItem item = new VocabularyItem();
+		item.setId(wordInfoId());
+		item.setLanguage("de");
+		item.setWord("Hausaufgabe");
+		item.setPhrase("Ich mache meine Hausaufgabe nach dem Abendessen.");
+		item.setPartOfSpeech("noun");
+		item.setGender("feminine");
+		item.setPlural("Hausaufgaben");
+		item.setFrequency("common");
+		item.setCompound(true);
+		item.setCreatedAt(OffsetDateTime.now());
+		item.setUpdatedAt(OffsetDateTime.now());
+		return item;
 	}
 
 }
