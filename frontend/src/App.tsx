@@ -607,10 +607,7 @@ function ReviewPage({ user, authState, onAuthError }: PageProps) {
         {!item ? <DoneCard /> : (
           <article className="study-card">
             <p className="meta">Item {index + 1} of {items.length} · {item.partOfSpeech}{item.article ? ` · ${item.article}` : ""}</p>
-            <div className="prompt-grid">
-              <Prompt label="English" value={joinText(item.translations.en) || "No English translation"} />
-              <Prompt label="Russian" value={joinText(item.translations.ru) || "No Russian translation"} />
-            </div>
+            <ReviewWordInfo item={item} />
             {item.phrase ? <ReviewPhraseImage item={item} onAuthError={onAuthError} /> : null}
             <label>
               German answer
@@ -957,6 +954,7 @@ function ReviewResult({ item, result, onNext, finalItem, onAuthError }: { item: 
     <div className={`result ${result.correct ? "correct" : "incorrect"}`}>
       <p><strong>{result.correct ? "Correct" : "Not this time"}</strong></p>
       <p>Answer: <strong>{result.expectedAnswer}</strong></p>
+      {item.phrase ? <Prompt label="German example" value={item.phrase} /> : null}
       {item.pronunciationAssetId ? <ReviewVideo assetId={item.pronunciationAssetId} onAuthError={onAuthError} /> : null}
       <small>Next due: {new Date(result.dueAt).toLocaleString()}</small>
       <button type="button" onClick={onNext}>{finalItem ? "Finish batch" : "Next word"}</button>
@@ -1044,6 +1042,26 @@ function Prompt({ label, value }: { label: string; value: string }) {
     <div className="prompt">
       <small>{label}</small>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function ReviewWordInfo({ item }: { item: DictionaryReviewItem }) {
+  const englishExample = joinText(item.phraseTranslations.en);
+  const russianExample = joinText(item.phraseTranslations.ru);
+
+  return (
+    <div className="review-word-info">
+      <div className="prompt-grid">
+        <Prompt label="English" value={joinText(item.translations.en) || "No English translation"} />
+        <Prompt label="Russian" value={joinText(item.translations.ru) || "No Russian translation"} />
+      </div>
+      {englishExample || russianExample ? (
+        <div className="example-grid">
+          <Prompt label="English example" value={englishExample || "No English example"} />
+          <Prompt label="Russian example" value={russianExample || "No Russian example"} />
+        </div>
+      ) : null}
     </div>
   );
 }

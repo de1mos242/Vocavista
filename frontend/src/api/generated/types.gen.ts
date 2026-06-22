@@ -55,6 +55,7 @@ export type DictionaryReviewItem = {
     normalizedWord: string;
     expectedAnswer: string;
     translations: LanguageTextMap;
+    phraseTranslations: LanguageTextMap;
     partOfSpeech: PartOfSpeech;
     article?: GermanArticle;
     pronunciationAssetId?: string | null;

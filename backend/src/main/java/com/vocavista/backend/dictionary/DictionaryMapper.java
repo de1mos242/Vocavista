@@ -16,7 +16,8 @@ class DictionaryMapper {
 	DictionaryReviewItem toReviewItem(UserDictionaryEntry entry, String expectedAnswer) {
 		VocabularyItem item = entry.getVocabularyItem();
 		DictionaryReviewItem reviewItem = new DictionaryReviewItem(entry.getId(), item.getId(), item.getWord(),
-				expectedAnswer, translations(item), PartOfSpeech.fromValue(item.getPartOfSpeech()), entry.getDueAt());
+				expectedAnswer, wordTranslations(item), phraseTranslations(item),
+				PartOfSpeech.fromValue(item.getPartOfSpeech()), entry.getDueAt());
 		reviewItem.setArticle(articleFor(item));
 		reviewItem.setPhrase(item.getPhrase());
 		return reviewItem;
@@ -27,11 +28,19 @@ class DictionaryMapper {
 				pronunciation.fullVideoUrl(), pronunciation.updatedAt());
 	}
 
-	private static Map<String, List<String>> translations(VocabularyItem item) {
+	private static Map<String, List<String>> wordTranslations(VocabularyItem item) {
 		return item.getTranslations().stream()
 				.collect(java.util.stream.Collectors.toMap(
 						translation -> translation.getLanguage(),
 						translation -> List.of(translation.getWordTranslation()),
+						(first, ignored) -> first));
+	}
+
+	private static Map<String, List<String>> phraseTranslations(VocabularyItem item) {
+		return item.getTranslations().stream()
+				.collect(java.util.stream.Collectors.toMap(
+						translation -> translation.getLanguage(),
+						translation -> List.of(translation.getPhraseTranslation()),
 						(first, ignored) -> first));
 	}
 
