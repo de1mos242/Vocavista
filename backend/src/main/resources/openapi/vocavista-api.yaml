@@ -833,6 +833,7 @@ components:
         - normalizedWord
         - expectedAnswer
         - translations
+        - phraseTranslations
         - partOfSpeech
         - dueAt
       properties:
@@ -849,6 +850,8 @@ components:
           type: string
           minLength: 1
         translations:
+          $ref: '#/components/schemas/LanguageTextMap'
+        phraseTranslations:
           $ref: '#/components/schemas/LanguageTextMap'
         partOfSpeech:
           $ref: '#/components/schemas/PartOfSpeech'

@@ -92,6 +92,10 @@ class UserDictionaryServiceTest {
 
 		assertThat(response.getItems().getFirst().getPronunciationAssetId()).isEqualTo(asset.getId());
 		assertThat(response.getItems().getFirst().getPhrase()).isEqualTo(asset.getInputPhrase());
+		assertThat(response.getItems().getFirst().getTranslations().get("en")).containsExactly("homework");
+		assertThat(response.getItems().getFirst().getTranslations().get("ru")).containsExactly("домашнее задание");
+		assertThat(response.getItems().getFirst().getPhraseTranslations().get("en")).containsExactly("I do my homework.");
+		assertThat(response.getItems().getFirst().getPhraseTranslations().get("ru")).containsExactly("Я делаю домашнее задание.");
 	}
 
 	@Test
