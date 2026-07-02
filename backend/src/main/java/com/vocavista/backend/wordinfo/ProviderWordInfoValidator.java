@@ -12,35 +12,51 @@ class ProviderWordInfoValidator {
 		if (wordInfo == null) {
 			throw malformed("missing word info");
 		}
-		requireText(wordInfo.normalizedWord(), "normalizedWord");
-		if (wordInfo.language() == null) {
+		if (wordInfo.inputLanguage() == null) {
+			throw malformed("inputLanguage is required");
+		}
+		if (wordInfo.meanings() == null || wordInfo.meanings().isEmpty()) {
+			throw malformed("meanings must contain at least 1 item");
+		}
+		if (wordInfo.meanings().size() > 5) {
+			throw malformed("meanings must not contain more than 5 items");
+		}
+		wordInfo.meanings().forEach(this::validateMeaning);
+	}
+
+	private void validateMeaning(ProviderWordInfo.WordMeaning meaning) {
+		if (meaning == null) {
+			throw malformed("meanings must not contain null items");
+		}
+		requireText(meaning.normalizedWord(), "meaning.normalizedWord");
+		if (meaning.language() == null) {
 			throw malformed("language is required");
 		}
-		if (wordInfo.language() != ProviderWordInfo.Language.de) {
+		if (meaning.language() != ProviderWordInfo.Language.de) {
 			throw malformed("language must be de");
 		}
-		requireLocalizedText(wordInfo.translations(), "translations");
-		requireValue(wordInfo.partOfSpeech(), "partOfSpeech");
-		requireValue(wordInfo.frequency(), "frequency");
-		if (wordInfo.isCompound() == null) {
+		requireLocalizedText(meaning.translations(), "meaning.translations");
+		requireValue(meaning.partOfSpeech(), "meaning.partOfSpeech");
+		requireValue(meaning.frequency(), "meaning.frequency");
+		if (meaning.isCompound() == null) {
 			throw malformed("isCompound is required");
 		}
-		if (wordInfo.compoundParts() == null) {
+		if (meaning.compoundParts() == null) {
 			throw malformed("compoundParts is required");
 		}
-		if (!wordInfo.isCompound() && !wordInfo.compoundParts().isEmpty()) {
+		if (!meaning.isCompound() && !meaning.compoundParts().isEmpty()) {
 			throw malformed("compoundParts must be empty for non-compound words");
 		}
-		wordInfo.compoundParts().forEach(this::validateCompoundPart);
-		requireLocalizedText(wordInfo.shortNote(), "shortNote");
-		if (wordInfo.examples() == null || wordInfo.examples().size() < 3) {
+		meaning.compoundParts().forEach(this::validateCompoundPart);
+		requireLocalizedText(meaning.shortNote(), "meaning.shortNote");
+		if (meaning.examples() == null || meaning.examples().size() < 3) {
 			throw malformed("examples must contain at least 3 items");
 		}
-		wordInfo.examples().forEach(this::validateExample);
-		if (wordInfo.partOfSpeech() == ProviderWordInfo.ProviderPartOfSpeech.noun) {
-			requireOptionalValue(wordInfo.gender(), "gender");
-			requireOptionalValue(wordInfo.article(), "article");
-			requireOptionalText(wordInfo.plural(), "plural");
+		meaning.examples().forEach(this::validateExample);
+		if (meaning.partOfSpeech() == ProviderWordInfo.ProviderPartOfSpeech.noun) {
+			requireOptionalValue(meaning.gender(), "meaning.gender");
+			requireOptionalValue(meaning.article(), "meaning.article");
+			requireOptionalText(meaning.plural(), "meaning.plural");
 		}
 	}
 

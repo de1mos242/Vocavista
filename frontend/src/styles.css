@@ -420,6 +420,7 @@ small,
 
 .suggestions,
 .word-info,
+.word-info-section,
 .users-list {
   display: grid;
   gap: 0.6rem;
@@ -452,6 +453,12 @@ small,
 
 .word-info-card {
   gap: 0.65rem;
+}
+
+.word-info-card.selected {
+  border-color: rgba(255, 211, 109, 0.8);
+  background: rgba(255, 211, 109, 0.14);
+  box-shadow: 0 0 0 2px rgba(255, 211, 109, 0.14);
 }
 
 .word-info-card-word {

@@ -77,12 +77,13 @@ class WordInfoControllerTest {
 
 		mockMvc.perform(get("/api/v1/words/info").param("word", " Hausaufgabe "))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.canonicalWord").value("Hausaufgabe"))
-				.andExpect(jsonPath("$.proposedItem.word").value("Hausaufgabe"))
-				.andExpect(jsonPath("$.proposedItem.partOfSpeech").value("noun"))
-				.andExpect(jsonPath("$.proposedItem.phrase").value("Ich mache meine Hausaufgabe nach dem Abendessen."))
-				.andExpect(jsonPath("$.proposedItems.length()").value(3))
-				.andExpect(jsonPath("$.proposedItems[1].phrase").value("Die Hausaufgabe ist heute leicht."));
+				.andExpect(jsonPath("$.inputLanguage").value("de"))
+				.andExpect(jsonPath("$.meanings[0].word").value("Hausaufgabe"))
+				.andExpect(jsonPath("$.meanings[0].partOfSpeech").value("noun"))
+				.andExpect(jsonPath("$.meanings[0].phraseOptions[0].phrase")
+						.value("Ich mache meine Hausaufgabe nach dem Abendessen."))
+				.andExpect(jsonPath("$.meanings[0].phraseOptions.length()").value(3))
+				.andExpect(jsonPath("$.meanings[0].phraseOptions[1].phrase").value("Die Hausaufgabe ist heute leicht."));
 
 		verify(aiWordInfoProvider).generate("Hausaufgabe");
 	}

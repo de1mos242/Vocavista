@@ -4,18 +4,23 @@ import java.util.List;
 import java.util.Optional;
 
 public record ProviderWordInfo(
-		String normalizedWord,
-		Language language,
-		LocalizedText translations,
-		ProviderPartOfSpeech partOfSpeech,
-		Optional<ProviderGender> gender,
-		Optional<ProviderArticle> article,
-		Optional<String> plural,
-		ProviderFrequency frequency,
-		Boolean isCompound,
-		List<CompoundPart> compoundParts,
-		LocalizedText shortNote,
-		List<WordExample> examples) {
+		InputLanguage inputLanguage,
+		List<WordMeaning> meanings) {
+
+	public record WordMeaning(
+			String normalizedWord,
+			Language language,
+			LocalizedText translations,
+			ProviderPartOfSpeech partOfSpeech,
+			Optional<ProviderGender> gender,
+			Optional<ProviderArticle> article,
+			Optional<String> plural,
+			ProviderFrequency frequency,
+			Boolean isCompound,
+			List<CompoundPart> compoundParts,
+			LocalizedText shortNote,
+			List<WordExample> examples) {
+	}
 
 	public record LocalizedText(List<String> en, List<String> ru) {
 	}
@@ -28,6 +33,10 @@ public record ProviderWordInfo(
 
 	public enum Language {
 		de
+	}
+
+	public enum InputLanguage {
+		en, ru, de
 	}
 
 	public enum ProviderPartOfSpeech {
