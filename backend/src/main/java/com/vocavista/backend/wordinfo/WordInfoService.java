@@ -86,16 +86,16 @@ class WordInfoService {
 	}
 
 	private static ProviderWordInfo.WordMeaning normalizeMeaning(ProviderWordInfo.WordMeaning meaning) {
-		if (meaning == null
-				|| meaning.partOfSpeech() != ProviderWordInfo.ProviderPartOfSpeech.noun
-				|| meaning.article() == null
-				|| meaning.article().isPresent()
-				|| meaning.gender() == null
-				|| meaning.gender().isEmpty()) {
+		if (meaning == null || meaning.partOfSpeech() != ProviderWordInfo.ProviderPartOfSpeech.noun
+				|| meaning.gender() == null || meaning.gender().isEmpty()) {
+			return meaning;
+		}
+		ProviderWordInfo.ProviderArticle article = articleFor(meaning.gender().get());
+		if (meaning.article() != null && meaning.article().filter(article::equals).isPresent()) {
 			return meaning;
 		}
 		return new ProviderWordInfo.WordMeaning(meaning.normalizedWord(), meaning.language(), meaning.translations(),
-				meaning.partOfSpeech(), meaning.gender(), Optional.of(articleFor(meaning.gender().get())), meaning.plural(),
+				meaning.partOfSpeech(), meaning.gender(), Optional.of(article), meaning.plural(),
 				meaning.frequency(), meaning.isCompound(), meaning.compoundParts(), meaning.shortNote(), meaning.examples());
 	}
 

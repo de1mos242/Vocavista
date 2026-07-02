@@ -123,6 +123,18 @@ class WordInfoServiceTest {
 	}
 
 	@Test
+	void correctsNounArticleWhenProviderArticleDoesNotMatchGender() {
+		ProviderWordInfo wordInfo = withArticle(SampleWordInfos.nounInfo(), Optional.of(ProviderWordInfo.ProviderArticle.der),
+				Optional.of(ProviderWordInfo.ProviderGender.feminine));
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(wordInfo, SampleWordInfos.nounInfoJson()),
+				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());
+
+		WordInfoResponse response = service.getWordInfo("Hausaufgabe");
+
+		assertThat(response.getMeanings().getFirst().getArticle().getValue()).isEqualTo("die");
+	}
+
+	@Test
 	void returnsExistingVocabularyItemWhenSavingSameWordAndPhrase() {
 		VocabularyItemDto proposal = wordInfoMapper.toProposedItem(SampleWordInfos.nounMeaning());
 		VocabularyItem existingItem = vocabularyItemMapper.toEntity(proposal, UUID.randomUUID(), java.time.OffsetDateTime.now());

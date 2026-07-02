@@ -173,7 +173,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   const [status, setStatus] = useState("Sign in with Google to use this page.");
   const [suggestions, setSuggestions] = useState<WordSuggestion[]>([]);
   const [wordInfo, setWordInfo] = useState<WordInfoResponse>();
-  const [selectedMeaning, setSelectedMeaning] = useState<WordMeaningOption>();
+  const [selectedMeaningId, setSelectedMeaningId] = useState<number>();
   const [selectedVocabularyItem, setSelectedVocabularyItem] = useState<VocabularyItemDto>();
   const [wordInfoId, setWordInfoId] = useState<string>();
   const [videoUrl, setVideoUrl] = useState<string>();
@@ -186,6 +186,9 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canUseFeatures = Boolean(user?.functionalAccessAllowed);
   const canGenerateAssets = canUseFeatures && Boolean(phrase.trim()) && Boolean(wordInfoId || selectedVocabularyItem);
+  const selectedMeaning = selectedMeaningId === undefined
+    ? undefined
+    : wordInfo?.meanings.find((meaning) => meaning.optionId === selectedMeaningId);
 
   useEffect(() => {
     if (authState === "signed-out") {
@@ -238,7 +241,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
       const info = await unwrap(getWordInfo({ query: { word: trimmedWord } }));
       setSuggestions([]);
       setWordInfo(info);
-      setSelectedMeaning(undefined);
+      setSelectedMeaningId(undefined);
       setSelectedVocabularyItem(undefined);
       setWordInfoId(undefined);
       setPhrase("");
@@ -257,7 +260,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   async function selectSuggestion(suggestion: WordSuggestion) {
     setSuggestions([]);
     setWordInfo(undefined);
-    setSelectedMeaning(undefined);
+    setSelectedMeaningId(undefined);
     setSelectedVocabularyItem(undefined);
     setWord(suggestion.word);
     setWordInfoId(suggestion.wordInfoId ?? undefined);
@@ -271,8 +274,8 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     setStatus("Selected existing entry. Use Save and generate assets when ready.");
   }
 
-  async function selectMeaningOption(meaning: WordMeaningOption) {
-    setSelectedMeaning(meaning);
+  function selectMeaningOption(meaning: WordMeaningOption) {
+    setSelectedMeaningId(meaning.optionId);
     setSelectedVocabularyItem(undefined);
     setWordInfoId(undefined);
     setWord(meaning.word);
@@ -281,7 +284,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     setStatus(`Meaning selected for ${meaning.word}. Choose one example phrase.`);
   }
 
-  async function selectVocabularyItem(item: VocabularyItemDto) {
+  function selectVocabularyItem(item: VocabularyItemDto) {
     setWord(item.word);
     setPhrase(item.phrase);
     setSelectedVocabularyItem(item);
@@ -329,7 +332,6 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
         throw new Error("Saved vocabulary item did not include an id.");
       }
       setSelectedVocabularyItem(saved.item);
-      setSelectedMeaning((current) => current ? replacePhraseOptionInMeaning(current, selectedVocabularyItem, saved.item) : current);
       setWordInfoId(savedItemId);
       setWordInfo((current) => current ? replacePhraseOption(current, selectedVocabularyItem, saved.item) : current);
       return savedItemId;
@@ -466,7 +468,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
           Word
           <input
             value={word}
-            onChange={(event) => { setWordInfo(undefined); setWordInfoId(undefined); setSelectedMeaning(undefined); setSelectedVocabularyItem(undefined); setPhrase(""); setWord(event.target.value); resetAssets(); }}
+            onChange={(event) => { setWordInfo(undefined); setWordInfoId(undefined); setSelectedMeaningId(undefined); setSelectedVocabularyItem(undefined); setPhrase(""); setWord(event.target.value); resetAssets(); }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
@@ -488,7 +490,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
         <button type="button" className="secondary" disabled={!canUseFeatures || searchBusy} onClick={loadWordInfo}>Search word</button>
 
-        {wordInfo ? <WordInfoPanel info={wordInfo} selectedMeaning={selectedMeaning} selectedItem={selectedVocabularyItem} onUseMeaning={(meaning) => void selectMeaningOption(meaning)} onUseItem={(item) => void selectVocabularyItem(item)} /> : null}
+        {wordInfo ? <WordInfoPanel info={wordInfo} selectedMeaning={selectedMeaning} selectedItem={selectedVocabularyItem} onUseMeaning={selectMeaningOption} onUseItem={selectVocabularyItem} /> : null}
 
         <label>
           Phrase
@@ -769,13 +771,6 @@ function replacePhraseOption(info: WordInfoResponse, previousItem: VocabularyIte
       ...meaning,
       phraseOptions: replacePhraseOptions(meaning.phraseOptions, previousItem, nextItem)
     }))
-  };
-}
-
-function replacePhraseOptionInMeaning(meaning: WordMeaningOption, previousItem: VocabularyItemDto, nextItem: VocabularyItemDto) {
-  return {
-    ...meaning,
-    phraseOptions: replacePhraseOptions(meaning.phraseOptions, previousItem, nextItem)
   };
 }
 

@@ -1167,6 +1167,7 @@ components:
           type: array
           description: Generated German meaning candidates for the input.
           minItems: 1
+          maxItems: 5
           items:
             $ref: '#/components/schemas/WordMeaningOption'
     WordMeaningOption:
@@ -1198,6 +1199,7 @@ components:
           type: array
           description: Generated phrase options for this meaning.
           minItems: 1
+          maxItems: 3
           items:
             $ref: '#/components/schemas/VocabularyItemDto'
         partOfSpeech:
