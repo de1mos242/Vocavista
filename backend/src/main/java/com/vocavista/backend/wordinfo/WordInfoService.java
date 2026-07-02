@@ -3,6 +3,7 @@ package com.vocavista.backend.wordinfo;
 import com.vocavista.backend.api.model.SaveVocabularyItemRequest;
 import com.vocavista.backend.api.model.SaveVocabularyItemResponse;
 import com.vocavista.backend.api.model.VocabularyItemDto;
+import com.vocavista.backend.api.model.WordMeaningOption;
 import com.vocavista.backend.api.model.WordInfoResponse;
 import com.vocavista.backend.vocabulary.VocabularyItem;
 import com.vocavista.backend.vocabulary.VocabularyItemMapper;
@@ -44,15 +45,8 @@ class WordInfoService {
 					providerResult.rawResponse());
 		}
 
-		List<VocabularyItemDto> proposedItems = wordInfoMapper.toProposedItems(providerWordInfo);
-		VocabularyItemDto proposedItem = proposedItems.getFirst();
-		List<VocabularyItemDto> existingItems = vocabularyItemRepository
-				.findByLanguageAndWordIgnoreCase(proposedItem.getLanguage(), proposedItem.getWord())
-				.stream()
-				.map(wordInfoMapper::toApiItem)
-				.toList();
-		return new WordInfoResponse(trimmedWord, proposedItem.getWord(), existingItems, proposedItem)
-				.proposedItems(proposedItems);
+		List<WordMeaningOption> meanings = assignOptionIds(wordInfoMapper.toMeaningOptions(providerWordInfo));
+		return new WordInfoResponse(trimmedWord, wordInfoMapper.toInputLanguage(providerWordInfo), meanings);
 	}
 
 	@Transactional
@@ -83,17 +77,33 @@ class WordInfoService {
 	}
 
 	private static ProviderWordInfo normalizeProviderWordInfo(ProviderWordInfo wordInfo) {
-		if (wordInfo == null
-				|| wordInfo.partOfSpeech() != ProviderWordInfo.ProviderPartOfSpeech.noun
-				|| wordInfo.article() == null
-				|| wordInfo.article().isPresent()
-				|| wordInfo.gender() == null
-				|| wordInfo.gender().isEmpty()) {
+		if (wordInfo == null || wordInfo.meanings() == null) {
 			return wordInfo;
 		}
-		return new ProviderWordInfo(wordInfo.normalizedWord(), wordInfo.language(), wordInfo.translations(),
-				wordInfo.partOfSpeech(), wordInfo.gender(), Optional.of(articleFor(wordInfo.gender().get())), wordInfo.plural(),
-				wordInfo.frequency(), wordInfo.isCompound(), wordInfo.compoundParts(), wordInfo.shortNote(), wordInfo.examples());
+		return new ProviderWordInfo(wordInfo.inputLanguage(), wordInfo.meanings().stream()
+				.map(WordInfoService::normalizeMeaning)
+				.toList());
+	}
+
+	private static ProviderWordInfo.WordMeaning normalizeMeaning(ProviderWordInfo.WordMeaning meaning) {
+		if (meaning == null || meaning.partOfSpeech() != ProviderWordInfo.ProviderPartOfSpeech.noun
+				|| meaning.gender() == null || meaning.gender().isEmpty()) {
+			return meaning;
+		}
+		ProviderWordInfo.ProviderArticle article = articleFor(meaning.gender().get());
+		if (meaning.article() != null && meaning.article().filter(article::equals).isPresent()) {
+			return meaning;
+		}
+		return new ProviderWordInfo.WordMeaning(meaning.normalizedWord(), meaning.language(), meaning.translations(),
+				meaning.partOfSpeech(), meaning.gender(), Optional.of(article), meaning.plural(),
+				meaning.frequency(), meaning.isCompound(), meaning.compoundParts(), meaning.shortNote(), meaning.examples());
+	}
+
+	private static List<WordMeaningOption> assignOptionIds(List<WordMeaningOption> meanings) {
+		for (int index = 0; index < meanings.size(); index++) {
+			meanings.get(index).optionId(index);
+		}
+		return meanings;
 	}
 
 	private static ProviderWordInfo.ProviderArticle articleFor(ProviderWordInfo.ProviderGender gender) {

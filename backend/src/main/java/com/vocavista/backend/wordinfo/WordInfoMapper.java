@@ -1,13 +1,18 @@
 package com.vocavista.backend.wordinfo;
 
 import com.vocavista.backend.api.model.Gender;
+import com.vocavista.backend.api.model.GermanArticle;
+import com.vocavista.backend.api.model.InputLanguage;
 import com.vocavista.backend.api.model.PartOfSpeech;
 import com.vocavista.backend.api.model.VocabularyItemDto;
 import com.vocavista.backend.api.model.VocabularyItemTranslation;
+import com.vocavista.backend.api.model.WordMeaningOption;
 import com.vocavista.backend.api.model.WordFrequency;
 import com.vocavista.backend.vocabulary.VocabularyItem;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -15,28 +20,51 @@ import org.springframework.util.StringUtils;
 @Component
 class WordInfoMapper {
 
-	List<VocabularyItemDto> toProposedItems(ProviderWordInfo wordInfo) {
-		return wordInfo.examples().stream()
-				.limit(3)
-				.map(example -> toProposedItem(wordInfo, example))
+	List<WordMeaningOption> toMeaningOptions(ProviderWordInfo wordInfo) {
+		return wordInfo.meanings().stream()
+				.limit(5)
+				.map(this::toMeaningOption)
 				.toList();
 	}
 
-	VocabularyItemDto toProposedItem(ProviderWordInfo wordInfo) {
-		return toProposedItem(wordInfo, wordInfo.examples().getFirst());
+	InputLanguage toInputLanguage(ProviderWordInfo wordInfo) {
+		return InputLanguage.fromValue(wordInfo.inputLanguage().name());
 	}
 
-	private VocabularyItemDto toProposedItem(ProviderWordInfo wordInfo, ProviderWordInfo.WordExample example) {
+	private WordMeaningOption toMeaningOption(ProviderWordInfo.WordMeaning meaning) {
+		List<VocabularyItemDto> phraseOptions = meaning.examples().stream()
+				.limit(3)
+				.map(example -> toProposedItem(meaning, example))
+				.toList();
+		return new WordMeaningOption(
+				0,
+				trim(meaning.normalizedWord()),
+				meaning.language().name(),
+				localizedText(meaning.translations()),
+				phraseOptions,
+				PartOfSpeech.fromValue(meaning.partOfSpeech().name()),
+				WordFrequency.fromValue(meaning.frequency().name()),
+				Boolean.TRUE.equals(meaning.isCompound()))
+				.gender(gender(meaning.gender()))
+				.article(article(meaning.article()))
+				.plural(optionalString(meaning.plural()));
+	}
+
+	VocabularyItemDto toProposedItem(ProviderWordInfo.WordMeaning meaning) {
+		return toProposedItem(meaning, meaning.examples().getFirst());
+	}
+
+	private VocabularyItemDto toProposedItem(ProviderWordInfo.WordMeaning meaning, ProviderWordInfo.WordExample example) {
 		return new VocabularyItemDto(
-				trim(wordInfo.normalizedWord()),
+				trim(meaning.normalizedWord()),
 				trim(example.sentence()),
-				wordInfo.language().name(),
-				translations(wordInfo.translations(), example.translations()),
-				PartOfSpeech.fromValue(wordInfo.partOfSpeech().name()),
-				WordFrequency.fromValue(wordInfo.frequency().name()),
-				Boolean.TRUE.equals(wordInfo.isCompound()))
-				.gender(gender(wordInfo.gender()))
-				.plural(optionalString(wordInfo.plural()));
+				meaning.language().name(),
+				translations(meaning.translations(), example.translations()),
+				PartOfSpeech.fromValue(meaning.partOfSpeech().name()),
+				WordFrequency.fromValue(meaning.frequency().name()),
+				Boolean.TRUE.equals(meaning.isCompound()))
+				.gender(gender(meaning.gender()))
+				.plural(optionalString(meaning.plural()));
 	}
 
 	VocabularyItemDto toApiItem(VocabularyItem item) {
@@ -65,6 +93,13 @@ class WordInfoMapper {
 		return values;
 	}
 
+	private static Map<String, List<String>> localizedText(ProviderWordInfo.LocalizedText text) {
+		Map<String, List<String>> values = new LinkedHashMap<>();
+		values.put("en", text.en().stream().map(WordInfoMapper::trim).toList());
+		values.put("ru", text.ru().stream().map(WordInfoMapper::trim).toList());
+		return values;
+	}
+
 	private static void addTranslation(List<VocabularyItemTranslation> values, String language, String word, String phrase) {
 		if (StringUtils.hasText(word) && StringUtils.hasText(phrase)) {
 			values.add(new VocabularyItemTranslation(language, trim(word), trim(phrase)));
@@ -77,6 +112,10 @@ class WordInfoMapper {
 
 	private static Gender gender(Optional<ProviderWordInfo.ProviderGender> value) {
 		return value == null || value.isEmpty() ? null : Gender.fromValue(value.get().name());
+	}
+
+	private static GermanArticle article(Optional<ProviderWordInfo.ProviderArticle> value) {
+		return value == null || value.isEmpty() ? null : GermanArticle.fromValue(value.get().name());
 	}
 
 	private static String optionalString(Optional<String> value) {

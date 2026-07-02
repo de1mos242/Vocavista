@@ -29,6 +29,7 @@ import type {
   UserStatus,
   VocabularyItemDto,
   WordInfoResponse,
+  WordMeaningOption,
   WordSuggestion
 } from "./api/generated/types.gen";
 
@@ -172,6 +173,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   const [status, setStatus] = useState("Sign in with Google to use this page.");
   const [suggestions, setSuggestions] = useState<WordSuggestion[]>([]);
   const [wordInfo, setWordInfo] = useState<WordInfoResponse>();
+  const [selectedMeaningId, setSelectedMeaningId] = useState<number>();
   const [selectedVocabularyItem, setSelectedVocabularyItem] = useState<VocabularyItemDto>();
   const [wordInfoId, setWordInfoId] = useState<string>();
   const [videoUrl, setVideoUrl] = useState<string>();
@@ -183,6 +185,10 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   const [saveBusy, setSaveBusy] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canUseFeatures = Boolean(user?.functionalAccessAllowed);
+  const canGenerateAssets = canUseFeatures && Boolean(phrase.trim()) && Boolean(wordInfoId || selectedVocabularyItem);
+  const selectedMeaning = selectedMeaningId === undefined
+    ? undefined
+    : wordInfo?.meanings.find((meaning) => meaning.optionId === selectedMeaningId);
 
   useEffect(() => {
     if (authState === "signed-out") {
@@ -192,7 +198,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
       setStatus(accountRestrictionMessage(user.status));
     }
     else if (user) {
-      setStatus("Search a word first, choose an example phrase, then generate assets.");
+      setStatus("Search a word first, choose a German meaning, then choose an example phrase.");
     }
   }, [authState, user]);
 
@@ -233,14 +239,14 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     try {
       setStatus("Loading word info...");
       const info = await unwrap(getWordInfo({ query: { word: trimmedWord } }));
-      const proposedItem = firstVisibleVocabularyItem(info);
+      setSuggestions([]);
       setWordInfo(info);
-      setSelectedVocabularyItem(proposedItem);
-      setWordInfoId(proposedItem.id ?? undefined);
-      setWord(info.canonicalWord);
-      setPhrase(proposedItem.phrase);
+      setSelectedMeaningId(undefined);
+      setSelectedVocabularyItem(undefined);
+      setWordInfoId(undefined);
+      setPhrase("");
       resetAssets();
-      setStatus("Choose an example phrase, then save and generate assets.");
+      setStatus("Choose the German meaning you want to learn.");
     }
     catch (error) {
       onAuthError(error);
@@ -253,13 +259,13 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
   async function selectSuggestion(suggestion: WordSuggestion) {
     setSuggestions([]);
+    setWordInfo(undefined);
+    setSelectedMeaningId(undefined);
     setSelectedVocabularyItem(undefined);
     setWord(suggestion.word);
     setWordInfoId(suggestion.wordInfoId ?? undefined);
+    setPhrase(suggestion.phrase ?? "");
     resetAssets();
-    if (suggestion.phrase) {
-      setPhrase(suggestion.phrase);
-    }
     if (suggestion.videoUrl) {
       setVideoUrl(suggestion.videoUrl);
       setStatus("Selected an existing pronunciation video. Use Save and generate assets when ready.");
@@ -268,7 +274,17 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
     setStatus("Selected existing entry. Use Save and generate assets when ready.");
   }
 
-  async function selectVocabularyItem(item: VocabularyItemDto) {
+  function selectMeaningOption(meaning: WordMeaningOption) {
+    setSelectedMeaningId(meaning.optionId);
+    setSelectedVocabularyItem(undefined);
+    setWordInfoId(undefined);
+    setWord(meaning.word);
+    setPhrase("");
+    resetAssets();
+    setStatus(`Meaning selected for ${meaning.word}. Choose one example phrase.`);
+  }
+
+  function selectVocabularyItem(item: VocabularyItemDto) {
     setWord(item.word);
     setPhrase(item.phrase);
     setSelectedVocabularyItem(item);
@@ -317,7 +333,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
       }
       setSelectedVocabularyItem(saved.item);
       setWordInfoId(savedItemId);
-      setWordInfo((current) => current ? replaceProposedItem(current, selectedVocabularyItem, saved.item) : current);
+      setWordInfo((current) => current ? replacePhraseOption(current, selectedVocabularyItem, saved.item) : current);
       return savedItemId;
     }
     catch (error) {
@@ -444,7 +460,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
       <section className="panel controls-panel">
         <p className="eyebrow">Add word</p>
         <h1>Make a tiny pronunciation lesson.</h1>
-        <p>Search a German word, pick an example sentence, save it to your revise list, then generate the media assets.</p>
+        <p>Search in English, Russian, or German. Pick the German meaning first, then choose the phrase you want to practice.</p>
         {user && !user.functionalAccessAllowed ? <AccountNotice user={user} /> : null}
         {authState === "signed-out" ? <SignInCard message="Sign in with Google to search and generate pronunciation video." /> : null}
 
@@ -452,7 +468,7 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
           Word
           <input
             value={word}
-            onChange={(event) => { setWordInfoId(undefined); setSelectedVocabularyItem(undefined); setWord(event.target.value); resetAssets(); }}
+            onChange={(event) => { setWordInfo(undefined); setWordInfoId(undefined); setSelectedMeaningId(undefined); setSelectedVocabularyItem(undefined); setPhrase(""); setWord(event.target.value); resetAssets(); }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
@@ -474,13 +490,13 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
         <button type="button" className="secondary" disabled={!canUseFeatures || searchBusy} onClick={loadWordInfo}>Search word</button>
 
-        {wordInfo ? <WordInfoPanel info={wordInfo} selectedItem={selectedVocabularyItem} onUseItem={(item) => void selectVocabularyItem(item)} /> : null}
+        {wordInfo ? <WordInfoPanel info={wordInfo} selectedMeaning={selectedMeaning} selectedItem={selectedVocabularyItem} onUseMeaning={selectMeaningOption} onUseItem={selectVocabularyItem} /> : null}
 
         <label>
           Phrase
           <textarea value={phrase} onChange={(event) => { setPhrase(event.target.value); resetAssets(); }} />
         </label>
-        <button type="button" disabled={!canUseFeatures || generateBusy || imageBusy || saveBusy} onClick={() => void generateAssets()}>Save and generate assets</button>
+        <button type="button" disabled={!canGenerateAssets || generateBusy || imageBusy || saveBusy} onClick={() => void generateAssets()}>Save and generate assets</button>
         <StatusBox>{status}</StatusBox>
       </section>
 
@@ -689,25 +705,51 @@ type PageProps = {
   onAuthError: (error: unknown) => void;
 };
 
-function WordInfoPanel({ info, selectedItem, onUseItem }: { info: WordInfoResponse; selectedItem?: VocabularyItemDto; onUseItem: (item: VocabularyItemDto) => void }) {
-  const proposedItems = visibleProposedVocabularyItems(info);
+function WordInfoPanel({ info, selectedMeaning, selectedItem, onUseMeaning, onUseItem }: { info: WordInfoResponse; selectedMeaning?: WordMeaningOption; selectedItem?: VocabularyItemDto; onUseMeaning: (meaning: WordMeaningOption) => void; onUseItem: (item: VocabularyItemDto) => void }) {
   return (
     <div className="word-info">
-      <small>Canonical word: {info.canonicalWord}</small>
-      {proposedItems.map((item, index) => (
-        <VocabularyItemCard key={`${item.id ?? "proposed"}-${item.phrase}`} item={item} label={`Generated option ${index + 1}`} selected={sameVocabularyOption(item, selectedItem)} onUse={() => onUseItem(item)} />
-      ))}
-      {info.existingItems.length > 0 ? <div className="word-info-divider">Saved alternatives are listed below.</div> : null}
-      {info.existingItems.map((item) => (
-        <VocabularyItemCard key={`${item.id ?? "saved"}-${item.phrase}`} item={item} label="Saved" selected={sameVocabularyOption(item, selectedItem)} onUse={() => onUseItem(item)} />
-      ))}
+      <small>Detected input language: {info.inputLanguage}</small>
+      <div className="word-info-section">
+        <span className="word-info-divider">Choose meaning</span>
+        {info.meanings.map((meaning) => (
+          <MeaningOptionCard key={`${meaning.optionId}-${meaning.word}`} meaning={meaning} selected={sameMeaningOption(meaning, selectedMeaning)} onUse={() => onUseMeaning(meaning)} />
+        ))}
+      </div>
+      {selectedMeaning ? (
+        <div className="word-info-section">
+          <span className="word-info-divider">Choose phrase for {selectedMeaning.word}</span>
+          {selectedMeaning.phraseOptions.map((item, index) => (
+            <VocabularyItemCard key={`${item.id ?? "phrase"}-${item.phrase}`} item={item} label={`Phrase ${index + 1}`} selected={sameVocabularyOption(item, selectedItem)} onUse={() => onUseItem(item)} />
+          ))}
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function MeaningOptionCard({ meaning, selected, onUse }: { meaning: WordMeaningOption; selected: boolean; onUse: () => void }) {
+  const example = firstPhraseOption(meaning);
+  return (
+    <article className={`soft-list-button word-info-card${selected ? " selected" : ""}`}>
+      <div className="word-info-card-word">
+        <strong>{meaning.word}</strong>
+        <small>{describeMeaningTranslations(meaning) || "No word translation"}</small>
+      </div>
+      <small className="word-info-card-meta">{[articleForMeaning(meaning), meaning.partOfSpeech, meaning.frequency].filter(Boolean).join(" · ")}</small>
+      {example ? (
+        <div className="word-info-card-phrase">
+          <strong>{example.phrase}</strong>
+          <small>{describePhraseTranslations(example) || "No phrase translation"}</small>
+        </div>
+      ) : null}
+      <button type="button" className="secondary small" onClick={onUse}>{selected ? "Meaning selected" : "Use meaning"}</button>
+    </article>
   );
 }
 
 function VocabularyItemCard({ item, label, selected, onUse }: { item: VocabularyItemDto; label: string; selected: boolean; onUse: () => void }) {
   return (
-    <article className="soft-list-button word-info-card">
+    <article className={`soft-list-button word-info-card${selected ? " selected" : ""}`}>
       <div className="word-info-card-word">
         <strong>{item.word}</strong>
         <small>{describeWordTranslations(item) || "No word translation"}</small>
@@ -722,41 +764,26 @@ function VocabularyItemCard({ item, label, selected, onUse }: { item: Vocabulary
   );
 }
 
-function proposedVocabularyItems(info: WordInfoResponse) {
-  return info.proposedItems && info.proposedItems.length > 0 ? info.proposedItems : [info.proposedItem];
-}
-
-function firstProposedItem(info: WordInfoResponse) {
-  return proposedVocabularyItems(info)[0];
-}
-
-function firstVisibleVocabularyItem(info: WordInfoResponse) {
-  return visibleProposedVocabularyItems(info)[0] ?? info.existingItems[0] ?? firstProposedItem(info);
-}
-
-function visibleProposedVocabularyItems(info: WordInfoResponse) {
-  const existingPhraseKeys = new Set(info.existingItems.map(phraseKey));
-  const proposedPhraseKeys = new Set<string>();
-  return proposedVocabularyItems(info).filter((item) => {
-    const key = phraseKey(item);
-    if (existingPhraseKeys.has(key) || proposedPhraseKeys.has(key)) {
-      return false;
-    }
-    proposedPhraseKeys.add(key);
-    return true;
-  });
-}
-
-function phraseKey(item: VocabularyItemDto) {
-  return item.phrase.trim().toLowerCase();
-}
-
-function replaceProposedItem(info: WordInfoResponse, previousItem: VocabularyItemDto, nextItem: VocabularyItemDto) {
+function replacePhraseOption(info: WordInfoResponse, previousItem: VocabularyItemDto, nextItem: VocabularyItemDto) {
   return {
     ...info,
-    proposedItem: sameVocabularyOption(info.proposedItem, previousItem) ? nextItem : info.proposedItem,
-    proposedItems: proposedVocabularyItems(info).map((item) => sameVocabularyOption(item, previousItem) ? nextItem : item)
+    meanings: info.meanings.map((meaning) => ({
+      ...meaning,
+      phraseOptions: replacePhraseOptions(meaning.phraseOptions, previousItem, nextItem)
+    }))
   };
+}
+
+function replacePhraseOptions(items: VocabularyItemDto[], previousItem: VocabularyItemDto, nextItem: VocabularyItemDto) {
+  return items.map((item) => sameVocabularyOption(item, previousItem) ? nextItem : item);
+}
+
+function firstPhraseOption(meaning: WordMeaningOption) {
+  return meaning.phraseOptions[0];
+}
+
+function sameMeaningOption(meaning?: WordMeaningOption, selectedMeaning?: WordMeaningOption) {
+  return Boolean(meaning && selectedMeaning && meaning.optionId === selectedMeaning.optionId);
 }
 
 function sameVocabularyOption(item?: VocabularyItemDto, selectedItem?: VocabularyItemDto) {
@@ -772,6 +799,12 @@ function sameVocabularyOption(item?: VocabularyItemDto, selectedItem?: Vocabular
 function describeWordTranslations(item: VocabularyItemDto) {
   return item.translations
     .map((translation) => `${translation.language}: ${translation.wordTranslation}`)
+    .join(" · ");
+}
+
+function describeMeaningTranslations(meaning: WordMeaningOption) {
+  return Object.entries(meaning.translations)
+    .map(([language, values]) => `${language}: ${joinText(values)}`)
     .join(" · ");
 }
 
@@ -792,6 +825,10 @@ function articleForGender(gender?: VocabularyItemDto["gender"]) {
     return "das";
   }
   return "";
+}
+
+function articleForMeaning(meaning: WordMeaningOption) {
+  return meaning.article ?? articleForGender(meaning.gender);
 }
 
 function PhraseImageCard({ image, status, busy, canGenerate, onSelectCandidate }: { image?: PhraseImageResponse; status: string; busy: boolean; canGenerate: boolean; onSelectCandidate: (candidateIndex: number) => void }) {

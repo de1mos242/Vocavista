@@ -9,7 +9,15 @@ final class SampleWordInfos {
 	}
 
 	static ProviderWordInfo nounInfo() {
-		return new ProviderWordInfo(
+		return new ProviderWordInfo(ProviderWordInfo.InputLanguage.de, List.of(nounMeaning()));
+	}
+
+	static ProviderWordInfo englishInputInfo() {
+		return new ProviderWordInfo(ProviderWordInfo.InputLanguage.en, List.of(nounMeaning(), houseMeaning()));
+	}
+
+	static ProviderWordInfo.WordMeaning nounMeaning() {
+		return new ProviderWordInfo.WordMeaning(
 				"Hausaufgabe",
 				ProviderWordInfo.Language.de,
 				localizedText(List.of("homework"), List.of("domashnee zadanie")),
@@ -38,6 +46,28 @@ final class SampleWordInfos {
 										List.of("Ty uzhe zakonchil domashnee zadanie?")))));
 	}
 
+	private static ProviderWordInfo.WordMeaning houseMeaning() {
+		return new ProviderWordInfo.WordMeaning(
+				"Haus",
+				ProviderWordInfo.Language.de,
+				localizedText(List.of("house", "home"), List.of("dom")),
+				ProviderWordInfo.ProviderPartOfSpeech.noun,
+				Optional.of(ProviderWordInfo.ProviderGender.neuter),
+				Optional.of(ProviderWordInfo.ProviderArticle.das),
+				Optional.of("Haeuser"),
+				ProviderWordInfo.ProviderFrequency.very_common,
+				false,
+				List.of(),
+				localizedText(List.of("A building or home."), List.of("Zdanie ili dom.")),
+				List.of(
+						new ProviderWordInfo.WordExample("Das Haus steht am Fluss.",
+								localizedText(List.of("The house is by the river."), List.of("Dom stoit u reki."))),
+						new ProviderWordInfo.WordExample("Wir kaufen ein kleines Haus.",
+								localizedText(List.of("We are buying a small house."), List.of("My pokupaem nebolshoy dom."))),
+						new ProviderWordInfo.WordExample("Zu Hause fuehle ich mich wohl.",
+								localizedText(List.of("I feel comfortable at home."), List.of("Doma mne uyutno.")))));
+	}
+
 	private static ProviderWordInfo.LocalizedText localizedText(List<String> en, List<String> ru) {
 		return new ProviderWordInfo.LocalizedText(en, ru);
 	}
@@ -45,59 +75,64 @@ final class SampleWordInfos {
 	static String nounInfoJson() {
 		return """
 				{
-				  "normalizedWord": "Hausaufgabe",
-				  "language": "de",
-				  "translations": {
-				    "en": ["homework"],
-				    "ru": ["domashnee zadanie"]
-				  },
-				  "partOfSpeech": "noun",
-				  "gender": "feminine",
-				  "article": "die",
-				  "plural": "Hausaufgaben",
-				  "frequency": "common",
-				  "isCompound": true,
-				  "compoundParts": [
+				  "inputLanguage": "de",
+				  "meanings": [
 				    {
-				      "word": "Haus",
-				      "meanings": {
-				        "en": ["house"],
-				        "ru": ["dom"]
-				      }
-				    },
-				    {
-				      "word": "Aufgabe",
-				      "meanings": {
-				        "en": ["task"],
-				        "ru": ["zadanie"]
-				      }
-				    }
-				  ],
-				  "shortNote": {
-				    "en": ["A common word for school homework."],
-				    "ru": ["Obychnoe slovo dlya domashnego zadaniya."]
-				  },
-				  "examples": [
-				    {
-				      "sentence": "Ich mache meine Hausaufgabe nach dem Abendessen.",
+				      "normalizedWord": "Hausaufgabe",
+				      "language": "de",
 				      "translations": {
-				        "en": ["I do my homework after dinner."],
-				        "ru": ["Ya delayu domashnee zadanie posle uzhina."]
-				      }
-				    },
-				    {
-				      "sentence": "Die Hausaufgabe ist heute leicht.",
-				      "translations": {
-				        "en": ["The homework is easy today."],
-				        "ru": ["Segodnya domashnee zadanie legkoe."]
-				      }
-				    },
-				    {
-				      "sentence": "Hast du die Hausaufgabe schon fertig?",
-				      "translations": {
-				        "en": ["Have you already finished the homework?"],
-				        "ru": ["Ty uzhe zakonchil domashnee zadanie?"]
-				      }
+				        "en": ["homework"],
+				        "ru": ["domashnee zadanie"]
+				      },
+				      "partOfSpeech": "noun",
+				      "gender": "feminine",
+				      "article": "die",
+				      "plural": "Hausaufgaben",
+				      "frequency": "common",
+				      "isCompound": true,
+				      "compoundParts": [
+				        {
+				          "word": "Haus",
+				          "meanings": {
+				            "en": ["house"],
+				            "ru": ["dom"]
+				          }
+				        },
+				        {
+				          "word": "Aufgabe",
+				          "meanings": {
+				            "en": ["task"],
+				            "ru": ["zadanie"]
+				          }
+				        }
+				      ],
+				      "shortNote": {
+				        "en": ["A common word for school homework."],
+				        "ru": ["Obychnoe slovo dlya domashnego zadaniya."]
+				      },
+				      "examples": [
+				        {
+				          "sentence": "Ich mache meine Hausaufgabe nach dem Abendessen.",
+				          "translations": {
+				            "en": ["I do my homework after dinner."],
+				            "ru": ["Ya delayu domashnee zadanie posle uzhina."]
+				          }
+				        },
+				        {
+				          "sentence": "Die Hausaufgabe ist heute leicht.",
+				          "translations": {
+				            "en": ["The homework is easy today."],
+				            "ru": ["Segodnya domashnee zadanie legkoe."]
+				          }
+				        },
+				        {
+				          "sentence": "Hast du die Hausaufgabe schon fertig?",
+				          "translations": {
+				            "en": ["Have you already finished the homework?"],
+				            "ru": ["Ty uzhe zakonchil domashnee zadanie?"]
+				          }
+				        }
+				      ]
 				    }
 				  ]
 				}

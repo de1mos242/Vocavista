@@ -39,9 +39,11 @@ class SpringAiOpenAiWordInfoProviderTest {
 		AiWordInfoResult result = provider.generate("Hausaufgabe");
 		ProviderWordInfo wordInfo = result.wordInfo();
 
-		assertThat(wordInfo.normalizedWord()).isEqualTo("Hausaufgabe");
-		assertThat(wordInfo.examples()).hasSize(3);
-		assertThat(wordInfo.translations().en()).contains("homework");
+		assertThat(wordInfo.inputLanguage()).isEqualTo(ProviderWordInfo.InputLanguage.de);
+		assertThat(wordInfo.meanings()).hasSize(1);
+		assertThat(wordInfo.meanings().getFirst().normalizedWord()).isEqualTo("Hausaufgabe");
+		assertThat(wordInfo.meanings().getFirst().examples()).hasSize(3);
+		assertThat(wordInfo.meanings().getFirst().translations().en()).contains("homework");
 		assertThat(result.rawResponse()).isEqualTo(SampleWordInfos.nounInfoJson());
 	}
 
@@ -71,17 +73,22 @@ class SpringAiOpenAiWordInfoProviderTest {
 				.map(JsonNode::asText)
 				.toList()).containsExactly("en", "ru");
 		assertThat(localizedTextSchema.path("additionalProperties").asBoolean()).isFalse();
-		assertThat(enumValues(responseSchema.path("properties").path("frequency")))
+		JsonNode meaningSchema = resolveInlineOrRef(responseSchema,
+				responseSchema.path("properties").path("meanings").path("items"));
+		assertThat(enumValues(responseSchema.path("properties").path("inputLanguage")))
+				.containsExactly("en", "ru", "de");
+		assertThat(meaningSchema.path("type").asText()).isEqualTo("object");
+		assertThat(enumValues(meaningSchema.path("properties").path("frequency")))
 				.containsExactly("rare", "uncommon", "common", "very_common");
-		assertThat(enumValues(responseSchema.path("properties").path("partOfSpeech")))
+		assertThat(enumValues(meaningSchema.path("properties").path("partOfSpeech")))
 				.containsExactly("noun", "verb", "adjective", "adverb", "pronoun", "preposition", "conjunction",
 						"interjection", "phrase", "other");
-		assertThat(enumValues(responseSchema.path("properties").path("gender")))
+		assertThat(enumValues(meaningSchema.path("properties").path("gender")))
 				.containsExactly("masculine", "feminine", "neuter");
-		assertThat(hasNullableAnyOf(responseSchema.path("properties").path("gender"))).isTrue();
-		assertThat(enumValues(responseSchema.path("properties").path("article"))).containsExactly("der", "die", "das");
-		assertThat(hasNullableAnyOf(responseSchema.path("properties").path("article"))).isTrue();
-		assertThat(StreamSupport.stream(responseSchema.path("properties").path("plural").path("type").spliterator(), false)
+		assertThat(hasNullableAnyOf(meaningSchema.path("properties").path("gender"))).isTrue();
+		assertThat(enumValues(meaningSchema.path("properties").path("article"))).containsExactly("der", "die", "das");
+		assertThat(hasNullableAnyOf(meaningSchema.path("properties").path("article"))).isTrue();
+		assertThat(StreamSupport.stream(meaningSchema.path("properties").path("plural").path("type").spliterator(), false)
 				.map(JsonNode::asText)
 				.toList()).containsExactly("string", "null");
 	}
@@ -154,6 +161,11 @@ class SpringAiOpenAiWordInfoProviderTest {
 				.filter(value -> !value.isNull())
 				.map(JsonNode::asText)
 				.toList();
+	}
+
+	private static JsonNode resolveInlineOrRef(JsonNode schema, JsonNode value) {
+		String ref = value.path("$ref").asText();
+		return ref.isBlank() ? value : schema.at(ref.substring(1));
 	}
 
 	private static boolean hasNullableAnyOf(JsonNode propertySchema) {

@@ -1155,27 +1155,74 @@ components:
       type: object
       required:
         - query
-        - canonicalWord
-        - existingItems
-        - proposedItem
+        - inputLanguage
+        - meanings
       properties:
         query:
           type: string
           minLength: 1
-        canonicalWord:
+        inputLanguage:
+          $ref: '#/components/schemas/InputLanguage'
+        meanings:
+          type: array
+          description: Generated German meaning candidates for the input.
+          minItems: 1
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/WordMeaningOption'
+    WordMeaningOption:
+      type: object
+      required:
+        - optionId
+        - word
+        - language
+        - translations
+        - phraseOptions
+        - partOfSpeech
+        - frequency
+        - isCompound
+      properties:
+        optionId:
+          type: integer
+          minimum: 0
+        word:
           type: string
           minLength: 1
-        existingItems:
+          maxLength: 80
+        language:
+          type: string
+          minLength: 2
+          maxLength: 16
+        translations:
+          $ref: '#/components/schemas/LanguageTextMap'
+        phraseOptions:
           type: array
+          description: Generated phrase options for this meaning.
+          minItems: 1
+          maxItems: 3
           items:
             $ref: '#/components/schemas/VocabularyItemDto'
-        proposedItem:
-          $ref: '#/components/schemas/VocabularyItemDto'
-        proposedItems:
-          type: array
-          description: Generated contextual vocabulary item proposals, one per example phrase.
-          items:
-            $ref: '#/components/schemas/VocabularyItemDto'
+        partOfSpeech:
+          $ref: '#/components/schemas/PartOfSpeech'
+        gender:
+          nullable: true
+          $ref: '#/components/schemas/Gender'
+        article:
+          nullable: true
+          $ref: '#/components/schemas/GermanArticle'
+        plural:
+          type: string
+          nullable: true
+        frequency:
+          $ref: '#/components/schemas/WordFrequency'
+        isCompound:
+          type: boolean
+    InputLanguage:
+      type: string
+      enum:
+        - en
+        - ru
+        - de
     WordSuggestionsResponse:
       type: object
       required:

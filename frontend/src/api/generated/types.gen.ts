@@ -161,14 +161,31 @@ export type VocabularyItemDto = {
 
 export type WordInfoResponse = {
     query: string;
-    canonicalWord: string;
-    existingItems: Array<VocabularyItemDto>;
-    proposedItem: VocabularyItemDto;
+    inputLanguage: InputLanguage;
     /**
-     * Generated contextual vocabulary item proposals, one per example phrase.
+     * Generated German meaning candidates for the input.
      */
-    proposedItems?: Array<VocabularyItemDto>;
+    meanings: Array<WordMeaningOption>;
 };
+
+export type WordMeaningOption = {
+    optionId: number;
+    word: string;
+    language: string;
+    translations: LanguageTextMap;
+    /**
+     * Generated phrase options for this meaning.
+     */
+    phraseOptions: Array<VocabularyItemDto>;
+    partOfSpeech: PartOfSpeech;
+    gender?: Gender;
+    article?: GermanArticle;
+    plural?: string | null;
+    frequency: WordFrequency;
+    isCompound: boolean;
+};
+
+export type InputLanguage = 'en' | 'ru' | 'de';
 
 export type WordSuggestionsResponse = {
     items: Array<WordSuggestion>;

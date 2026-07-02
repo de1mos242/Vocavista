@@ -25,16 +25,21 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 	private static final String SYSTEM_PROMPT = """
 			You generate compact vocabulary metadata for a language-learning app.
 			The learning language is German. The learner knows English and Russian.
+			The user may enter a word or short fixed expression in English, Russian, or German.
 			Return only JSON matching the provided schema. Do not include markdown.
+			Detect the input language and set inputLanguage to en, ru, or de.
+			Return 1 to 5 useful German meaning candidates in meanings.
+			Each meaning candidate must be a German word or fixed expression.
 			Keep translations and notes concise. Do not invent rare meanings unless clearly relevant.
-			Use null for noun-only fields only when the word is not a noun.
+			For close synonyms or ambiguous source words, choose examples that make usage differences clear.
+			Use null for noun-only fields only when the meaning candidate is not a noun.
 			For German nouns, gender, article, and plural are mandatory and must not be null.
 			For German noun article, use the nominative singular definite article derived from gender: masculine=der, feminine=die, neuter=das.
-			Use exact enum values: language de; partOfSpeech noun, verb, adjective, adverb, pronoun, preposition, conjunction, interjection, phrase, other; frequency rare, uncommon, common, very_common; gender masculine, feminine, neuter; article der, die, das.
-			Examples must contain exactly 3 natural German sentences.
+			Use exact enum values: inputLanguage en, ru, de; language de; partOfSpeech noun, verb, adjective, adverb, pronoun, preposition, conjunction, interjection, phrase, other; frequency rare, uncommon, common, very_common; gender masculine, feminine, neuter; article der, die, das.
+			Each meaning candidate examples array must contain exactly 3 natural German sentences.
 			Example objects must contain only the German sentence and translations.
 			Translations, notes, example translations, and compound-part meanings must include both en and ru keys.
-			If the word is not a compound, isCompound must be false and compoundParts must be an empty array.
+			If a meaning candidate is not a compound, isCompound must be false and compoundParts must be an empty array.
 			""";
 
 	private final ChatModel chatModel;
@@ -106,7 +111,7 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 	}
 
 	private static String userPrompt(String word) {
-		return "Generate word info for this German word or fixed expression: " + word;
+		return "Generate German vocabulary meaning candidates for this English, Russian, or German input: " + word;
 	}
 
 	private static boolean isTemporarilyUnavailable(OpenAIServiceException ex) {
