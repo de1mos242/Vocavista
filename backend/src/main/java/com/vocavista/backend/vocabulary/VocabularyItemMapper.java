@@ -2,7 +2,6 @@ package com.vocavista.backend.vocabulary;
 
 import com.vocavista.backend.api.model.VocabularyItemDto;
 import java.time.OffsetDateTime;
-import java.util.Locale;
 import java.util.UUID;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
@@ -48,19 +47,18 @@ public abstract class VocabularyItemMapper {
 
 	@Named("trimAndCollapse")
 	String trimAndCollapse(String value) {
-		return value == null ? null : value.trim().replaceAll("\\s+", " ");
+		return VocabularyText.optional(value);
 	}
 
 	@Named("trimOptional")
 	String trimOptional(String value) {
-		String trimmed = trimAndCollapse(value);
+		String trimmed = VocabularyText.optional(value);
 		return StringUtils.hasText(trimmed) ? trimmed : null;
 	}
 
 	@Named("languageCode")
 	String languageCode(String value) {
-		String trimmed = trimAndCollapse(value);
-		return trimmed == null ? null : trimmed.toLowerCase(Locale.ROOT);
+		return VocabularyText.languageCode(value);
 	}
 
 }
