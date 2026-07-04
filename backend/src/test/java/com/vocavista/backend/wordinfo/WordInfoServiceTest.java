@@ -63,6 +63,66 @@ class WordInfoServiceTest {
 	}
 
 	@Test
+	void rejectsEnglishInputLeakingIntoGermanExamples() {
+		ProviderWordInfo wordInfo = new ProviderWordInfo(ProviderWordInfo.InputLanguage.en, List.of(
+				new ProviderWordInfo.WordMeaning(
+						"Apfel",
+						ProviderWordInfo.Language.de,
+						new ProviderWordInfo.LocalizedText(List.of("apple"), List.of("yabloko")),
+						ProviderWordInfo.ProviderPartOfSpeech.noun,
+						Optional.of(ProviderWordInfo.ProviderGender.masculine),
+						Optional.of(ProviderWordInfo.ProviderArticle.der),
+						Optional.of("Aepfel"),
+						ProviderWordInfo.ProviderFrequency.common,
+						false,
+						List.of(),
+						new ProviderWordInfo.LocalizedText(List.of("A common fruit."), List.of("Frukt.")),
+						List.of(
+								new ProviderWordInfo.WordExample("Er isst apple.",
+										new ProviderWordInfo.LocalizedText(List.of("He eats an apple."), List.of("On est yabloko."))),
+								new ProviderWordInfo.WordExample("Der Apfel ist rot.",
+										new ProviderWordInfo.LocalizedText(List.of("The apple is red."), List.of("Yabloko krasnoe."))),
+								new ProviderWordInfo.WordExample("Ich kaufe einen Apfel.",
+										new ProviderWordInfo.LocalizedText(List.of("I buy an apple."), List.of("Ya pokupayu yabloko.")))))));
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(wordInfo, "{}"),
+				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());
+
+		assertThatThrownBy(() -> service.getWordInfo("apple"))
+				.isInstanceOf(AiProviderBadGatewayException.class)
+				.hasMessageContaining("German examples must not contain the source-language input word");
+	}
+
+	@Test
+	void allowsSourceInputWhenItIsAlsoTheGermanWord() {
+		ProviderWordInfo wordInfo = new ProviderWordInfo(ProviderWordInfo.InputLanguage.en, List.of(
+				new ProviderWordInfo.WordMeaning(
+						"Taxi",
+						ProviderWordInfo.Language.de,
+						new ProviderWordInfo.LocalizedText(List.of("taxi"), List.of("taksi")),
+						ProviderWordInfo.ProviderPartOfSpeech.noun,
+						Optional.of(ProviderWordInfo.ProviderGender.neuter),
+						Optional.of(ProviderWordInfo.ProviderArticle.das),
+						Optional.of("Taxis"),
+						ProviderWordInfo.ProviderFrequency.common,
+						false,
+						List.of(),
+						new ProviderWordInfo.LocalizedText(List.of("A car for hire."), List.of("Mashina po vyzovu.")),
+						List.of(
+								new ProviderWordInfo.WordExample("Das Taxi wartet draussen.",
+										new ProviderWordInfo.LocalizedText(List.of("The taxi waits outside."), List.of("Taksi zhdet snaruzhi."))),
+								new ProviderWordInfo.WordExample("Ich rufe ein Taxi.",
+										new ProviderWordInfo.LocalizedText(List.of("I call a taxi."), List.of("Ya vyzyvayu taksi."))),
+								new ProviderWordInfo.WordExample("Wir fahren mit dem Taxi.",
+										new ProviderWordInfo.LocalizedText(List.of("We go by taxi."), List.of("My edem na taksi.")))))));
+		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(wordInfo, "{}"),
+				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());
+
+		WordInfoResponse response = service.getWordInfo("taxi");
+
+		assertThat(response.getMeanings().getFirst().getWord()).isEqualTo("Taxi");
+	}
+
+	@Test
 	void rejectsBlankWordAfterTrimming() {
 		WordInfoService service = new WordInfoService(word -> new AiWordInfoResult(SampleWordInfos.nounInfo(), "{}"),
 				providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());

@@ -94,6 +94,22 @@ class SpringAiOpenAiWordInfoProviderTest {
 	}
 
 	@Test
+	void promptRequiresExamplesToStayTiedToGermanMeaning() {
+		ChatModel chatModel = mock(ChatModel.class);
+		when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse(SampleWordInfos.nounInfoJson()));
+		SpringAiOpenAiWordInfoProvider provider = new SpringAiOpenAiWordInfoProvider(chatModel, "test-key", WORDS_MODEL);
+
+		provider.generate("apple");
+
+		ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
+		verify(chatModel).call(promptCaptor.capture());
+		assertThat(promptCaptor.getValue().getInstructions())
+				.anySatisfy(message -> assertThat(message.getText())
+						.contains("Every example sentence for a meaning candidate must illustrate only that candidate's meaning")
+						.contains("never copy the source-language input into German example sentences"));
+	}
+
+	@Test
 	void mapsMalformedProviderJsonToBadGateway() {
 		ChatModel chatModel = mock(ChatModel.class);
 		String rawResponse = "{not-json";

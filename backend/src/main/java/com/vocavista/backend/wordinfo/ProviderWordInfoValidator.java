@@ -2,6 +2,7 @@ package com.vocavista.backend.wordinfo;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -9,6 +10,10 @@ import org.springframework.util.StringUtils;
 class ProviderWordInfoValidator {
 
 	void validate(ProviderWordInfo wordInfo) {
+		validate(wordInfo, null);
+	}
+
+	void validate(ProviderWordInfo wordInfo, String inputWord) {
 		if (wordInfo == null) {
 			throw malformed("missing word info");
 		}
@@ -21,10 +26,11 @@ class ProviderWordInfoValidator {
 		if (wordInfo.meanings().size() > 5) {
 			throw malformed("meanings must not contain more than 5 items");
 		}
-		wordInfo.meanings().forEach(this::validateMeaning);
+		wordInfo.meanings().forEach(meaning -> validateMeaning(meaning, wordInfo.inputLanguage(), inputWord));
 	}
 
-	private void validateMeaning(ProviderWordInfo.WordMeaning meaning) {
+	private void validateMeaning(ProviderWordInfo.WordMeaning meaning, ProviderWordInfo.InputLanguage inputLanguage,
+			String inputWord) {
 		if (meaning == null) {
 			throw malformed("meanings must not contain null items");
 		}
@@ -52,7 +58,7 @@ class ProviderWordInfoValidator {
 		if (meaning.examples() == null || meaning.examples().size() < 3) {
 			throw malformed("examples must contain at least 3 items");
 		}
-		meaning.examples().forEach(this::validateExample);
+		meaning.examples().forEach(example -> validateExample(example, inputLanguage, inputWord, meaning.normalizedWord()));
 		if (meaning.partOfSpeech() == ProviderWordInfo.ProviderPartOfSpeech.noun) {
 			requireOptionalValue(meaning.gender(), "meaning.gender");
 			requireOptionalValue(meaning.article(), "meaning.article");
@@ -68,12 +74,35 @@ class ProviderWordInfoValidator {
 		requireLocalizedText(compoundPart.meanings(), "compoundPart.meanings");
 	}
 
-	private void validateExample(ProviderWordInfo.WordExample example) {
+	private void validateExample(ProviderWordInfo.WordExample example, ProviderWordInfo.InputLanguage inputLanguage,
+			String inputWord, String normalizedWord) {
 		if (example == null) {
 			throw malformed("examples must not contain null items");
 		}
 		requireText(example.sentence(), "example.sentence");
+		if (inputLanguage != ProviderWordInfo.InputLanguage.de
+				&& !sameNormalizedText(inputWord, normalizedWord)
+				&& containsWholeInput(example.sentence(), inputWord)) {
+			throw malformed("German examples must not contain the source-language input word");
+		}
 		requireLocalizedText(example.translations(), "example.translations");
+	}
+
+	private static boolean sameNormalizedText(String left, String right) {
+		return normalizeText(left).equalsIgnoreCase(normalizeText(right));
+	}
+
+	private static boolean containsWholeInput(String sentence, String inputWord) {
+		String normalizedInput = normalizeText(inputWord);
+		if (!StringUtils.hasText(normalizedInput)) {
+			return false;
+		}
+		String pattern = "(?iu)(?<![\\p{L}\\p{N}])" + Pattern.quote(normalizedInput) + "(?![\\p{L}\\p{N}])";
+		return Pattern.compile(pattern).matcher(normalizeText(sentence)).find();
+	}
+
+	private static String normalizeText(String value) {
+		return value == null ? "" : value.trim().replaceAll("\\s+", " ");
 	}
 
 	private static void requireLocalizedText(ProviderWordInfo.LocalizedText text, String fieldName) {
