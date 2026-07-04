@@ -85,12 +85,18 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <nav className="nav-links" aria-label="Main navigation">
-          <NavLink to="/" end>Home</NavLink>
-          <NavLink to="/add">Add</NavLink>
-          <NavLink to="/review">Review</NavLink>
-          {currentUser?.admin ? <NavLink to="/admin">Admin</NavLink> : null}
-        </nav>
+        <div className="nav-cluster">
+          <NavLink className="brand-mark" to="/" end aria-label="Vocavista home">
+            <span>V</span>
+            <strong>Vocavista</strong>
+          </NavLink>
+          <nav className="nav-links" aria-label="Main navigation">
+            <NavLink to="/" end>Home</NavLink>
+            <NavLink to="/add">Add</NavLink>
+            <NavLink to="/review">Review</NavLink>
+            {currentUser?.admin ? <NavLink to="/admin">Admin</NavLink> : null}
+          </nav>
+        </div>
         <AuthPanel authState={authState} user={currentUser} onLogout={logoutCurrentUser} />
       </header>
 
@@ -145,21 +151,62 @@ function HomePage({ user, authState }: { user?: CurrentUserResponse; authState: 
   return (
     <main className="home-layout">
       <section className="hero-card home-hero">
-        <p className="eyebrow">Vocavista PWA</p>
-        <h1>German words that fit in your pocket.</h1>
-        <p>Add vocabulary with generated pronunciation video, then review it from your phone whenever you have a minute.</p>
+        <div className="hero-copy">
+          <p className="eyebrow">Language atelier</p>
+          <h1>Turn one German word into a tiny scene you can replay.</h1>
+          <p>Vocavista builds tactile study cards from meaning, phrase, image, and pronunciation. It should feel less like a form and more like opening a box of living flashcards.</p>
+        </div>
+        <div className="specimen-card" aria-label="Example study card">
+          <span>der Augenblick</span>
+          <strong>moment</strong>
+          <small>момент</small>
+          <div className="specimen-wave" aria-hidden="true"><i /><i /><i /><i /><i /></div>
+        </div>
+        <div className="word-strip" aria-label="Example vocabulary loop">
+          <span>meaning</span>
+          <span>phrase</span>
+          <span>image</span>
+          <span>voice</span>
+        </div>
         {authState === "signed-out" ? <a className="login-button wide" href={loginUrl()}><img src="/google-g.svg" alt="" aria-hidden="true" />Sign in with Google</a> : null}
         {user && !user.functionalAccessAllowed ? <AccountNotice user={user} /> : null}
       </section>
-      <section className="action-grid" aria-label="Primary actions">
-        <NavLink className="action-card add-card" to="/add">
-          <span>Add word</span>
-          <strong>Search, choose a phrase, generate assets.</strong>
-        </NavLink>
-        <NavLink className="action-card review-card-link" to="/review">
-          <span>Review</span>
-          <strong>Recall from English and Russian prompts.</strong>
-        </NavLink>
+      <section className="studio-panel" aria-label="Study flow">
+        <p className="eyebrow">Study choreography</p>
+        <div className="flow-list">
+          <div>
+            <span>01</span>
+            <strong>Search a word</strong>
+            <small>Start from English, Russian, or German.</small>
+          </div>
+          <div>
+            <span>02</span>
+            <strong>Choose the exact meaning</strong>
+            <small>Disambiguate first so the generated card is precise.</small>
+          </div>
+          <div>
+            <span>03</span>
+            <strong>Attach media</strong>
+            <small>Generate a visual anchor and pronunciation take.</small>
+          </div>
+          <div>
+            <span>04</span>
+            <strong>Recall under pressure</strong>
+            <small>Answer before the scene and video reward you.</small>
+          </div>
+        </div>
+        <div className="action-grid" aria-label="Primary actions">
+          <NavLink className="action-card add-card" to="/add">
+            <span>Add word</span>
+            <strong>Build the next study card.</strong>
+            <small>Meaning, phrase, image, and video.</small>
+          </NavLink>
+          <NavLink className="action-card review-card-link" to="/review">
+            <span>Review</span>
+            <strong>Enter the deck.</strong>
+            <small>Prompt first, reveal media after answer.</small>
+          </NavLink>
+        </div>
       </section>
     </main>
   );
@@ -456,13 +503,21 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
   return (
     <main className="mobile-workspace add-layout">
       <section className="panel controls-panel">
-        <p className="eyebrow">Add word</p>
-        <h1>Make a tiny pronunciation lesson.</h1>
-        <p>Search in English, Russian, or German. Pick the German meaning first, then choose the phrase you want to practice.</p>
+        <div className="page-intro">
+          <p className="eyebrow">Add word</p>
+          <h1>Cut a new scene for your deck.</h1>
+          <p>Search in English, Russian, or German. Pick the German meaning first, then choose the phrase you want to practice.</p>
+        </div>
+        <div className="step-rail" aria-label="Add word steps">
+          <span className={word.trim() ? "complete" : "active"}>Search</span>
+          <span className={selectedMeaning ? "complete" : wordInfo ? "active" : ""}>Meaning</span>
+          <span className={phrase.trim() ? "complete" : selectedMeaning ? "active" : ""}>Phrase</span>
+          <span className={videoUrl || phraseImage ? "complete" : phrase.trim() ? "active" : ""}>Media</span>
+        </div>
         {user && !user.functionalAccessAllowed ? <AccountNotice user={user} /> : null}
         {authState === "signed-out" ? <SignInCard message="Sign in with Google to search and generate pronunciation video." /> : null}
 
-        <label>
+        <label className="field-card search-card">
           Word
           <input
             value={word}
@@ -490,15 +545,25 @@ function AddWordPage({ user, authState, onAuthError }: PageProps) {
 
         {wordInfo ? <WordInfoPanel info={wordInfo} selectedMeaning={selectedMeaning} selectedItem={selectedVocabularyItem} onUseMeaning={selectMeaningOption} onUseItem={selectVocabularyItem} /> : null}
 
-        <label>
-          Phrase
-          <textarea value={phrase} onChange={(event) => { setPhrase(event.target.value); resetAssets(); }} />
-        </label>
-        <button type="button" disabled={!canGenerateAssets || generateBusy || imageBusy || saveBusy} onClick={() => void generateAssets()}>Save and generate assets</button>
+        {phrase.trim() ? (
+          <SelectedPhraseCard
+            word={word}
+            phrase={phrase}
+            item={selectedVocabularyItem}
+            busy={generateBusy || imageBusy || saveBusy}
+            disabled={!canGenerateAssets}
+            onCreate={() => void generateAssets()}
+          />
+        ) : null}
         <StatusBox>{status}</StatusBox>
       </section>
 
       <section className="video-stage media-stage">
+        <div className="stage-heading">
+          <p className="eyebrow">Scene lab</p>
+          <h2>Compose the card visually.</h2>
+          <p>The image is the memory anchor. The video is the pronunciation take. Together they make the word easier to recall later.</p>
+        </div>
         <div className="media-stack">
           <PhraseImageCard
             image={phraseImage}
@@ -607,9 +672,15 @@ function ReviewPage({ user, authState, onAuthError }: PageProps) {
   return (
     <main className="mobile-workspace review-layout">
       <section className="panel controls-panel">
-        <p className="eyebrow">Review</p>
-        <h1>Recall the German word.</h1>
-        <p>Use the English and Russian prompts, type the German answer, and include the article for nouns.</p>
+        <div className="page-intro">
+          <p className="eyebrow">Review</p>
+          <h1>Step into one card at a time.</h1>
+          <p>Use the English and Russian prompts, type the German answer, and include the article for nouns.</p>
+        </div>
+        <div className="review-counter" aria-label="Review progress">
+          <strong>{items.length === 0 ? "No active card" : `${index + 1}/${items.length}`}</strong>
+          <span>{includeUpcoming ? "Upcoming practice" : "Due review"}</span>
+        </div>
         {user && !user.functionalAccessAllowed ? <AccountNotice user={user} /> : null}
         {authState === "signed-out" ? <SignInCard message="Sign in with Google to review your dictionary." /> : null}
         <button type="button" disabled={!canUseFeatures} onClick={() => void loadBatch(false)}>Load due words</button>
@@ -620,7 +691,10 @@ function ReviewPage({ user, authState, onAuthError }: PageProps) {
       <section className="review-stage">
         {!item ? <DoneCard /> : (
           <article className="study-card">
-            <p className="meta">Item {index + 1} of {items.length} · {item.partOfSpeech}{item.article ? ` · ${item.article}` : ""}</p>
+            <div className="study-card-head">
+              <p className="meta">Item {index + 1} of {items.length} · {item.partOfSpeech}{item.article ? ` · ${item.article}` : ""}</p>
+              <h2>What is the German word?</h2>
+            </div>
             <ReviewWordInfo item={item} />
             {item.phrase ? <ReviewPhraseImage item={item} onAuthError={onAuthError} /> : null}
             <label>
@@ -706,7 +780,7 @@ type PageProps = {
 function WordInfoPanel({ info, selectedMeaning, selectedItem, onUseMeaning, onUseItem }: { info: WordInfoResponse; selectedMeaning?: WordMeaningOption; selectedItem?: VocabularyItemDto; onUseMeaning: (meaning: WordMeaningOption) => void; onUseItem: (item: VocabularyItemDto) => void }) {
   return (
     <div className="word-info">
-      <small>Detected input language: {info.inputLanguage}</small>
+      <small className="detected-language">Detected input language: {info.inputLanguage}</small>
       <div className="word-info-section">
         <span className="word-info-divider">Choose meaning</span>
         {info.meanings.map((meaning) => (
@@ -722,6 +796,17 @@ function WordInfoPanel({ info, selectedMeaning, selectedItem, onUseMeaning, onUs
         </div>
       ) : null}
     </div>
+  );
+}
+
+function SelectedPhraseCard({ word, phrase, item, busy, disabled, onCreate }: { word: string; phrase: string; item?: VocabularyItemDto; busy: boolean; disabled: boolean; onCreate: () => void }) {
+  return (
+    <article className="selected-phrase-card">
+      <span>Selected phrase</span>
+      <strong>{phrase}</strong>
+      <small>{[word, item ? describePhraseTranslations(item) : ""].filter(Boolean).join(" · ")}</small>
+      <button type="button" disabled={disabled || busy} onClick={onCreate}>{busy ? "Creating card..." : "Create study card"}</button>
+    </article>
   );
 }
 
@@ -813,6 +898,10 @@ function PhraseImageCard({ image, status, busy, canGenerate, onSelectCandidate }
 
   return (
     <article className="phrase-image-card">
+      <div className="media-card-head">
+        <span>Image</span>
+        <strong>Visual association</strong>
+      </div>
       <div className="phrase-image-frame">
         {previewUrl ? <img src={previewUrl} alt={image?.phrase ? `Generated scene for ${image.phrase}` : "Generated vocabulary scene"} /> : <div className="placeholder">{candidateUrls.length > 0 ? "Choose a candidate below to preview it here." : "Cinematic Imagen scene will appear here."}</div>}
       </div>
@@ -830,6 +919,10 @@ function canUseCandidatePicker(canGenerate: boolean, busy: boolean) {
 function PronunciationVideoCard({ videoUrl, status, busy, canGenerate, videoRef }: { videoUrl?: string; status: string; busy: boolean; canGenerate: boolean; videoRef: RefObject<HTMLVideoElement | null> }) {
   return (
     <article className="phrase-image-card video-card">
+      <div className="media-card-head">
+        <span>Video</span>
+        <strong>Pronunciation take</strong>
+      </div>
       {videoUrl ? <video ref={videoRef} src={videoUrl} controls playsInline /> : <div className="placeholder">Generated MP4 video will appear here when Veo completes.</div>}
       {canGenerate && busy ? <small>Video generation is running.</small> : null}
       {status ? <small>{status}</small> : null}
@@ -1052,6 +1145,10 @@ function ReviewWordInfo({ item }: { item: DictionaryReviewItem }) {
 
   return (
     <div className="review-word-info">
+      <div className="review-word-title">
+        <span>Prompts</span>
+        <strong>Recall from meaning before media.</strong>
+      </div>
       <div className="prompt-grid">
         <Prompt label="English" value={joinText(item.translations.en) || "No English translation"} />
         <Prompt label="Russian" value={joinText(item.translations.ru) || "No Russian translation"} />
