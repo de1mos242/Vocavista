@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router";
 import { accountRestrictionMessage, ApiError, loginUrl, logout, unwrap } from "./api";
+import { articleForGender, articleForMeaning, describeMeaningTranslations, describePhraseTranslations, describeWordTranslations, joinText, normalizeAnswer, smallPronunciationVideoUrl } from "./domain";
+import { syncDictionaryVideoCache } from "./mediaCache";
 import {
   addDictionaryEntry,
   createPhraseImage,
   createPronunciation,
   getCurrentUser,
-  getDictionaryVideos,
   getDictionaryReview,
   getPhraseImage,
   getPronunciation,
@@ -22,7 +23,6 @@ import {
 import type {
   AdminUserResponse,
   CurrentUserResponse,
-  DictionaryVideoManifestItem,
   DictionaryReviewItem,
   DictionaryReviewSubmitResponse,
   PhraseImageResponse,
@@ -35,8 +35,6 @@ import type {
 
 type AuthState = "checking" | "signed-out" | "signed-in";
 
-const PRONUNCIATION_VIDEO_CACHE = "pronunciation-videos";
-const DICTIONARY_VIDEO_MANIFEST_KEY = "vocavista.dictionaryVideoManifest.v1";
 
 export default function App() {
   const [authState, setAuthState] = useState<AuthState>("checking");
@@ -796,41 +794,6 @@ function sameVocabularyOption(item?: VocabularyItemDto, selectedItem?: Vocabular
   return !item.id && !selectedItem.id && item.word === selectedItem.word && item.phrase === selectedItem.phrase;
 }
 
-function describeWordTranslations(item: VocabularyItemDto) {
-  return item.translations
-    .map((translation) => `${translation.language}: ${translation.wordTranslation}`)
-    .join(" · ");
-}
-
-function describeMeaningTranslations(meaning: WordMeaningOption) {
-  return Object.entries(meaning.translations)
-    .map(([language, values]) => `${language}: ${joinText(values)}`)
-    .join(" · ");
-}
-
-function describePhraseTranslations(item: VocabularyItemDto) {
-  return item.translations
-    .map((translation) => `${translation.language}: ${translation.phraseTranslation}`)
-    .join(" · ");
-}
-
-function articleForGender(gender?: VocabularyItemDto["gender"]) {
-  if (gender === "masculine") {
-    return "der";
-  }
-  if (gender === "feminine") {
-    return "die";
-  }
-  if (gender === "neuter") {
-    return "das";
-  }
-  return "";
-}
-
-function articleForMeaning(meaning: WordMeaningOption) {
-  return meaning.article ?? articleForGender(meaning.gender);
-}
-
 function PhraseImageCard({ image, status, busy, canGenerate, onSelectCandidate }: { image?: PhraseImageResponse; status: string; busy: boolean; canGenerate: boolean; onSelectCandidate: (candidateIndex: number) => void }) {
   const imageUrl = image?.status === "completed" ? image.imageUrl ?? undefined : undefined;
   const candidateUrls = image?.status === "awaiting_selection" ? image.candidateImageUrls ?? [] : [];
@@ -1145,86 +1108,4 @@ async function pollPhraseImage(id: string, setStatus: (message: string) => void)
 
 function sleep(millis: number) {
   return new Promise((resolve) => window.setTimeout(resolve, millis));
-}
-
-function joinText(values?: string[]) {
-  return values?.join(" · ") ?? "";
-}
-
-function normalizeAnswer(value: string) {
-  return value
-    .toLowerCase()
-    .replaceAll("ä", "ae")
-    .replaceAll("ö", "oe")
-    .replaceAll("ü", "ue")
-    .replaceAll("ß", "ss")
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-}
-
-async function syncDictionaryVideoCache() {
-  if (!("caches" in window)) {
-    return;
-  }
-  const manifest = await unwrap(getDictionaryVideos());
-  const cache = await caches.open(PRONUNCIATION_VIDEO_CACHE);
-  const previousManifest = readCachedDictionaryVideoManifest();
-  const nextManifest: Record<string, string> = {};
-  const expectedUrls = new Set(manifest.items.map((item) => absoluteUrl(item.videoUrl)));
-
-  for (const item of manifest.items) {
-    const url = absoluteUrl(item.videoUrl);
-    const updatedAt = item.updatedAt;
-    nextManifest[url] = updatedAt;
-    const cached = await cache.match(url);
-    if (cached && previousManifest[url] === updatedAt) {
-      continue;
-    }
-    const response = await fetch(cacheRefreshUrl(url, updatedAt), { credentials: "include", cache: "reload" });
-    if (!response.ok) {
-      throw new Error(`Could not cache pronunciation video ${item.pronunciationAssetId}.`);
-    }
-    await cache.put(url, response.clone());
-  }
-
-  for (const request of await cache.keys()) {
-    if (isSmallPronunciationVideoUrl(request.url) && !expectedUrls.has(request.url)) {
-      await cache.delete(request);
-    }
-  }
-  localStorage.setItem(DICTIONARY_VIDEO_MANIFEST_KEY, JSON.stringify(nextManifest));
-}
-
-function readCachedDictionaryVideoManifest(): Record<string, string> {
-  try {
-    const rawValue = localStorage.getItem(DICTIONARY_VIDEO_MANIFEST_KEY);
-    if (!rawValue) {
-      return {};
-    }
-    const value = JSON.parse(rawValue) as Record<string, string>;
-    return value && typeof value === "object" ? value : {};
-  }
-  catch {
-    return {};
-  }
-}
-
-function smallPronunciationVideoUrl(assetId: string) {
-  return `/api/v1/media/pronunciations/${assetId}/video/small`;
-}
-
-function absoluteUrl(value: DictionaryVideoManifestItem["videoUrl"]) {
-  return new URL(value, window.location.origin).toString();
-}
-
-function cacheRefreshUrl(value: string, updatedAt: string) {
-  const url = new URL(value);
-  url.searchParams.set("cacheVersion", updatedAt);
-  return url.toString();
-}
-
-function isSmallPronunciationVideoUrl(value: string) {
-  const url = new URL(value);
-  return /^\/api\/v1\/media\/pronunciations\/[^/]+\/video\/small$/.test(url.pathname);
 }

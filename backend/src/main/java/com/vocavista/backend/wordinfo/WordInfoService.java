@@ -8,6 +8,7 @@ import com.vocavista.backend.api.model.WordInfoResponse;
 import com.vocavista.backend.vocabulary.VocabularyItem;
 import com.vocavista.backend.vocabulary.VocabularyItemMapper;
 import com.vocavista.backend.vocabulary.VocabularyItemRepository;
+import com.vocavista.backend.vocabulary.VocabularyText;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -55,8 +56,11 @@ class WordInfoService {
 			throw new WordInfoValidationException("item is required");
 		}
 		VocabularyItemDto item = request.getItem();
+		String language = validateVocabularyField(VocabularyText.languageCode(item.getLanguage()), "language");
+		String word = validateVocabularyField(VocabularyText.optional(item.getWord()), "word");
+		String phrase = validateVocabularyField(VocabularyText.optional(item.getPhrase()), "phrase");
 		Optional<VocabularyItem> existingItem = vocabularyItemRepository
-				.findFirstByLanguageAndWordIgnoreCaseAndPhraseIgnoreCase(item.getLanguage(), item.getWord(), item.getPhrase());
+				.findFirstByLanguageAndWordIgnoreCaseAndPhraseIgnoreCase(language, word, phrase);
 		if (existingItem.isPresent()) {
 			return new SaveVocabularyItemResponse(wordInfoMapper.toApiItem(existingItem.get()));
 		}
@@ -69,11 +73,18 @@ class WordInfoService {
 		}
 		catch (DataIntegrityViolationException ex) {
 			return vocabularyItemRepository
-					.findFirstByLanguageAndWordIgnoreCaseAndPhraseIgnoreCase(item.getLanguage(), item.getWord(), item.getPhrase())
+					.findFirstByLanguageAndWordIgnoreCaseAndPhraseIgnoreCase(language, word, phrase)
 					.map(wordInfoMapper::toApiItem)
 					.map(SaveVocabularyItemResponse::new)
 					.orElseThrow(() -> ex);
 		}
+	}
+
+	private static String validateVocabularyField(String value, String fieldName) {
+		if (!StringUtils.hasText(value)) {
+			throw new WordInfoValidationException(fieldName + " must not be blank");
+		}
+		return value;
 	}
 
 	private static ProviderWordInfo normalizeProviderWordInfo(ProviderWordInfo wordInfo) {
