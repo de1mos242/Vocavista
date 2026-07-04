@@ -39,7 +39,7 @@ class WordInfoService {
 		AiWordInfoResult providerResult = aiWordInfoProvider.generate(trimmedWord);
 		ProviderWordInfo providerWordInfo = normalizeProviderWordInfo(providerResult.wordInfo());
 		try {
-			providerWordInfoValidator.validate(providerWordInfo);
+			providerWordInfoValidator.validate(providerWordInfo, trimmedWord);
 		}
 		catch (AiProviderBadGatewayException ex) {
 			throw new AiProviderBadGatewayException(withRawResponse(ex.getMessage(), providerResult.rawResponse()), ex,

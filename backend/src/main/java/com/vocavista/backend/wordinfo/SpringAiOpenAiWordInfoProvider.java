@@ -32,6 +32,9 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 			Each meaning candidate must be a German word or fixed expression.
 			Keep translations and notes concise. Do not invent rare meanings unless clearly relevant.
 			For close synonyms or ambiguous source words, choose examples that make usage differences clear.
+			Every example sentence for a meaning candidate must illustrate only that candidate's meaning.
+			Every example sentence must use the candidate's German word or fixed expression, or a normal inflected form of it.
+			If the input language is English or Russian, never copy the source-language input into German example sentences; translate it to the selected German candidate.
 			Use null for noun-only fields only when the meaning candidate is not a noun.
 			For German nouns, gender, article, and plural are mandatory and must not be null.
 			For German noun article, use the nominative singular definite article derived from gender: masculine=der, feminine=die, neuter=das.
