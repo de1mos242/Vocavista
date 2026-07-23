@@ -21,6 +21,7 @@ final class SampleWordInfos {
 				"Hausaufgabe",
 				ProviderWordInfo.Language.de,
 				localizedText(List.of("homework"), List.of("domashnee zadanie")),
+				localizedText(List.of("school work assigned to a student"), List.of("zadanie dlya shkoly")),
 				ProviderWordInfo.ProviderPartOfSpeech.noun,
 				Optional.of(ProviderWordInfo.ProviderGender.feminine),
 				Optional.of(ProviderWordInfo.ProviderArticle.die),
@@ -51,6 +52,7 @@ final class SampleWordInfos {
 				"Haus",
 				ProviderWordInfo.Language.de,
 				localizedText(List.of("house", "home"), List.of("dom")),
+				localizedText(List.of("a residential building"), List.of("zhiloe zdanie")),
 				ProviderWordInfo.ProviderPartOfSpeech.noun,
 				Optional.of(ProviderWordInfo.ProviderGender.neuter),
 				Optional.of(ProviderWordInfo.ProviderArticle.das),
@@ -83,6 +85,10 @@ final class SampleWordInfos {
 				      "translations": {
 				        "en": ["homework"],
 				        "ru": ["domashnee zadanie"]
+				      },
+				      "gloss": {
+				        "en": ["school work assigned to a student"],
+				        "ru": ["zadanie dlya shkoly"]
 				      },
 				      "partOfSpeech": "noun",
 				      "gender": "feminine",

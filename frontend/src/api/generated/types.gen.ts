@@ -173,6 +173,7 @@ export type WordMeaningOption = {
     word: string;
     language: string;
     translations: LanguageTextMap;
+    gloss: LanguageTextMap;
     /**
      * Generated phrase options for this meaning.
      */

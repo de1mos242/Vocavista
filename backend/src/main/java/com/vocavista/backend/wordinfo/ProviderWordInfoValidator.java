@@ -2,6 +2,8 @@ package com.vocavista.backend.wordinfo;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -27,6 +29,7 @@ class ProviderWordInfoValidator {
 			throw malformed("meanings must not contain more than 5 items");
 		}
 		wordInfo.meanings().forEach(meaning -> validateMeaning(meaning, wordInfo.inputLanguage(), inputWord));
+		validateDistinctMeaningCandidates(wordInfo.meanings());
 	}
 
 	private void validateMeaning(ProviderWordInfo.WordMeaning meaning, ProviderWordInfo.InputLanguage inputLanguage,
@@ -42,6 +45,7 @@ class ProviderWordInfoValidator {
 			throw malformed("language must be de");
 		}
 		requireLocalizedText(meaning.translations(), "meaning.translations");
+		requireLocalizedText(meaning.gloss(), "meaning.gloss");
 		requireValue(meaning.partOfSpeech(), "meaning.partOfSpeech");
 		requireValue(meaning.frequency(), "meaning.frequency");
 		if (meaning.isCompound() == null) {
@@ -66,6 +70,20 @@ class ProviderWordInfoValidator {
 		}
 	}
 
+	private static void validateDistinctMeaningCandidates(List<ProviderWordInfo.WordMeaning> meanings) {
+		Set<String> candidates = new HashSet<>();
+		Set<String> glosses = new HashSet<>();
+		for (ProviderWordInfo.WordMeaning meaning : meanings) {
+			if (!candidates.add(normalizeText(meaning.normalizedWord()).toLowerCase())) {
+				throw malformed("meanings must not contain duplicate normalized German candidates");
+			}
+			String normalizedGloss = normalizedLocalizedText(meaning.gloss());
+			if (!glosses.add(normalizedGloss)) {
+				throw malformed("meanings must not contain duplicate localized glosses");
+			}
+		}
+	}
+
 	private void validateCompoundPart(ProviderWordInfo.CompoundPart compoundPart) {
 		if (compoundPart == null) {
 			throw malformed("compoundParts must not contain null items");
@@ -80,6 +98,9 @@ class ProviderWordInfoValidator {
 			throw malformed("examples must not contain null items");
 		}
 		requireText(example.sentence(), "example.sentence");
+		if (!normalizeText(example.sentence()).toLowerCase().contains(normalizeText(normalizedWord).toLowerCase())) {
+			throw malformed("German examples must use the declared German meaning candidate");
+		}
 		if (inputLanguage != ProviderWordInfo.InputLanguage.de
 				&& !sameNormalizedText(inputWord, normalizedWord)
 				&& containsWholeInput(example.sentence(), inputWord)) {
@@ -103,6 +124,15 @@ class ProviderWordInfoValidator {
 
 	private static String normalizeText(String value) {
 		return value == null ? "" : value.trim().replaceAll("\\s+", " ");
+	}
+
+	private static String normalizedLocalizedText(ProviderWordInfo.LocalizedText text) {
+		return normalizeLanguageValues(text.en()) + "|" + normalizeLanguageValues(text.ru());
+	}
+
+	private static String normalizeLanguageValues(List<String> values) {
+		return values.stream().map(ProviderWordInfoValidator::normalizeText).map(String::toLowerCase)
+				.sorted().reduce((left, right) -> left + "\\u001F" + right).orElse("");
 	}
 
 	private static void requireLocalizedText(ProviderWordInfo.LocalizedText text, String fieldName) {

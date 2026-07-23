@@ -29,7 +29,10 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 			Return only JSON matching the provided schema. Do not include markdown.
 			Detect the input language and set inputLanguage to en, ru, or de.
 			Return 1 to 5 useful German meaning candidates in meanings.
-			Each meaning candidate must be a German word or fixed expression.
+			Each meaning candidate must be exactly one atomic German sense represented by a German word or fixed expression.
+			Never combine unrelated senses or synonyms into one candidate; return separate candidates instead.
+			Candidates must be mutually distinct senses, even if they have the same German word.
+			Every candidate must include a short localized gloss that explains when that particular sense applies; do not use translation synonyms as its gloss.
 			Keep translations and notes concise. Do not invent rare meanings unless clearly relevant.
 			For close synonyms or ambiguous source words, choose examples that make usage differences clear.
 			Every example sentence for a meaning candidate must illustrate only that candidate's meaning.
@@ -41,7 +44,7 @@ class SpringAiOpenAiWordInfoProvider implements AiWordInfoProvider {
 			Use exact enum values: inputLanguage en, ru, de; language de; partOfSpeech noun, verb, adjective, adverb, pronoun, preposition, conjunction, interjection, phrase, other; frequency rare, uncommon, common, very_common; gender masculine, feminine, neuter; article der, die, das.
 			Each meaning candidate examples array must contain exactly 3 natural German sentences.
 			Example objects must contain only the German sentence and translations.
-			Translations, notes, example translations, and compound-part meanings must include both en and ru keys.
+			Translations, glosses, notes, example translations, and compound-part meanings must include both en and ru keys.
 			If a meaning candidate is not a compound, isCompound must be false and compoundParts must be an empty array.
 			""";
 

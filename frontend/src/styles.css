@@ -875,6 +875,16 @@ small,
   color: #41515f;
 }
 
+.word-info-card-alternatives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.6rem;
+}
+
+.word-info-card-alternatives small {
+  color: #41515f;
+}
+
 .word-info-card-meta {
   color: #637180;
 }

@@ -17,6 +17,7 @@ import com.vocavista.backend.vocabulary.VocabularyItem;
 import com.vocavista.backend.vocabulary.VocabularyItemMapper;
 import com.vocavista.backend.vocabulary.VocabularyItemRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -57,9 +58,35 @@ class WordInfoServiceTest {
 		assertThat(response.getMeanings()).hasSize(2);
 		assertThat(response.getMeanings()).extracting("optionId").containsExactly(0, 1);
 		assertThat(response.getMeanings()).extracting("word").containsExactly("Hausaufgabe", "Haus");
+		assertThat(response.getMeanings()).extracting("gloss")
+				.containsExactly(Map.of("en", List.of("school work assigned to a student"), "ru", List.of("zadanie dlya shkoly")),
+						Map.of("en", List.of("a residential building"), "ru", List.of("zhiloe zdanie")));
 		assertThat(response.getMeanings().get(1).getPhraseOptions()).extracting("phrase")
 				.containsExactly("Das Haus steht am Fluss.", "Wir kaufen ein kleines Haus.",
 						"Zu Hause fuehle ich mich wohl.");
+	}
+
+	@Test
+	void rejectsDuplicateNormalizedGermanCandidatesAndGlosses() {
+		ProviderWordInfo.WordMeaning original = SampleWordInfos.nounMeaning();
+		ProviderWordInfo.WordMeaning duplicateCandidate = new ProviderWordInfo.WordMeaning(" hausaufgabe ", original.language(),
+				original.translations(), localizedText("a different label", "drugaya metka"), original.partOfSpeech(),
+				original.gender(), original.article(), original.plural(), original.frequency(), original.isCompound(),
+				original.compoundParts(), original.shortNote(), original.examples());
+
+		assertThatThrownBy(() -> providerWordInfoValidator.validate(new ProviderWordInfo(ProviderWordInfo.InputLanguage.de,
+				List.of(original, duplicateCandidate))))
+				.isInstanceOf(AiProviderBadGatewayException.class)
+				.hasMessageContaining("duplicate normalized German candidates");
+
+		ProviderWordInfo.WordMeaning duplicateGloss = new ProviderWordInfo.WordMeaning("Schularbeit", original.language(),
+				original.translations(), original.gloss(), original.partOfSpeech(), original.gender(), original.article(),
+				original.plural(), original.frequency(), original.isCompound(), original.compoundParts(), original.shortNote(),
+				original.examples());
+		assertThatThrownBy(() -> providerWordInfoValidator.validate(new ProviderWordInfo(ProviderWordInfo.InputLanguage.de,
+				List.of(original, duplicateGloss))))
+				.isInstanceOf(AiProviderBadGatewayException.class)
+				.hasMessageContaining("duplicate localized glosses");
 	}
 
 	@Test
@@ -69,6 +96,7 @@ class WordInfoServiceTest {
 						"Apfel",
 						ProviderWordInfo.Language.de,
 						new ProviderWordInfo.LocalizedText(List.of("apple"), List.of("yabloko")),
+						new ProviderWordInfo.LocalizedText(List.of("edible fruit"), List.of("syedobnyy frukt")),
 						ProviderWordInfo.ProviderPartOfSpeech.noun,
 						Optional.of(ProviderWordInfo.ProviderGender.masculine),
 						Optional.of(ProviderWordInfo.ProviderArticle.der),
@@ -93,12 +121,31 @@ class WordInfoServiceTest {
 	}
 
 	@Test
+	void rejectsExamplesThatDoNotUseTheDeclaredSenseCandidate() {
+		ProviderWordInfo.WordMeaning meaning = SampleWordInfos.nounMeaning();
+		List<ProviderWordInfo.WordExample> unrelatedExamples = List.of(
+				new ProviderWordInfo.WordExample("Der Unterricht beginnt um acht.", localizedText("School begins at eight.", "Uroki nachinayutsya v vosem.")),
+				new ProviderWordInfo.WordExample("Die Lehrerin erklärt die Aufgabe.", localizedText("The teacher explains the task.", "Uchitel obyasnyaet zadanie.")),
+				new ProviderWordInfo.WordExample("Die Klasse ist heute ruhig.", localizedText("The class is quiet today.", "Klass segodnya tikhiy.")));
+		ProviderWordInfo.WordMeaning withUnrelatedExamples = new ProviderWordInfo.WordMeaning(meaning.normalizedWord(),
+				meaning.language(), meaning.translations(), meaning.gloss(), meaning.partOfSpeech(), meaning.gender(),
+				meaning.article(), meaning.plural(), meaning.frequency(), meaning.isCompound(), meaning.compoundParts(),
+				meaning.shortNote(), unrelatedExamples);
+
+		assertThatThrownBy(() -> providerWordInfoValidator.validate(new ProviderWordInfo(ProviderWordInfo.InputLanguage.de,
+				List.of(withUnrelatedExamples))))
+				.isInstanceOf(AiProviderBadGatewayException.class)
+				.hasMessageContaining("German examples must use the declared German meaning candidate");
+	}
+
+	@Test
 	void allowsSourceInputWhenItIsAlsoTheGermanWord() {
 		ProviderWordInfo wordInfo = new ProviderWordInfo(ProviderWordInfo.InputLanguage.en, List.of(
 				new ProviderWordInfo.WordMeaning(
 						"Taxi",
 						ProviderWordInfo.Language.de,
 						new ProviderWordInfo.LocalizedText(List.of("taxi"), List.of("taksi")),
+						new ProviderWordInfo.LocalizedText(List.of("car for hire"), List.of("mashina po vyzovu")),
 						ProviderWordInfo.ProviderPartOfSpeech.noun,
 						Optional.of(ProviderWordInfo.ProviderGender.neuter),
 						Optional.of(ProviderWordInfo.ProviderArticle.das),
@@ -134,6 +181,7 @@ class WordInfoServiceTest {
 	void rejectsMalformedProviderResponse() {
 		ProviderWordInfo.WordMeaning malformedMeaning = new ProviderWordInfo.WordMeaning("Hausaufgabe", ProviderWordInfo.Language.de,
 				new ProviderWordInfo.LocalizedText(List.of("homework"), List.of("домашнее задание")),
+				new ProviderWordInfo.LocalizedText(List.of("school assignment"), List.of("школьное задание")),
 				ProviderWordInfo.ProviderPartOfSpeech.noun, Optional.of(ProviderWordInfo.ProviderGender.feminine),
 				Optional.of(ProviderWordInfo.ProviderArticle.die), Optional.of("Hausaufgaben"),
 				ProviderWordInfo.ProviderFrequency.common, false, List.of(),
@@ -217,7 +265,7 @@ class WordInfoServiceTest {
 		examples.add(new ProviderWordInfo.WordExample("Extra sentence that should be ignored.",
 				new ProviderWordInfo.LocalizedText(List.of("Ignored extra example."), List.of("Ignoriert."))));
 		ProviderWordInfo.WordMeaning updatedMeaning = new ProviderWordInfo.WordMeaning(meaning.normalizedWord(),
-				meaning.language(), meaning.translations(), meaning.partOfSpeech(), meaning.gender(), meaning.article(),
+				meaning.language(), meaning.translations(), meaning.gloss(), meaning.partOfSpeech(), meaning.gender(), meaning.article(),
 				meaning.plural(), meaning.frequency(), meaning.isCompound(), meaning.compoundParts(), meaning.shortNote(),
 				examples);
 		return new ProviderWordInfo(wordInfo.inputLanguage(), List.of(updatedMeaning));
@@ -228,7 +276,7 @@ class WordInfoServiceTest {
 			Optional<ProviderWordInfo.ProviderGender> gender) {
 		ProviderWordInfo.WordMeaning meaning = wordInfo.meanings().getFirst();
 		ProviderWordInfo.WordMeaning updatedMeaning = new ProviderWordInfo.WordMeaning(meaning.normalizedWord(),
-				meaning.language(), meaning.translations(), meaning.partOfSpeech(), gender, article, meaning.plural(),
+				meaning.language(), meaning.translations(), meaning.gloss(), meaning.partOfSpeech(), gender, article, meaning.plural(),
 				meaning.frequency(), meaning.isCompound(), meaning.compoundParts(), meaning.shortNote(), meaning.examples());
 		return new ProviderWordInfo(wordInfo.inputLanguage(), List.of(updatedMeaning));
 	}
@@ -237,6 +285,10 @@ class WordInfoServiceTest {
 		VocabularyItemRepository vocabularyItemRepository = mock(VocabularyItemRepository.class);
 		when(vocabularyItemRepository.findByLanguageAndWordIgnoreCase("de", "Hausaufgabe")).thenReturn(List.of());
 		return vocabularyItemRepository;
+	}
+
+	private static ProviderWordInfo.LocalizedText localizedText(String en, String ru) {
+		return new ProviderWordInfo.LocalizedText(List.of(en), List.of(ru));
 	}
 
 }

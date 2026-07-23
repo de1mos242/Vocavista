@@ -35,8 +35,12 @@ export function describeWordTranslations(item: VocabularyItemDto) {
 
 export function describeMeaningTranslations(meaning: WordMeaningOption) {
   return Object.entries(meaning.translations)
-    .map(([language, values]) => `${language}: ${joinText(values)}`)
-    .join(" · ");
+    .flatMap(([language, values]) => values.map((value) => `${language}: ${value}`));
+}
+
+export function describeMeaningGloss(meaning: WordMeaningOption) {
+  return Object.entries(meaning.gloss)
+    .flatMap(([language, values]) => values.map((value) => `${language}: ${value}`));
 }
 
 export function describePhraseTranslations(item: VocabularyItemDto) {

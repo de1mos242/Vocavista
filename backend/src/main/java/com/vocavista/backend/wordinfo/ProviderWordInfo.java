@@ -11,6 +11,7 @@ public record ProviderWordInfo(
 			String normalizedWord,
 			Language language,
 			LocalizedText translations,
+			LocalizedText gloss,
 			ProviderPartOfSpeech partOfSpeech,
 			Optional<ProviderGender> gender,
 			Optional<ProviderArticle> article,

@@ -41,6 +41,7 @@ class WordInfoMapper {
 				trim(meaning.normalizedWord()),
 				meaning.language().name(),
 				localizedText(meaning.translations()),
+				localizedText(meaning.gloss()),
 				phraseOptions,
 				PartOfSpeech.fromValue(meaning.partOfSpeech().name()),
 				WordFrequency.fromValue(meaning.frequency().name()),

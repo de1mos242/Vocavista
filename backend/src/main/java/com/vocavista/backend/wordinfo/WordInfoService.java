@@ -105,7 +105,7 @@ class WordInfoService {
 		if (meaning.article() != null && meaning.article().filter(article::equals).isPresent()) {
 			return meaning;
 		}
-		return new ProviderWordInfo.WordMeaning(meaning.normalizedWord(), meaning.language(), meaning.translations(),
+		return new ProviderWordInfo.WordMeaning(meaning.normalizedWord(), meaning.language(), meaning.translations(), meaning.gloss(),
 				meaning.partOfSpeech(), meaning.gender(), Optional.of(article), meaning.plural(),
 				meaning.frequency(), meaning.isCompound(), meaning.compoundParts(), meaning.shortNote(), meaning.examples());
 	}

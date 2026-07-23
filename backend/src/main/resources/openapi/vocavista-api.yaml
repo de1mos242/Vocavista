@@ -1177,6 +1177,7 @@ components:
         - word
         - language
         - translations
+        - gloss
         - phraseOptions
         - partOfSpeech
         - frequency
@@ -1194,6 +1195,9 @@ components:
           minLength: 2
           maxLength: 16
         translations:
+          $ref: '#/components/schemas/LanguageTextMap'
+        gloss:
+          description: Localized short label explaining when this German sense applies.
           $ref: '#/components/schemas/LanguageTextMap'
         phraseOptions:
           type: array
