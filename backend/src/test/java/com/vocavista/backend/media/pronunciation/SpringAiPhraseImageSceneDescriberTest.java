@@ -23,15 +23,18 @@ class SpringAiPhraseImageSceneDescriberTest {
 	private static final String WORDS_MODEL = "gpt-5.4-mini";
 
 	@Test
-	void generatesVisualSceneDescriptionWithWordsModel() {
+	void generatesStructuredScenePlanWithWordsModel() {
 		ChatModel chatModel = mock(ChatModel.class);
-		when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse("\"A focused student sits at a desk with books.\""));
+		when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse("""
+				{"targetSense":"doing assigned work at home","semanticAnchors":["kitchen table","worksheet with blank lines","pencil in hand"],"mainAction":"a child solves a worksheet","compositionGuidance":"over-the-shoulder close view","visualStyle":"warm editorial illustration"}
+				"""));
 		SpringAiPhraseImageSceneDescriber describer = new SpringAiPhraseImageSceneDescriber(chatModel, "test-key",
 				WORDS_MODEL);
 
-		String description = describer.describe("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de");
+		PhraseImageScenePlan plan = describer.describe("Hausaufgabe", "Ich mache meine Hausaufgabe.", "de");
 
-		assertThat(description).isEqualTo("A focused student sits at a desk with books.");
+		assertThat(plan.targetSense()).isEqualTo("doing assigned work at home");
+		assertThat(plan.semanticAnchors()).containsExactly("kitchen table", "worksheet with blank lines", "pencil in hand");
 		ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
 		verify(chatModel).call(promptCaptor.capture());
 		OpenAiChatOptions options = (OpenAiChatOptions) promptCaptor.getValue().getOptions();
@@ -39,6 +42,9 @@ class SpringAiPhraseImageSceneDescriberTest {
 		assertThat(promptCaptor.getValue().getInstructions())
 				.anySatisfy(message -> assertThat(message.getText()).contains("Hausaufgabe",
 						"Ich mache meine Hausaufgabe."));
+		assertThat(promptCaptor.getValue().getInstructions())
+				.anySatisfy(message -> assertThat(message.getText()).contains("semanticAnchors", "concrete visual contrasts",
+						"generic office or classroom"));
 	}
 
 	@Test

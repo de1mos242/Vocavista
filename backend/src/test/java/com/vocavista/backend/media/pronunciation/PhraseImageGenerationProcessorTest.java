@@ -10,14 +10,16 @@ import org.junit.jupiter.api.Test;
 class PhraseImageGenerationProcessorTest {
 
 	@Test
-	void buildsPositiveOnlyImagePrompt() {
-		PhraseImagePrompt prompt = PhraseImageGenerationProcessor.promptFor(asset(),
-				"A focused student sits at a desk with an open blank notebook, pencil, textbooks, and warm evening light.");
+	void buildsAnchorBearingImagePrompt() {
+		PhraseImagePrompt prompt = PhraseImageGenerationProcessor.promptFor(asset(), new PhraseImageScenePlan(
+				"doing assigned work at home", java.util.List.of("kitchen table", "worksheet with blank lines", "pencil in hand"),
+				"a child solves a worksheet", "over-the-shoulder close view", "warm editorial illustration"));
 
 		assertThat(prompt.version()).isEqualTo("v4");
 		assertThat(prompt.word()).isEqualTo("Hausaufgabe");
 		assertThat(prompt.phrase()).isEqualTo("Ich mache meine Hausaufgabe.");
-		assertThat(prompt.text()).contains("focused student", "blank notebook", "high-quality 16:9 image");
+		assertThat(prompt.text()).contains("high-quality 16:9 warm editorial illustration image", "doing assigned work at home",
+				"kitchen table", "worksheet with blank lines", "pencil in hand", "over-the-shoulder close view");
 		assertThat(prompt.text()).doesNotContain("Build a natural", "clean cinematic composition",
 				"plausible everyday objects");
 		assertThat(prompt.text()).doesNotContain("Hausaufgabe", "Ich mache meine Hausaufgabe.", "Phrase context",

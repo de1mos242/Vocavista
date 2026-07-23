@@ -18,6 +18,7 @@ class PhraseImageGenerationProcessor {
 	private final PhraseImageRepository phraseImageRepository;
 	private final SpringAiPhraseImageSceneDescriber phraseImageSceneDescriber;
 	private final PhraseImageGenerator phraseImageGenerator;
+	private final PhraseImageQualityReviewer phraseImageQualityReviewer;
 	private final MediaStorageService mediaStorageService;
 	private final Clock clock = Clock.systemUTC();
 
@@ -31,10 +32,11 @@ class PhraseImageGenerationProcessor {
 			asset.setStatus(PhraseImageAssetStatus.PROCESSING);
 			asset.setUpdatedAt(now);
 
-			String sceneDescription = phraseImageSceneDescriber.describe(asset.getInputWord(), asset.getInputPhrase(),
+			PhraseImageScenePlan scenePlan = phraseImageSceneDescriber.describe(asset.getInputWord(), asset.getInputPhrase(),
 					asset.getLanguage());
-			PhraseImagePrompt prompt = promptFor(asset, sceneDescription);
+			PhraseImagePrompt prompt = promptFor(asset, scenePlan);
 			asset.setPromptText(prompt.text());
+			asset.setScenePlan(scenePlan.asJson());
 			generateImages(asset, prompt);
 			asset.setUpdatedAt(OffsetDateTime.now(clock));
 			if (asset.getStatus() == PhraseImageAssetStatus.COMPLETED) {
@@ -51,6 +53,20 @@ class PhraseImageGenerationProcessor {
 
 	private void generateImages(PhraseImageAsset asset, PhraseImagePrompt prompt) {
 		List<GeneratedImage> images = phraseImageGenerator.generate(prompt);
+		List<ImageQualityReview> reviews = images.stream().map(image -> phraseImageQualityReviewer.review(prompt, image)).toList();
+		List<GeneratedImage> accepted = java.util.stream.IntStream.range(0, images.size())
+				.filter(index -> reviews.get(index).passes(0.75)).mapToObj(images::get).toList();
+		if (accepted.isEmpty()) {
+			images = phraseImageGenerator.generate(prompt);
+			reviews = images.stream().map(image -> phraseImageQualityReviewer.review(prompt, image)).toList();
+			accepted = java.util.stream.IntStream.range(0, images.size()).filter(index -> reviews.get(index).passes(0.75))
+					.mapToObj(images::get).toList();
+		}
+		if (accepted.isEmpty()) {
+			throw new MediaGenerationException("image_quality_failed", "Generated images did not pass the scene quality gate");
+		}
+		asset.setQualityMetadata(reviews.stream().map(ImageQualityReview::asJson).collect(java.util.stream.Collectors.joining(",", "[", "]")));
+		images = accepted;
 		for (int i = 0; i < images.size(); i += 1) {
 			GeneratedImage image = images.get(i);
 			mediaStorageService.store(PhraseImageService.candidateObjectKey(asset.getId(), i), image.contentType(), image.bytes());
@@ -75,13 +91,13 @@ class PhraseImageGenerationProcessor {
 		asset.setUpdatedAt(OffsetDateTime.now(clock));
 	}
 
-	static PhraseImagePrompt promptFor(PhraseImageAsset asset, String sceneDescription) {
+	static PhraseImagePrompt promptFor(PhraseImageAsset asset, PhraseImageScenePlan scenePlan) {
 		String phrase = asset.getInputPhrase().replaceAll("\\s+", " ").trim();
 		String word = asset.getInputWord().replaceAll("\\s+", " ").trim();
-		String cleanSceneDescription = sceneDescription.replaceAll("\\s+", " ").trim();
 		String text = """
-				Create a high-quality 16:9 image of this scene: %s.
-				""".formatted(cleanSceneDescription).replaceAll("\\s+", " ").trim();
+				Create a high-quality 16:9 %s image. Target sense: %s. Visible semantic anchors: %s. Main action: %s. Composition: %s.
+				""".formatted(scenePlan.visualStyle(), scenePlan.targetSense(), String.join("; ", scenePlan.semanticAnchors()),
+					scenePlan.mainAction(), scenePlan.compositionGuidance()).replaceAll("\\s+", " ").trim();
 		return new PhraseImagePrompt(word, phrase, asset.getLanguage(), text, asset.getPromptVersion());
 	}
 
