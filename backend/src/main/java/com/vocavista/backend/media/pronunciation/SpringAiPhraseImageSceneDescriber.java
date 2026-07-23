@@ -21,10 +21,13 @@ class SpringAiPhraseImageSceneDescriber {
 	private static final String MISSING_API_KEY = "__missing__";
 
 	private static final String SYSTEM_PROMPT = """
-			You write concise visual scene descriptions for an image model.
+			You create a structured visual scene plan for an image model.
 			The input is a German vocabulary word and an example German sentence.
-			Return one English sentence, 12 to 30 words, describing concrete physical objects, people, actions, setting, mood, and composition.
-			Use only visual details that can be drawn. Keep the description free of German words, quotes, labels, typography, signage, UI, captions, watermarks, and instructions.
+			Return ONLY a JSON object with exactly these English fields: targetSense, semanticAnchors, mainAction, compositionGuidance, visualStyle.
+			targetSense explains the selected meaning in English. semanticAnchors is an array of 2 to 4 concrete, visible details unique to that meaning.
+			mainAction and compositionGuidance describe what is visibly happening and how it is framed. visualStyle is a specific appropriate visual style.
+			Include concrete visual contrasts that distinguish this selected meaning from common alternative meanings. Do not use generic office or classroom stock scenes unless the phrase specifically requires one.
+			Use only draw-able visual details. Do not include German words, labels, typography, signage, UI, captions, watermarks, or instructions.
 			""";
 
 	private final ChatModel chatModel;
@@ -40,18 +43,18 @@ class SpringAiPhraseImageSceneDescriber {
 		this.model = model;
 	}
 
-	public String describe(String word, String phrase, String language) {
+	public PhraseImageScenePlan describe(String word, String phrase, String language) {
 		if (!StringUtils.hasText(apiKey) || MISSING_API_KEY.equals(apiKey)) {
 			throw new MediaGenerationException("scene_provider_unavailable", "OpenAI API key is not configured");
 		}
 
 		try {
 			ChatResponse response = chatModel.call(promptFor(word, phrase, language));
-			String description = cleanup(response.getResult().getOutput().getText());
-			if (!StringUtils.hasText(description)) {
-				throw new MediaGenerationException("scene_provider_error", "OpenAI returned an empty scene description");
+			String planJson = cleanup(response.getResult().getOutput().getText());
+			if (!StringUtils.hasText(planJson)) {
+				throw new MediaGenerationException("scene_provider_error", "OpenAI returned an empty scene plan");
 			}
-			return description;
+			return PhraseImageScenePlan.fromJson(planJson);
 		}
 		catch (TransientAiException | OpenAIIoException ex) {
 			throw new MediaGenerationException("scene_provider_unavailable", "OpenAI scene description is unavailable", ex);
@@ -90,9 +93,7 @@ class SpringAiPhraseImageSceneDescriber {
 		if (!StringUtils.hasText(description)) {
 			return "";
 		}
-		return description.replaceAll("[`\"']", "")
-				.replaceAll("\\s+", " ")
-				.trim();
+		return description.replaceAll("^```(?:json)?\\s*|\\s*```$", "").trim();
 	}
 
 	private static boolean isTemporarilyUnavailable(OpenAIServiceException ex) {

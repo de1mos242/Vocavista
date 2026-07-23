@@ -61,6 +61,12 @@ public class PhraseImageAsset {
 	@Column(name = "prompt_text")
 	private String promptText;
 
+	@Column(name = "scene_plan")
+	private String scenePlan;
+
+	@Column(name = "quality_metadata")
+	private String qualityMetadata;
+
 	@Column(name = "error_code")
 	private String errorCode;
 
