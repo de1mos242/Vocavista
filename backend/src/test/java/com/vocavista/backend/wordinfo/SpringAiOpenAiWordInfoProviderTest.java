@@ -44,6 +44,7 @@ class SpringAiOpenAiWordInfoProviderTest {
 		assertThat(wordInfo.meanings().getFirst().normalizedWord()).isEqualTo("Hausaufgabe");
 		assertThat(wordInfo.meanings().getFirst().examples()).hasSize(3);
 		assertThat(wordInfo.meanings().getFirst().translations().en()).contains("homework");
+		assertThat(wordInfo.meanings().getFirst().gloss().en()).contains("school work assigned to a student");
 		assertThat(result.rawResponse()).isEqualTo(SampleWordInfos.nounInfoJson());
 	}
 
@@ -78,6 +79,7 @@ class SpringAiOpenAiWordInfoProviderTest {
 		assertThat(enumValues(responseSchema.path("properties").path("inputLanguage")))
 				.containsExactly("en", "ru", "de");
 		assertThat(meaningSchema.path("type").asText()).isEqualTo("object");
+		assertThat(meaningSchema.path("required").toString()).contains("gloss");
 		assertThat(enumValues(meaningSchema.path("properties").path("frequency")))
 				.containsExactly("rare", "uncommon", "common", "very_common");
 		assertThat(enumValues(meaningSchema.path("properties").path("partOfSpeech")))
@@ -106,6 +108,8 @@ class SpringAiOpenAiWordInfoProviderTest {
 		assertThat(promptCaptor.getValue().getInstructions())
 				.anySatisfy(message -> assertThat(message.getText())
 						.contains("Every example sentence for a meaning candidate must illustrate only that candidate's meaning")
+						.contains("exactly one atomic German sense")
+						.contains("mutually distinct senses")
 						.contains("never copy the source-language input into German example sentences"));
 	}
 

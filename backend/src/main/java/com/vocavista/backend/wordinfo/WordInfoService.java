@@ -25,6 +25,7 @@ import org.springframework.util.StringUtils;
 class WordInfoService {
 
 	private static final int MAX_WORD_LENGTH = 80;
+	private static final int MAX_PROVIDER_RETRIES = 3;
 
 	private final AiWordInfoProvider aiWordInfoProvider;
 	private final ProviderWordInfoValidator providerWordInfoValidator;
@@ -36,18 +37,22 @@ class WordInfoService {
 	@Transactional(readOnly = true)
 	WordInfoResponse getWordInfo(String word) {
 		String trimmedWord = trimAndValidate(word);
-		AiWordInfoResult providerResult = aiWordInfoProvider.generate(trimmedWord);
-		ProviderWordInfo providerWordInfo = normalizeProviderWordInfo(providerResult.wordInfo());
-		try {
-			providerWordInfoValidator.validate(providerWordInfo, trimmedWord);
+		for (int retry = 0; retry <= MAX_PROVIDER_RETRIES; retry++) {
+			AiWordInfoResult providerResult = aiWordInfoProvider.generate(trimmedWord);
+			ProviderWordInfo providerWordInfo = normalizeProviderWordInfo(providerResult.wordInfo());
+			try {
+				providerWordInfoValidator.validate(providerWordInfo, trimmedWord);
+				List<WordMeaningOption> meanings = assignOptionIds(wordInfoMapper.toMeaningOptions(providerWordInfo));
+				return new WordInfoResponse(trimmedWord, wordInfoMapper.toInputLanguage(providerWordInfo), meanings);
+			}
+			catch (AiProviderBadGatewayException ex) {
+				if (retry == MAX_PROVIDER_RETRIES) {
+					throw new AiProviderBadGatewayException(withRawResponse(ex.getMessage(), providerResult.rawResponse()), ex,
+							providerResult.rawResponse());
+				}
+			}
 		}
-		catch (AiProviderBadGatewayException ex) {
-			throw new AiProviderBadGatewayException(withRawResponse(ex.getMessage(), providerResult.rawResponse()), ex,
-					providerResult.rawResponse());
-		}
-
-		List<WordMeaningOption> meanings = assignOptionIds(wordInfoMapper.toMeaningOptions(providerWordInfo));
-		return new WordInfoResponse(trimmedWord, wordInfoMapper.toInputLanguage(providerWordInfo), meanings);
+		throw new IllegalStateException("unreachable");
 	}
 
 	@Transactional
@@ -105,7 +110,7 @@ class WordInfoService {
 		if (meaning.article() != null && meaning.article().filter(article::equals).isPresent()) {
 			return meaning;
 		}
-		return new ProviderWordInfo.WordMeaning(meaning.normalizedWord(), meaning.language(), meaning.translations(),
+		return new ProviderWordInfo.WordMeaning(meaning.normalizedWord(), meaning.language(), meaning.translations(), meaning.gloss(),
 				meaning.partOfSpeech(), meaning.gender(), Optional.of(article), meaning.plural(),
 				meaning.frequency(), meaning.isCompound(), meaning.compoundParts(), meaning.shortNote(), meaning.examples());
 	}

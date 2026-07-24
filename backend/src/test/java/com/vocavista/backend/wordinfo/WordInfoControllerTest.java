@@ -79,6 +79,7 @@ class WordInfoControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.inputLanguage").value("de"))
 				.andExpect(jsonPath("$.meanings[0].word").value("Hausaufgabe"))
+				.andExpect(jsonPath("$.meanings[0].gloss.en[0]").value("school work assigned to a student"))
 				.andExpect(jsonPath("$.meanings[0].partOfSpeech").value("noun"))
 				.andExpect(jsonPath("$.meanings[0].phraseOptions[0].phrase")
 						.value("Ich mache meine Hausaufgabe nach dem Abendessen."))

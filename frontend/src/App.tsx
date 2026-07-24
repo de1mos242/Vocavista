@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router";
 import { accountRestrictionMessage, ApiError, loginUrl, logout, unwrap } from "./api";
-import { articleForGender, articleForMeaning, describeMeaningTranslations, describePhraseTranslations, describeWordTranslations, joinText, normalizeAnswer, smallPronunciationVideoUrl } from "./domain";
+import { articleForGender, articleForMeaning, describeMeaningGloss, describeMeaningTranslations, describePhraseTranslations, describeWordTranslations, joinText, normalizeAnswer, smallPronunciationVideoUrl } from "./domain";
 import { syncDictionaryVideoCache } from "./mediaCache";
 import {
   addDictionaryEntry,
@@ -812,11 +812,14 @@ function SelectedPhraseCard({ word, phrase, item, busy, disabled, onCreate }: { 
 
 function MeaningOptionCard({ meaning, selected, onUse }: { meaning: WordMeaningOption; selected: boolean; onUse: () => void }) {
   const example = firstPhraseOption(meaning);
+  const glosses = describeMeaningGloss(meaning);
+  const translations = describeMeaningTranslations(meaning);
   return (
     <article className={`soft-list-button word-info-card${selected ? " selected" : ""}`}>
       <div className="word-info-card-word">
         <strong>{meaning.word}</strong>
-        <small>{describeMeaningTranslations(meaning) || "No word translation"}</small>
+        <small>{glosses.join(" · ") || "No sense gloss"}</small>
+        {translations.length ? <div className="word-info-card-alternatives" aria-label="Translation alternatives">{translations.map((translation) => <small key={translation}>{translation}</small>)}</div> : <small>No word translation</small>}
       </div>
       <small className="word-info-card-meta">{[articleForMeaning(meaning), meaning.partOfSpeech, meaning.frequency].filter(Boolean).join(" · ")}</small>
       {example ? (
