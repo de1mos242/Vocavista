@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class WordInfoServiceTest {
@@ -200,6 +201,39 @@ class WordInfoServiceTest {
 				.hasMessageContaining("rawProviderResponse=" + rawResponse)
 				.extracting(ex -> ((AiProviderBadGatewayException) ex).providerResponse())
 				.isEqualTo(rawResponse);
+	}
+
+	@Test
+	void retriesMalformedProviderOutputUpToThreeTimesBeforeUsingValidOutput() {
+		ProviderWordInfo.WordMeaning invalidMeaning = new ProviderWordInfo.WordMeaning("Hausaufgabe",
+				ProviderWordInfo.Language.de, localizedText("homework", "domashnee zadanie"),
+				localizedText("school assignment", "shkolnoe zadanie"), ProviderWordInfo.ProviderPartOfSpeech.noun,
+				Optional.of(ProviderWordInfo.ProviderGender.feminine), Optional.of(ProviderWordInfo.ProviderArticle.die),
+				Optional.of("Hausaufgaben"), ProviderWordInfo.ProviderFrequency.common, false, List.of(),
+				localizedText("note", "zametka"), List.of());
+		AtomicInteger attempts = new AtomicInteger();
+		WordInfoService service = new WordInfoService(word -> attempts.incrementAndGet() <= 2
+				? new AiWordInfoResult(new ProviderWordInfo(ProviderWordInfo.InputLanguage.de, List.of(invalidMeaning)), "invalid")
+				: new AiWordInfoResult(SampleWordInfos.nounInfo(), "valid"), providerWordInfoValidator, wordInfoMapper,
+				vocabularyItemMapper, emptyRepository());
+
+		WordInfoResponse response = service.getWordInfo("Hausaufgabe");
+
+		assertThat(attempts).hasValue(3);
+		assertThat(response.getMeanings()).hasSize(1);
+	}
+
+	@Test
+	void stopsRetryingAfterThreeRetriesForMalformedProviderOutput() {
+		AtomicInteger attempts = new AtomicInteger();
+		WordInfoService service = new WordInfoService(word -> {
+			attempts.incrementAndGet();
+			return new AiWordInfoResult(new ProviderWordInfo(null, List.of()), "invalid");
+		}, providerWordInfoValidator, wordInfoMapper, vocabularyItemMapper, emptyRepository());
+
+		assertThatThrownBy(() -> service.getWordInfo("Hausaufgabe"))
+				.isInstanceOf(AiProviderBadGatewayException.class);
+		assertThat(attempts).hasValue(4);
 	}
 
 	@Test
